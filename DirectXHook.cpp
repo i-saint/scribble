@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <d3d11.h>
 #include <d3dx11.h>
+#include <cstdio>
 
 
 // メンバ関数ポインタはキャストすらできないようなので、union で強引に値を取得します
@@ -37,15 +38,11 @@ void *g_ID3D11DeviceContext_hooked_vtable[115];
 class DummyDeviceContext
 {
 public:
+    // ID3D11DeviceContext のメンバ関数は stdcall であることに注意
 
-    // x86 と x64 で以下のように分岐しないとクラッシュする。要調査
-#if defined(_WIN64)
-    void DrawIndexedInstanced(UINT IndexCountPerInstance, UINT InstanceCount, UINT StartIndexLocation, INT BaseVertexLocation, UINT StartInstanceLocation ) {
+    void __stdcall DrawIndexedInstanced(UINT IndexCountPerInstance, UINT InstanceCount, UINT StartIndexLocation, INT BaseVertexLocation, UINT StartInstanceLocation )
+    {
         ID3D11DeviceContext *_this = (ID3D11DeviceContext*)this;
-#elif defined(_WIN32)
-    void DrawIndexedInstanced(ID3D11DeviceContext *_this, UINT IndexCountPerInstance, UINT InstanceCount, UINT StartIndexLocation, INT BaseVertexLocation, UINT StartInstanceLocation ) {
-#endif
-
         OutputDebugStringA("DummyDeviceContext::DrawIndexedInstanced()\n");
 
         // 一時的に vtable を元に戻して本来の動作をさせる
