@@ -1,4 +1,4 @@
-#ifndef _ViewFrustumCulling_h_
+﻿#ifndef _ViewFrustumCulling_h_
 #define _ViewFrustumCulling_h_
 
 #include <xmmintrin.h>
