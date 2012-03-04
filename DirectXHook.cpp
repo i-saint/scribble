@@ -4,8 +4,8 @@
 #include <cstdio>
 
 
-// ƒƒ“ƒoŠÖ”ƒ|ƒCƒ“ƒ^‚ÍƒLƒƒƒXƒg‚·‚ç‚Å‚«‚È‚¢‚æ‚¤‚È‚Ì‚ÅAunion ‚Å‹­ˆø‚É’l‚ğæ“¾‚µ‚Ü‚·
-// ‚¿‚È‚İ‚É C++ ‚Ì‹KŠi‚ÍŠÖ”ƒ|ƒCƒ“ƒ^‚Ì void* ‚Ö‚ÌƒLƒƒƒXƒg‚Í“®ì•s’è‚Æ‹K’è‚µ‚Ä‚¢‚Ü‚·
+// ãƒ¡ãƒ³ãƒé–¢æ•°ãƒã‚¤ãƒ³ã‚¿ã¯ã‚­ãƒ£ã‚¹ãƒˆã™ã‚‰ã§ããªã„ã‚ˆã†ãªã®ã§ã€union ã§å¼·å¼•ã«å€¤ã‚’å–å¾—ã—ã¾ã™
+// ã¡ãªã¿ã« C++ ã®è¦æ ¼ã¯é–¢æ•°ãƒã‚¤ãƒ³ã‚¿ã® void* ã¸ã®ã‚­ãƒ£ã‚¹ãƒˆã¯å‹•ä½œä¸å®šã¨è¦å®šã—ã¦ã„ã¾ã™
 template<class T>
 inline void* mfp_to_voidp(T v)
 {
@@ -38,14 +38,14 @@ void *g_ID3D11DeviceContext_hooked_vtable[115];
 class DummyDeviceContext
 {
 public:
-    // ID3D11DeviceContext ‚Ìƒƒ“ƒoŠÖ”‚Í stdcall ‚Å‚ ‚é‚±‚Æ‚É’ˆÓ
+    // ID3D11DeviceContext ã®ãƒ¡ãƒ³ãƒé–¢æ•°ã¯ stdcall ã§ã‚ã‚‹ã“ã¨ã«æ³¨æ„
 
     void __stdcall DrawIndexedInstanced(UINT IndexCountPerInstance, UINT InstanceCount, UINT StartIndexLocation, INT BaseVertexLocation, UINT StartInstanceLocation )
     {
         ID3D11DeviceContext *_this = (ID3D11DeviceContext*)this;
         OutputDebugStringA("DummyDeviceContext::DrawIndexedInstanced()\n");
 
-        // ˆê“I‚É vtable ‚ğŒ³‚É–ß‚µ‚Ä–{—ˆ‚Ì“®ì‚ğ‚³‚¹‚é
+        // ä¸€æ™‚çš„ã« vtable ã‚’å…ƒã«æˆ»ã—ã¦æœ¬æ¥ã®å‹•ä½œã‚’ã•ã›ã‚‹
         set_vtable(_this, g_ID3D11DeviceContext_default_vtable);
         _this->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
         set_vtable(_this, g_ID3D11DeviceContext_hooked_vtable);
@@ -59,13 +59,13 @@ void SetHook(ID3D11DeviceContext *pDeviceContext)
     size_t vtable_size = sizeof(g_ID3D11DeviceContext_hooked_vtable);
     void **vtable = get_vtable(pDeviceContext);
 
-    // Œ³‚Ì vtable ‚ğ•Û‘¶
+    // å…ƒã® vtable ã‚’ä¿å­˜
     g_ID3D11DeviceContext_default_vtable = vtable;
 
-    // hook ŠÖ”‚ğd‚ñ‚¾ vtable ‚ğì¬
+    // hook é–¢æ•°ã‚’ä»•è¾¼ã‚“ã  vtable ã‚’ä½œæˆ
     memcpy(g_ID3D11DeviceContext_hooked_vtable, g_ID3D11DeviceContext_default_vtable, vtable_size);
     g_ID3D11DeviceContext_hooked_vtable[20] = mfp_to_voidp(&DummyDeviceContext::DrawIndexedInstanced);
 
-    // vtable ‚ğ‚·‚è‘Ö‚¦‚é
+    // vtable ã‚’ã™ã‚Šæ›¿ãˆã‚‹
     set_vtable(pDeviceContext, g_ID3D11DeviceContext_hooked_vtable);
 }
