@@ -1,4 +1,5 @@
-// GameEngineGems2 で紹介されていた、class のメンバ変数に統一的にアクセスする手段を用意して、serializer や tool との連動の実装などを便利にする、というアイデアの簡単な実装例。
+// GameEngineGems2 で紹介されていた、class のメンバ変数に統一的にアクセスする手段を用意して
+// serializer や tool との連動の実装などを便利にする、というアイデアの簡単な実装例。
 // GEG2 のソースは https://github.com/jwatte/C---Introspection-and-Properties
 // 
 // ↓の INTROSPECTION() のマクロがアクセス手段を実装 (MEMBER() の後ろに "," をつけないトリック)
