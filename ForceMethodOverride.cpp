@@ -1,7 +1,6 @@
 ﻿#include <cstdio>
 #include <algorithm>
 
-
 /// vtable の取得/設定
 /// たぶんこれは C++ 的に違法だと思いますが、少なくとも VisualC++ では機能します。
 template<class T> inline void** get_vtable(T _this) { return ((void***)_this)[0]; }
@@ -10,15 +9,14 @@ template<class T> inline void   set_vtable(T _this, void **vtable) { ((void***)_
 /// メンバ関数は普通のキャストが効かないので、union で代用
 template<class D, class S> inline D force_cast(S v) { union {S s; D d;} u={v}; return u.d; }
 
+
 class IHoge
 {
 public:
     virtual ~IHoge() {}
     virtual void Test()=0;
-
-protected:
-    void *vtable[2];
 };
+
 
 class Hoge : public IHoge
 {
@@ -40,7 +38,9 @@ public:
     void Test2() { printf("Hoge::Test2()\n"); }
 
 private:
+    void *vtable[2];
 };
+
 
 int main()
 {
