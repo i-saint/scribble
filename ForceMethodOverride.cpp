@@ -1,13 +1,13 @@
-#include <cstdio>
+ï»¿#include <cstdio>
 #include <algorithm>
 
 
-/// vtable ‚Ìæ“¾/İ’è
-/// ‚½‚Ô‚ñ‚±‚ê‚Í C++ “I‚Éˆá–@‚¾‚Æv‚¢‚Ü‚·‚ªA­‚È‚­‚Æ‚à VisualC++ ‚Å‚Í‹@”\‚µ‚Ü‚·B
+/// vtable ã®å–å¾—/è¨­å®š
+/// ãŸã¶ã‚“ã“ã‚Œã¯ C++ çš„ã«é•æ³•ã ã¨æ€ã„ã¾ã™ãŒã€å°‘ãªãã¨ã‚‚ VisualC++ ã§ã¯æ©Ÿèƒ½ã—ã¾ã™ã€‚
 template<class T> inline void** get_vtable(T _this) { return ((void***)_this)[0]; }
 template<class T> inline void   set_vtable(T _this, void **vtable) { ((void***)_this)[0] = vtable; }
 
-/// ƒƒ“ƒoŠÖ”‚Í•’Ê‚ÌƒLƒƒƒXƒg‚ªŒø‚©‚È‚¢‚Ì‚ÅAunion ‚Å‘ã—p
+/// ãƒ¡ãƒ³ãƒé–¢æ•°ã¯æ™®é€šã®ã‚­ãƒ£ã‚¹ãƒˆãŒåŠ¹ã‹ãªã„ã®ã§ã€union ã§ä»£ç”¨
 template<class D, class S> inline D force_cast(S v) { union {S s; D d;} u={v}; return u.d; }
 
 class IHoge
@@ -45,7 +45,7 @@ private:
 int main()
 {
     Hoge h0(0), h1(1), h2(2);
-    IHoge *i; // h0.Test(); ‚¾‚Æ vtable ‰î‚³‚È‚¢ƒR[ƒh‚É‚È‚Á‚ÄƒI[ƒo[ƒ‰ƒCƒh‚³‚ê‚È‚¢‚Ì‚ÅA‚±‚Ìƒ|ƒCƒ“ƒ^Œo—R‚ÅŒÄ‚Ô•K—v‚ª‚ ‚é
+    IHoge *i; // h0.Test(); ã ã¨ vtable ä»‹ã•ãªã„ã‚³ãƒ¼ãƒ‰ã«ãªã£ã¦ã‚ªãƒ¼ãƒãƒ¼ãƒ©ã‚¤ãƒ‰ã•ã‚Œãªã„ã®ã§ã€ã“ã®ãƒã‚¤ãƒ³ã‚¿çµŒç”±ã§å‘¼ã¶å¿…è¦ãŒã‚ã‚‹
     i=&h0; i->Test();
     i=&h1; i->Test();
     i=&h2; i->Test();
