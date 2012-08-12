@@ -1,8 +1,8 @@
-// GameEngineGems2 ‚ÅĞ‰î‚³‚ê‚Ä‚¢‚½Aclass ‚Ìƒƒ“ƒo•Ï”‚É“ˆê“I‚ÉƒAƒNƒZƒX‚·‚éè’i‚ğ—pˆÓ‚µ‚Ä
-// serializer ‚â tool ‚Æ‚Ì˜A“®‚ÌÀ‘•‚È‚Ç‚ğ•Ö—˜‚É‚·‚éA‚Æ‚¢‚¤ƒAƒCƒfƒA‚ÌŠÈ’P‚ÈÀ‘•—áB
-// GEG2 ‚Ìƒ\[ƒX‚Í https://github.com/jwatte/C---Introspection-and-Properties
+ï»¿// GameEngineGems2 ã§ç´¹ä»‹ã•ã‚Œã¦ã„ãŸã€class ã®ãƒ¡ãƒ³ãƒå¤‰æ•°ã«çµ±ä¸€çš„ã«ã‚¢ã‚¯ã‚»ã‚¹ã™ã‚‹æ‰‹æ®µã‚’ç”¨æ„ã—ã¦
+// serializer ã‚„ tool ã¨ã®é€£å‹•ã®å®Ÿè£…ãªã©ã‚’ä¾¿åˆ©ã«ã™ã‚‹ã€ã¨ã„ã†ã‚¢ã‚¤ãƒ‡ã‚¢ã®ç°¡å˜ãªå®Ÿè£…ä¾‹ã€‚
+// GEG2 ã®ã‚½ãƒ¼ã‚¹ã¯ https://github.com/jwatte/C---Introspection-and-Properties
 // 
-// «‚Ì INTROSPECTION() ‚Ìƒ}ƒNƒ‚ªƒAƒNƒZƒXè’i‚ğÀ‘• (MEMBER() ‚ÌŒã‚ë‚É "," ‚ğ‚Â‚¯‚È‚¢ƒgƒŠƒbƒN)
+// â†“ã® INTROSPECTION() ã®ãƒã‚¯ãƒ­ãŒã‚¢ã‚¯ã‚»ã‚¹æ‰‹æ®µã‚’å®Ÿè£… (MEMBER() ã®å¾Œã‚ã« "," ã‚’ã¤ã‘ãªã„ãƒˆãƒªãƒƒã‚¯)
 // struct TestData
 // {
 //     int hoge;
@@ -17,7 +17,7 @@
 //     )
 // };
 // 
-// «‚Ì‚æ‚¤‚É‚µ‚Äƒƒ“ƒo•Ï”‚ğ„‰ñ‚Å‚«‚é 
+// â†“ã®ã‚ˆã†ã«ã—ã¦ãƒ¡ãƒ³ãƒå¤‰æ•°ã‚’å·¡å›ã§ãã‚‹ 
 // int main()
 // {
 //     TestData t = {0, 1.0f, "test"};
@@ -29,7 +29,7 @@
 //     }
 // }
 // 
-// o—ÍŒ‹‰ÊF
+// å‡ºåŠ›çµæœï¼š
 // hoge: 0
 // hage: 1.000000
 // hige: "test"
@@ -57,7 +57,7 @@ struct IMemberInfo
     virtual ~IMemberInfo() {}
     virtual const char* GetName() const=0;
     virtual void PrintValue(const void *obj) const=0;
-    // serializer ‚È‚Ç‚ğÀ‘•‚·‚éÛ‚Í GetValue(), SetValue(), GetSize() ‚È‚Ç‚à‚±‚±‚É’Ç‰Á
+    // serializer ãªã©ã‚’å®Ÿè£…ã™ã‚‹éš›ã¯ GetValue(), SetValue(), GetSize() ãªã©ã‚‚ã“ã“ã«è¿½åŠ 
 };
 
 struct MemberInfoCollection

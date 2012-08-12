@@ -1,4 +1,4 @@
-#include <windows.h>
+ï»¿#include <windows.h>
 #include <imagehlp.h>
 #include <string>
 
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
         int *nullpo = NULL;
         *nullpo = 0;
     }
-    __except( FilterFunction(GetExceptionInformation()) ) // ‚±‚±‚ÅÀs‚µ‚È‚¢‚ÆˆÓ}‚µ‚½ callstack ‚Í“¾‚ç‚ê‚È‚¢
+    __except( FilterFunction(GetExceptionInformation()) ) // ã“ã“ã§å®Ÿè¡Œã—ãªã„ã¨æ„å›³ã—ãŸ callstack ã¯å¾—ã‚‰ã‚Œãªã„
     {
     }
 
