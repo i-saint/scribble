@@ -7,35 +7,35 @@ typedef __m128  simdvec4;
 
 struct soavec24
 {
-    simdvec sv[2];
+    simdvec4 sv[2];
 
     soavec24() { sv[0]=sv[1]=_mm_set1_ps(0.0f); }
     soavec24(const simdvec4 *_v) { sv[0]=_sv[0]; sv[1]=_sv[1]; sv[2]=_sv[2]; }
-    soavec24(const simdvec4 &_x, const simdvec &_y) { sv[0]=_x; sv[1]=_y; }
-    simdvec& operator[](int i) { return sv[i]; }
-    const simdvec& operator[](int i) const { return sv[i]; }
+    soavec24(const simdvec4 &_x, const simdvec4 &_y) { sv[0]=_x; sv[1]=_y; }
+    simdvec4& operator[](int i) { return sv[i]; }
+    const simdvec4& operator[](int i) const { return sv[i]; }
 };
 
 struct soavec34
 {
-    simdvec sv[3];
+    simdvec4 sv[3];
 
     soavec34() { sv[0]=sv[1]=sv[2]=_mm_set1_ps(0.0f); }
     soavec34(const simdvec4 *_v) { sv[0]=_sv[0]; sv[1]=_sv[1]; sv[2]=_sv[2]; }
-    soavec34(const simdvec4 &_x, const simdvec &_y, const simdvec &_z) { sv[0]=_x; sv[1]=_y; sv[2]=_z; }
-    simdvec& operator[](int i) { return sv[i]; }
-    const simdvec& operator[](int i) const { return sv[i]; }
+    soavec34(const simdvec4 &_x, const simdvec4 &_y, const simdvec4 &_z) { sv[0]=_x; sv[1]=_y; sv[2]=_z; }
+    simdvec4& operator[](int i) { return sv[i]; }
+    const simdvec4& operator[](int i) const { return sv[i]; }
 };
 
 struct soavec44
 {
-    simdvec sv[4];
+    simdvec4 sv[4];
 
     soavec44() { sv[0]=sv[1]=sv[2]=sv[3]=_mm_set1_ps(0.0f); }
     soavec44(const simdvec4 *_v) { sv[0]=_sv[0]; sv[1]=_sv[1]; sv[2]=_sv[2]; sv[3]=_sv[3]; }
-    soavec44(const simdvec4 &_x, const simdvec &_y, const simdvec &_z, const simdvec &_w) { sv[0]=_x; sv[1]=_y; sv[2]=_z; sv[3]=_w; }
-    simdvec& operator[](int i) { return sv[i]; }
-    const simdvec& operator[](int i) const { return sv[i]; }
+    soavec44(const simdvec4 &_x, const simdvec4 &_y, const simdvec4 &_z, const simdvec4 &_w) { sv[0]=_x; sv[1]=_y; sv[2]=_z; sv[3]=_w; }
+    simdvec4& operator[](int i) { return sv[i]; }
+    const simdvec4& operator[](int i) const { return sv[i]; }
 };
 
 
