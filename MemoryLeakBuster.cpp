@@ -1,6 +1,6 @@
-// 正しい方を選ぶ (残念ながらここは自動化できないっぽい…)
-#define _SUBSYSTEM_WINDOWS_
-//#define _SUBSYSTEM_CONSOLE_
+#pragma init_seg(lib) // global オブジェクトの初期化の優先順位上げる
+#pragma warning(disable: 4073) // init_seg(lib) は普通は使っちゃダメ的な warning。正当な理由があるので黙らせる
+#pragma warning(disable: 4996) // _s じゃない CRT 関数使うとでるやつ
 
 
 #include <windows.h>
@@ -16,12 +16,6 @@ namespace stl = std;
 #endif // max
 
 #pragma comment(lib, "imagehlp.lib")
-#if defined(_SUBSYSTEM_WINDOWS_)
-#   pragma comment(linker, "/ENTRY:MemoryLeakBusterWinMain")
-#elif defined(_SUBSYSTEM_CONSOLE_)
-#   pragma comment(linker, "/ENTRY:MemoryLeakBusterMain")
-#endif
-
 
 template<size_t N>
 inline int istsprintf(char (&buf)[N], const char *format, ...)
@@ -172,6 +166,7 @@ private:
 };
 
 
+
 template<typename T>
 class malloc_allocator {
 public : 
@@ -200,8 +195,8 @@ public :
     pointer address(reference r) { return &r; }
     const_pointer address(const_reference r) { return &r; }
 
-    pointer allocate(size_type cnt, const void *p=NULL) {  return (pointer)malloc(cnt * sizeof(T)); }
-    void deallocate(pointer p, size_type) {  free(p); }
+    pointer allocate(size_type cnt, const void *p=NULL) {  return (pointer)::malloc(cnt * sizeof(T)); }
+    void deallocate(pointer p, size_type) {  ::free(p); }
 
     size_type max_size() const { return std::numeric_limits<size_type>::max() / sizeof(T); }
 
@@ -226,6 +221,13 @@ __declspec(align(16)) class MemoryLeakBuster
 public:
     MemoryLeakBuster() : m_enabled(true)
     {
+        InitializeDebugSymbol();
+    }
+
+    ~MemoryLeakBuster()
+    {
+        printLeakInfo();
+        FinalizeDebugSymbol();
     }
 
     void enableLeakCheck(bool v) { m_enabled=v; }
@@ -265,75 +267,32 @@ private:
     Mutex m_mutex;
     bool m_enabled;
 };
+MemoryLeakBuster g_memory_leak_checker;
 
 
-MemoryLeakBuster *g_memory_leak_checker = NULL;
 
-void MemoryLeakBusterInitialize()
+void* operator new(size_t size)
 {
-    g_memory_leak_checker = new MemoryLeakBuster();
+    void *p = _aligned_malloc(size, 16);
+    g_memory_leak_checker.addAllocationInfo(p);
+    return p;
 }
-
-void MemoryLeakBusterFinalize()
-{
-    delete g_memory_leak_checker;
-    g_memory_leak_checker = NULL;
-}
-
-void MemoryLeakBusterPrint()
-{
-    g_memory_leak_checker->printLeakInfo();
-}
-
-void MemoryLeakBusterEnable( bool v )
-{
-    g_memory_leak_checker->enableLeakCheck(v);
-}
-
 
 void* operator new[](size_t size)
 {
-    char *p = (char*)_aligned_malloc(size+sizeof(AllocInfo), 16);
-    if(g_memory_leak_checker) {
-        g_memory_leak_checker->addAllocationInfo(p);
-    }
-    return p+sizeof(AllocInfo);
+    void *p = _aligned_malloc(size, 16);
+    g_memory_leak_checker.addAllocationInfo(p);
+    return p;
 }
 
-void operator delete[](void* _p)
+void operator delete(void* p)
 {
-    char *p = (char*)_p-sizeof(AllocInfo);
-    if(g_memory_leak_checker) {
-        g_memory_leak_checker->eraseAllocationInfo(p);
-    }
+    g_memory_leak_checker.eraseAllocationInfo(p);
     _aligned_free(p);
 }
 
-
-#if defined(_SUBSYSTEM_WINDOWS_)
-
-int WINAPI MemoryLeakBusterWinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR cmd, int show)
+void operator delete[](void* p)
 {
-    InitializeDebugSymbol();
-    MemoryLeakBusterInitialize();
-    int r = WinMain(hInstance, prev, cmd, show);
-    MemoryLeakBusterPrint();
-    MemoryLeakBusterFinalize();
-    FinalizeDebugSymbol();
-    return r;
+    g_memory_leak_checker.eraseAllocationInfo(p);
+    _aligned_free(p);
 }
-
-#elif defined(_SUBSYSTEM_CONSOLE_)
-
-int MemoryLeakBusterMain(int argc, char *argv[])
-{
-    InitializeDebugSymbol();
-    MemoryLeakBusterInitialize();
-    int r = main(argc, argv);
-    MemoryLeakBusterPrint();
-    MemoryLeakBusterFinalize();
-    FinalizeDebugSymbol();
-    return r;
-}
-
-#endif
