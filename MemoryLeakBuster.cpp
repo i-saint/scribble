@@ -1,7 +1,11 @@
-#pragma init_seg(lib) // global オブジェクトの初期化の優先順位上げる
+
+const size_t MinimumAlignment = 16;
+const size_t MaxCallstackDepth = 32;
+
+
 #pragma warning(disable: 4073) // init_seg(lib) は普通は使っちゃダメ的な warning。正当な理由があるので黙らせる
 #pragma warning(disable: 4996) // _s じゃない CRT 関数使うとでるやつ
-
+#pragma init_seg(lib) // global オブジェクトの初期化の優先順位上げる
 
 #include <windows.h>
 #include <imagehlp.h>
@@ -16,6 +20,8 @@ namespace stl = std;
 #endif // max
 
 #pragma comment(lib, "imagehlp.lib")
+
+
 
 template<size_t N>
 inline int istsprintf(char (&buf)[N], const char *format, ...)
@@ -166,7 +172,8 @@ private:
 };
 
 
-
+// アロケーション情報を格納するコンテナのアロケータが new / delete を使うと永久再起するので、
+// malloc()/free() を呼ぶだけのアロケータを用意
 template<typename T>
 class malloc_allocator {
 public : 
@@ -210,13 +217,15 @@ template<class T, typename Alloc> inline bool operator==(const malloc_allocator<
 template<class T, typename Alloc> inline bool operator!=(const malloc_allocator<T>& l, const malloc_allocator<T>& r) { return (!(l == r)); }
 
 
+// アロケート時の callstack を保持
 struct AllocInfo
 {
-    void *stack[32];
+    void *stack[MaxCallstackDepth];
     int depth;
 };
 
-__declspec(align(16)) class MemoryLeakBuster
+
+class MemoryLeakBuster
 {
 public:
     MemoryLeakBuster() : m_enabled(true)
@@ -267,32 +276,38 @@ private:
     Mutex m_mutex;
     bool m_enabled;
 };
-MemoryLeakBuster g_memory_leak_checker;
+
+// global 変数にすることで main 開始前に初期化、main 抜けた後に終了処理をさせる。
+// entry point を乗っ取ってもっとスマートにやりたかったが、
+// WinMainCRTStartup() は main を呼んだ後 exit() してしまい、main の後にリーク箇所を出力することができないため断念
+MemoryLeakBuster g_memory_leak_buster;
 
 
+
+// 以下 operator new & delete overload
 
 void* operator new(size_t size)
 {
-    void *p = _aligned_malloc(size, 16);
-    g_memory_leak_checker.addAllocationInfo(p);
+    void *p = _aligned_malloc(size, MinimumAlignment);
+    g_memory_leak_buster.addAllocationInfo(p);
     return p;
 }
 
 void* operator new[](size_t size)
 {
-    void *p = _aligned_malloc(size, 16);
-    g_memory_leak_checker.addAllocationInfo(p);
+    void *p = _aligned_malloc(size, MinimumAlignment);
+    g_memory_leak_buster.addAllocationInfo(p);
     return p;
 }
 
 void operator delete(void* p)
 {
-    g_memory_leak_checker.eraseAllocationInfo(p);
+    g_memory_leak_buster.eraseAllocationInfo(p);
     _aligned_free(p);
 }
 
 void operator delete[](void* p)
 {
-    g_memory_leak_checker.eraseAllocationInfo(p);
+    g_memory_leak_buster.eraseAllocationInfo(p);
     _aligned_free(p);
 }
