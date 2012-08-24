@@ -1,11 +1,23 @@
+ï»¿// ãƒ¡ãƒ¢ãƒªãƒªãƒ¼ã‚¯æ¤œå‡ºå™¨ã€‚
+// ã“ã® .cpp ã‚’ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã«å«ã‚ã‚‹ã ã‘ã§æœ‰åŠ¹ã«ãªã‚Šã€ãƒ—ãƒ­ã‚°ãƒ©ãƒ çµ‚äº†æ™‚ã«ãƒªãƒ¼ã‚¯é ˜åŸŸã®ç¢ºä¿æ™‚ã®ã‚³ãƒ¼ãƒ«ã‚¹ã‚¿ãƒƒã‚¯ã‚’ãƒ‡ãƒãƒƒã‚°å‡ºåŠ›ã«è¡¨ç¤ºã—ã¾ã™ã€‚
+// 
+// oerator new / delete ã‚’ã‚ªãƒ¼ãƒãƒ¼ãƒ©ã‚¤ãƒ‰ã™ã‚‹ã“ã¨ã§å®Ÿç¾ã—ã¦ã„ã¾ã™ã€‚
+// ãã®ãŸã‚ã€malloc() ãªã©ã® global new ã‚’ä»‹ã•ãªã„ãƒ¡ãƒ¢ãƒªç¢ºä¿ã¯æ•æ‰ã§ãã¾ã›ã‚“ã—ã€
+// åˆ¥ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ« (dll) ã®ãƒ¡ãƒ¢ãƒªç¢ºä¿ã‚‚æ•æ‰ã§ãã¾ã›ã‚“ã€‚
+// 
+// 
+// ç’°å¢ƒã‚’é¸ã¶ã‘ã©ã‚ˆã‚Šå¼·ã„æ¤œå‡ºåŠ›ã‚’å‚™ãˆãŸãƒãƒ¼ã‚¸ãƒ§ãƒ³:
+// https://github.com/i-saint/scribble/blob/master/MemoryLeakBuster2.cpp
+
+
 
 const size_t MinimumAlignment = 16;
 const size_t MaxCallstackDepth = 32;
 
 
-#pragma warning(disable: 4073) // init_seg(lib) ‚Í•’Ê‚Íg‚Á‚¿‚áƒ_ƒ“I‚È warningB³“–‚È——R‚ª‚ ‚é‚Ì‚Å–Ù‚ç‚¹‚é
-#pragma warning(disable: 4996) // _s ‚¶‚á‚È‚¢ CRT ŠÖ”g‚¤‚Æ‚Å‚é‚â‚Â
-#pragma init_seg(lib) // global ƒIƒuƒWƒFƒNƒg‚Ì‰Šú‰»‚Ì—Dæ‡ˆÊã‚°‚é
+#pragma warning(disable: 4073) // init_seg(lib) ã¯æ™®é€šã¯ä½¿ã£ã¡ã‚ƒãƒ€ãƒ¡çš„ãª warningã€‚æ­£å½“ãªç†ç”±ãŒã‚ã‚‹ã®ã§é»™ã‚‰ã›ã‚‹
+#pragma warning(disable: 4996) // _s ã˜ã‚ƒãªã„ CRT é–¢æ•°ä½¿ã†ã¨ã§ã‚‹ã‚„ã¤
+#pragma init_seg(lib) // global ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®åˆæœŸåŒ–ã®å„ªå…ˆé †ä½ä¸Šã’ã‚‹
 
 #include <windows.h>
 #include <imagehlp.h>
@@ -13,7 +25,7 @@ const size_t MaxCallstackDepth = 32;
 #include <map>
 namespace stl = std;
 
-// windows.h ‚Ìˆ«‚³‘Îô
+// windows.h ã®æ‚ªã•å¯¾ç­–
 #ifdef max
 #undef  max
 #undef  min
@@ -42,7 +54,7 @@ inline int istvsprintf(char (&buf)[N], const char *format, va_list vl)
 #define istPrint(...) DebugPrint(__FILE__, __LINE__, __VA_ARGS__)
 
 static const int DPRINTF_MES_LENGTH  = 4096;
-void DebugPrintV(const char* file, int line, const char* fmt, va_list vl)
+void DebugPrintV(const char* /*file*/, int /*line*/, const char* fmt, va_list vl)
 {
     char buf[DPRINTF_MES_LENGTH];
     //istsprintf(buf, "%s:%d - ", file, line);
@@ -152,6 +164,8 @@ public:
 
 private:
     T &m_mutex;
+
+    ScopedLock& operator=(const ScopedLock&);
 };
 class Mutex
 {
@@ -172,8 +186,8 @@ private:
 };
 
 
-// ƒAƒƒP[ƒVƒ‡ƒ“î•ñ‚ğŠi”[‚·‚éƒRƒ“ƒeƒi‚ÌƒAƒƒP[ƒ^‚ª new / delete ‚ğg‚¤‚Æ‰i‹vÄ‹N‚·‚é‚Ì‚ÅA
-// malloc()/free() ‚ğŒÄ‚Ô‚¾‚¯‚ÌƒAƒƒP[ƒ^‚ğ—pˆÓ
+// ã‚¢ãƒ­ã‚±ãƒ¼ã‚·ãƒ§ãƒ³æƒ…å ±ã‚’æ ¼ç´ã™ã‚‹ã‚³ãƒ³ãƒ†ãƒŠã®ã‚¢ãƒ­ã‚±ãƒ¼ã‚¿ãŒ new / delete ã‚’ä½¿ã†ã¨æ°¸ä¹…å†èµ·ã™ã‚‹ã®ã§ã€
+// malloc()/free() ã‚’å‘¼ã¶ã ã‘ã®ã‚¢ãƒ­ã‚±ãƒ¼ã‚¿ã‚’ç”¨æ„
 template<typename T>
 class malloc_allocator {
 public : 
@@ -202,13 +216,13 @@ public :
     pointer address(reference r) { return &r; }
     const_pointer address(const_reference r) { return &r; }
 
-    pointer allocate(size_type cnt, const void *p=NULL) {  return (pointer)::malloc(cnt * sizeof(T)); }
-    void deallocate(pointer p, size_type) {  ::free(p); }
+    pointer allocate(size_type cnt, const void *p=NULL) { p; return (pointer)::malloc(cnt * sizeof(T)); }
+    void deallocate(pointer p, size_type) { ::free(p); }
 
     size_type max_size() const { return std::numeric_limits<size_type>::max() / sizeof(T); }
 
     void construct(pointer p, const T& t) { new(p) T(t); }
-    void destroy(pointer p) { p->~T(); }
+    void destroy(pointer p) { p; p->~T(); }
 
     bool operator==(malloc_allocator const&) { return true; }
     bool operator!=(malloc_allocator const& a) { return !operator==(a); }
@@ -217,7 +231,7 @@ template<class T, typename Alloc> inline bool operator==(const malloc_allocator<
 template<class T, typename Alloc> inline bool operator!=(const malloc_allocator<T>& l, const malloc_allocator<T>& r) { return (!(l == r)); }
 
 
-// ƒAƒƒP[ƒg‚Ì callstack ‚ğ•Û
+// ã‚¢ãƒ­ã‚±ãƒ¼ãƒˆæ™‚ã® callstack ã‚’ä¿æŒ
 struct AllocInfo
 {
     void *stack[MaxCallstackDepth];
@@ -277,14 +291,14 @@ private:
     bool m_enabled;
 };
 
-// global •Ï”‚É‚·‚é‚±‚Æ‚Å main ŠJn‘O‚É‰Šú‰»Amain ”²‚¯‚½Œã‚ÉI—¹ˆ—‚ğ‚³‚¹‚éB
-// entry point ‚ğæ‚Áæ‚Á‚Ä‚à‚Á‚ÆƒXƒ}[ƒg‚É‚â‚è‚½‚©‚Á‚½‚ªA
-// WinMainCRTStartup() ‚Í main ‚ğŒÄ‚ñ‚¾Œã exit() ‚µ‚Ä‚µ‚Ü‚¢Amain ‚ÌŒã‚ÉƒŠ[ƒN‰ÓŠ‚ğo—Í‚·‚é‚±‚Æ‚ª‚Å‚«‚È‚¢‚½‚ß’f”O
+// global å¤‰æ•°ã«ã™ã‚‹ã“ã¨ã§ main é–‹å§‹å‰ã«åˆæœŸåŒ–ã€main æŠœã‘ãŸå¾Œã«çµ‚äº†å‡¦ç†ã‚’ã•ã›ã‚‹ã€‚
+// entry point ã‚’ä¹—ã£å–ã£ã¦ã‚‚ã£ã¨ã‚¹ãƒãƒ¼ãƒˆã«ã‚„ã‚ŠãŸã‹ã£ãŸãŒã€
+// WinMainCRTStartup() ã¯ main ã‚’å‘¼ã‚“ã å¾Œ exit() ã—ã¦ã—ã¾ã„ã€main ã®å¾Œã«ãƒªãƒ¼ã‚¯ç®‡æ‰€ã‚’å‡ºåŠ›ã™ã‚‹ã“ã¨ãŒã§ããªã„ãŸã‚æ–­å¿µ
 MemoryLeakBuster g_memory_leak_buster;
 
 
 
-// ˆÈ‰º operator new & delete overload
+// ä»¥ä¸‹ operator new & delete overload
 
 void* operator new(size_t size)
 {
