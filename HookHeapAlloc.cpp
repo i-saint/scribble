@@ -1,4 +1,8 @@
-﻿#include <windows.h>
+﻿// PE ファイルをパースして import 関数テーブルを巡回しつつ、hook をしかけたりするコード。
+// 以下の記事が大変参考になりました。
+// http://msdn.microsoft.com/en-us/library/ms809762.aspx
+
+#include <windows.h>
 
 // write protect がかかったメモリ領域を強引に書き換える
 template<class T>
