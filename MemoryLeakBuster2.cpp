@@ -2,10 +2,11 @@
 // この .cpp をプロジェクトに含めるだけで有効になり、プログラム終了時にリーク領域の確保時のコールスタックをデバッグ出力に表示します。
 // 
 // CRT が呼ぶ HeapAlloc/Free を hook することで、new/delete も malloc 一族も全て捕捉します。
-// CRT を介さないメモリ確保や、static link された CRT のメモリ確保は捕捉できません。
+// dll 版の CRT をリンクしているものであれば、外部 dll であってもリークを検出できます。
+// CRT を介さないメモリ確保 (VirtualAlloc() など) や、CRT を static link した外部 dll のリークは検出できません。
 // 
-// 現状 CRT の設定が /MD か /MDd の時しか対応していません。
-// また、CRT は msvcr100.dll か msvcr100d.dll (VisualStudio2010) にしか対応していませんが、調べて g_vcrt_info に書き足せば他もたぶん動きます。
+// 現状 ランタイムラブラリ の設定が /MD か /MDd の時しか対応していません。
+// また、g_vcrt_info にリストされている CRT の dll しか対応していませんが、未対応のものも調べて書き足せばたぶん動きます。
 // (調べ方:
 //  適当にデバッグを開始して逆アセンブルモードで malloc() の中を追い、HeapAlloc を呼んでる箇所を見ると、
 //  __imp__HeapAlloc みたいな名前のポインタ変数を経由して関数を呼んでいるのが分かります。
@@ -15,9 +16,6 @@
 // 機能に制限があるけどより portable なバージョン:
 // https://github.com/i-saint/scribble/blob/master/MemoryLeakBuster.cpp
 
-
-// /MD or /MDd
-#ifdef _DLL
 
 #pragma warning(disable: 4073) // init_seg(lib) は普通は使っちゃダメ的な warning。正当な理由があるので黙らせる
 #pragma warning(disable: 4996) // _s じゃない CRT 関数使うとでるやつ
@@ -38,6 +36,16 @@ namespace stl = std;
 
 namespace {
 
+// 一部の CRT 関数は、確保したメモリをモジュール開放時にまとめて開放する仕様になっており、
+// リーク情報を出力する時点ではモジュールはまだ開放されていないため、リーク判定されてしまう。
+// そやつらを除外する必要がある。以下は該当関数群。 (たぶん他にもある)
+const char *g_ignore_list[] = {
+    "!unlock",
+    "!fopen",
+    "!setlocale",
+    "!gmtime32_s",
+    "!_getmainargs",
+};
 
 struct VCRT_INFO
 {
@@ -48,12 +56,16 @@ struct VCRT_INFO
 g_vcrt_info[] = {
     // import table の HeapAlloc/Free の相対アドレス
     // バージョンが変わったりするとおそらく無効になる (=クラッシュする) ので注意
+    // 同じファイル名でもバージョンが複数ある可能性もあります
 #ifdef _WIN64
-    { "msvcr100.dll",  0x91418, 0x91420 },
+    { "msvcr100.dll",  0x91418,  0x91420 },
     { "msvcr100d.dll", 0x15f458, 0x15f438 },
 #else
     { "msvcr100.dll" , 0x11f8, 0x11fc },
     { "msvcr100d.dll", 0x1210, 0x1200 },
+    { "msvcr90d.dll",  0x1170, 0x116c },
+    { "msvcr90.dll",   0x1170, 0x116c },
+    //1170
 #endif
 };
 
@@ -292,7 +304,6 @@ class MemoryLeakBuster
 public:
     MemoryLeakBuster()
         : m_leakinfo(NULL)
-        , m_mi(0)
         , m_enabled(true)
     {
         InitializeDebugSymbol();
@@ -307,22 +318,19 @@ public:
         HeapFree_Orig = &HeapFree;
 
         // CRT モジュールの中の import table の HeapAlloc/Free を塗り替えて hook を仕込む
-        for(m_mi=0; m_mi<_countof(g_vcrt_info); ++m_mi) {
-            VCRT_INFO &crti = g_vcrt_info[m_mi];
+        for(size_t mi=0; mi<_countof(g_vcrt_info); ++mi) {
+            VCRT_INFO &crti = g_vcrt_info[mi];
             size_t msvcr = (size_t)::GetModuleHandleA(crti.ModuleName);
             if(msvcr==0) { continue; }
 
             {
                 void **__imp__HeapAlloc = (void**)(msvcr+crti.RVA_imp_HeapAlloc);
-                HeapAlloc_Orig = (HeapAllocT)(*__imp__HeapAlloc);
                 ForceWrite<void*>(*__imp__HeapAlloc, HeapAlloc_Hooked);
             }
             {
                 void **__imp__HeapFree = (void**)(msvcr+crti.RVA_imp_HeapFree);
-                HeapFree_Orig = (HeapFreeT)(*__imp__HeapFree);
                 ForceWrite<void*>(*__imp__HeapFree, HeapFree_Hooked);
             }
-            break;
         }
 
         m_leakinfo = new (HeapAlloc_Orig((HANDLE)_get_heap_handle(), 0, sizeof(DataTableT))) DataTableT();
@@ -332,24 +340,25 @@ public:
     {
         Mutex::ScopedLock l(m_mutex);
 
-        // hook を解除
-        if(m_mi < _countof(g_vcrt_info)) {
-            VCRT_INFO &crti = g_vcrt_info[m_mi];
-            size_t msvcr = (size_t)::GetModuleHandleA(crti.ModuleName);
-            if(msvcr!=0) {
-                {
-                    void **__imp__HeapAlloc = (void**)(msvcr+crti.RVA_imp_HeapAlloc);
-                    ForceWrite<void*>(*__imp__HeapAlloc, HeapAlloc_Orig);
-                }
-                {
-                    void **__imp__HeapFree = (void**)(msvcr+crti.RVA_imp_HeapFree);
-                    ForceWrite<void*>(*__imp__HeapFree, HeapFree_Orig);
-                }
+        printLeakInfo();
 
+        // hook を解除
+        // 解除しないとアンロード時にメモリ解放する系の dll などが g_memory_leak_buster 破棄後に
+        // eraseAllocationInfo() を呼ぶため、問題が起きる
+        for(size_t mi=0; mi<_countof(g_vcrt_info); ++mi) {
+            VCRT_INFO &crti = g_vcrt_info[mi];
+            size_t msvcr = (size_t)::GetModuleHandleA(crti.ModuleName);
+            if(msvcr==0) { continue; }
+
+            {
+                void **__imp__HeapAlloc = (void**)(msvcr+crti.RVA_imp_HeapAlloc);
+                ForceWrite<void*>(*__imp__HeapAlloc, HeapAlloc_Orig);
+            }
+            {
+                void **__imp__HeapFree = (void**)(msvcr+crti.RVA_imp_HeapFree);
+                ForceWrite<void*>(*__imp__HeapFree, HeapFree_Orig);
             }
         }
-
-        printLeakInfo();
 
         m_leakinfo->~DataTableT();
         HeapFree_Orig((HANDLE)_get_heap_handle(), 0, m_leakinfo);
@@ -382,24 +391,13 @@ public:
 
     void printLeakInfo()
     {
-        // 一部の CRT 関数は、確保したメモリをモジュール開放時にまとめて開放する仕様になっており、
-        // ここに来た時点ではモジュールはまだ開放されていないため、リーク判定されてしまう。
-        // そやつらを除外する必要がある。以下は該当関数群。 (たぶん他にもある)
-        const char *ignore_list[] = {
-            "!unlock",
-            "!fopen",
-            "!setlocale",
-            "!gmtime32_s",
-            "!_getmainargs",
-        };
-
-        Mutex::ScopedLock l(m_mutex);
+        if(m_leakinfo==NULL) { return; }
         for(DataTableT::iterator li=m_leakinfo->begin(); li!=m_leakinfo->end(); ++li) {
             stl::string text = CallstackToSymbolNames(li->second.stack, li->second.depth);
 
             bool ignore = false;
-            for(size_t ii=0; ii<_countof(ignore_list); ++ii) {
-                if(text.find(ignore_list[ii])!=stl::string::npos) {
+            for(size_t ii=0; ii<_countof(g_ignore_list); ++ii) {
+                if(text.find(g_ignore_list[ii])!=stl::string::npos) {
                     ignore = true;
                     break;
                 }
@@ -416,7 +414,6 @@ private:
     typedef stl::map<void*, AllocInfo, stl::less<void*>, OrigHeapAllocator<stl::pair<const void*, AllocInfo> > > DataTableT;
     DataTableT *m_leakinfo;
     Mutex m_mutex;
-    size_t m_mi;
     bool m_enabled;
 };
 
@@ -441,5 +438,3 @@ BOOL WINAPI HeapFree_Hooked( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem )
 }
 
 } /// namespace
-#endif // _DLL
-
