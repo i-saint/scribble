@@ -39,3 +39,6 @@ void HookHeapAlloc(HMODULE module)
         ++pImportDesc;
     }
 }
+
+// ex:
+// HookHeapAlloc(::GetModuleHandleA("msvcrt100.dll"));
