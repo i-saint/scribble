@@ -21,10 +21,13 @@
 #pragma warning(disable: 4996) // _s じゃない CRT 関数使うとでるやつ
 #pragma init_seg(lib) // global オブジェクトの初期化の優先順位上げる
 #pragma comment(lib, "imagehlp.lib")
+#pragma comment(lib, "psapi.lib")
 
 #include <windows.h>
 #include <imagehlp.h>
+#include <psapi.h>
 #include <string>
+#include <vector>
 #include <map>
 namespace stl = std;
 
@@ -36,9 +39,10 @@ namespace stl = std;
 
 namespace {
 
-// 一部の CRT 関数は、確保したメモリをモジュール開放時にまとめて開放する仕様になっており、
-// リーク情報を出力する時点ではモジュールはまだ開放されていないため、リーク判定されてしまう。
-// そやつらを除外する必要がある。以下は該当関数群。 (たぶん他にもある)
+// 以下の関数群はリーク判定しないようにする。
+// 一部の CRT 関数などは確保したメモリをモジュール開放時にまとめて開放する仕様になっており、
+// リーク情報を出力する時点ではモジュールはまだ開放されていないため、リーク判定されてしまう。そういう関数を無視できるようにしている。
+// (たぶん下記以外にもあるはず)
 const char *g_ignore_list[] = {
     "!unlock",
     "!fopen",
@@ -47,29 +51,23 @@ const char *g_ignore_list[] = {
     "!_getmainargs",
 };
 
-struct VCRT_INFO
-{
-    const char *ModuleName;
-    size_t RVA_imp_HeapAlloc;
-    size_t RVA_imp_HeapFree;
-}
-g_vcrt_info[] = {
-    // import table の HeapAlloc/Free の相対アドレス
-    // バージョンが変わったりするとおそらく無効になる (=クラッシュする) ので注意
-    // 同じファイル名でもバージョンが複数ある可能性もあります
-#ifdef _WIN64
-    { "msvcr100.dll",  0x91418,  0x91420 },
-    { "msvcr100d.dll", 0x15f458, 0x15f438 },
-#else
-    { "msvcr100.dll" , 0x11f8, 0x11fc },
-    { "msvcr100d.dll", 0x1210, 0x1200 },
-    { "msvcr90d.dll",  0x1170, 0x116c },
-    { "msvcr90.dll",   0x1170, 0x116c },
-    //1170
-#endif
+// CRT dll のリスト。
+// これらのモジュールが使用する HeapAlloc に対して hook を仕掛ける。
+// EnumProcessModules でロードされている全モジュールに仕掛けることもできるが、
+// 色々誤判定されるので絞ったほうがいいと思われる。
+const char *g_crtdllnames[] = {
+    "msvcr110.dll",
+    "msvcr110d.dll",
+    "msvcr100.dll",
+    "msvcr100d.dll",
+    "msvcr90.dll",
+    "msvcr90d.dll",
+    "msvcr80.dll",
+    "msvcr80d.dll",
+    "msvcrt.dll",
 };
 
-const size_t MinimumAlignment = 16;
+// 保持する callstack の最大段数
 const size_t MaxCallstackDepth = 32;
 
 
@@ -80,9 +78,11 @@ typedef BOOL (WINAPI *HeapFreeT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem );
 HeapAllocT HeapAlloc_Orig = NULL;
 HeapFreeT HeapFree_Orig = NULL;
 
-// HeapAlloc/Free の hook 版
+// 乗っ取り後の HeapAlloc/Free
 LPVOID WINAPI HeapAlloc_Hooked( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes );
 BOOL WINAPI HeapFree_Hooked( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem );
+
+
 
 
 template<size_t N>
@@ -281,6 +281,15 @@ template<class T, typename Alloc> inline bool operator==(const OrigHeapAllocator
 template<class T, typename Alloc> inline bool operator!=(const OrigHeapAllocator<T>& l, const OrigHeapAllocator<T>& r) { return (!(l == r)); }
 
 
+
+// アロケート時の callstack を保持
+struct AllocInfo
+{
+    void *stack[MaxCallstackDepth];
+    int depth;
+};
+
+
 // write protect がかかったメモリ領域を強引に書き換える
 template<class T> inline void ForceWrite(T &dst, const T &src)
 {
@@ -291,13 +300,78 @@ template<class T> inline void ForceWrite(T &dst, const T &src)
 }
 
 
-// アロケート時の callstack を保持
-struct AllocInfo
+// dllname: 大文字小文字区別しません
+// F: functor。引数は (const char *funcname, void *&imp_func)
+template<class F>
+bool EachImportFunction(HMODULE module, const char *dllname, const F &f)
 {
-    void *stack[MaxCallstackDepth];
-    int depth;
-};
+    if(module==0) { return false; }
 
+    size_t ImageBase = (size_t)module;
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
+    if(pDosHeader->e_magic!=IMAGE_DOS_SIGNATURE) { return false; }
+    PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)(ImageBase + pDosHeader->e_lfanew);
+
+    size_t RVAImports = pNTHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+    if(RVAImports==0) { return false; }
+
+    IMAGE_IMPORT_DESCRIPTOR *pImportDesc = (IMAGE_IMPORT_DESCRIPTOR*)(ImageBase + RVAImports);
+    while(pImportDesc->Name != 0) {
+        if(stricmp((const char*)(ImageBase+pImportDesc->Name), dllname)==0) {
+            IMAGE_IMPORT_BY_NAME **func_names = (IMAGE_IMPORT_BY_NAME**)(ImageBase+pImportDesc->Characteristics);
+            void **import_table = (void**)(ImageBase+pImportDesc->FirstThunk);
+            for(size_t i=0; ; ++i) {
+                if((size_t)func_names[i] == 0) { break;}
+                const char *funcname = (const char*)(ImageBase+(size_t)func_names[i]->Name);
+                f(funcname, import_table[i]);
+            }
+        }
+        ++pImportDesc;
+    }
+    return true;
+}
+
+template<class F>
+void EachImportFunctionInEveryModule(const char *dllname, const F &f)
+{
+    stl::vector<HMODULE> modules;
+    DWORD num_modules;
+    ::EnumProcessModules(::GetCurrentProcess(), NULL, 0, &num_modules);
+    modules.resize(num_modules/sizeof(HMODULE));
+    ::EnumProcessModules(::GetCurrentProcess(), &modules[0], num_modules, &num_modules);
+    for(size_t i=0; i<modules.size(); ++i) {
+        EachImportFunction<F>(modules[i], dllname, f);
+    }
+}
+
+
+void HookHeapAlloc()
+{
+    for(size_t i=0; i<_countof(g_crtdllnames); ++i) {
+        EachImportFunction(::GetModuleHandleA(g_crtdllnames[i]), "kernel32.dll", [](const char *funcname, void *&imp_func){
+            if(strcmp(funcname, "HeapAlloc")==0) {
+                ForceWrite<void*>(imp_func, HeapAlloc_Hooked);
+            }
+            else if(strcmp(funcname, "HeapFree")==0) {
+                ForceWrite<void*>(imp_func, HeapFree_Hooked);
+            }
+        });
+    }
+}
+
+void UnhookHeapAlloc()
+{
+    for(size_t i=0; i<_countof(g_crtdllnames); ++i) {
+        EachImportFunction(::GetModuleHandleA(g_crtdllnames[i]), "kernel32.dll", [](const char *funcname, void *&imp_func){
+            if(strcmp(funcname, "HeapAlloc")==0) {
+                ForceWrite<void*>(imp_func, HeapAlloc_Orig);
+            }
+            else if(strcmp(funcname, "HeapFree")==0) {
+                ForceWrite<void*>(imp_func, HeapAlloc_Orig);
+            }
+        });
+    }
+}
 
 class MemoryLeakBuster
 {
@@ -318,21 +392,7 @@ public:
         HeapFree_Orig = &HeapFree;
 
         // CRT モジュールの中の import table の HeapAlloc/Free を塗り替えて hook を仕込む
-        for(size_t mi=0; mi<_countof(g_vcrt_info); ++mi) {
-            VCRT_INFO &crti = g_vcrt_info[mi];
-            size_t msvcr = (size_t)::GetModuleHandleA(crti.ModuleName);
-            if(msvcr==0) { continue; }
-
-            {
-                void **__imp__HeapAlloc = (void**)(msvcr+crti.RVA_imp_HeapAlloc);
-                ForceWrite<void*>(*__imp__HeapAlloc, HeapAlloc_Hooked);
-            }
-            {
-                void **__imp__HeapFree = (void**)(msvcr+crti.RVA_imp_HeapFree);
-                ForceWrite<void*>(*__imp__HeapFree, HeapFree_Hooked);
-            }
-        }
-
+        HookHeapAlloc();
         m_leakinfo = new (HeapAlloc_Orig((HANDLE)_get_heap_handle(), 0, sizeof(DataTableT))) DataTableT();
     }
 
@@ -345,20 +405,7 @@ public:
         // hook を解除
         // 解除しないとアンロード時にメモリ解放する系の dll などが g_memory_leak_buster 破棄後に
         // eraseAllocationInfo() を呼ぶため、問題が起きる
-        for(size_t mi=0; mi<_countof(g_vcrt_info); ++mi) {
-            VCRT_INFO &crti = g_vcrt_info[mi];
-            size_t msvcr = (size_t)::GetModuleHandleA(crti.ModuleName);
-            if(msvcr==0) { continue; }
-
-            {
-                void **__imp__HeapAlloc = (void**)(msvcr+crti.RVA_imp_HeapAlloc);
-                ForceWrite<void*>(*__imp__HeapAlloc, HeapAlloc_Orig);
-            }
-            {
-                void **__imp__HeapFree = (void**)(msvcr+crti.RVA_imp_HeapFree);
-                ForceWrite<void*>(*__imp__HeapFree, HeapFree_Orig);
-            }
-        }
+        UnhookHeapAlloc();
 
         m_leakinfo->~DataTableT();
         HeapFree_Orig((HANDLE)_get_heap_handle(), 0, m_leakinfo);
