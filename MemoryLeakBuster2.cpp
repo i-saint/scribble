@@ -1,20 +1,8 @@
 ﻿// メモリリーク検出器。
 // この .cpp をプロジェクトに含めるだけで有効になり、プログラム終了時にリーク領域の確保時のコールスタックをデバッグ出力に表示します。
 // 
-// CRT が呼ぶ HeapAlloc/Free を hook することで、new/delete も malloc 一族も全て捕捉します。
-// dll 版の CRT をリンクしているものであれば、外部 dll であってもリークを検出できます。
-// CRT を介さないメモリ確保 (VirtualAlloc() など) や、CRT を static link した外部 dll のリークは検出できません。
-// 
-// 現状 ランタイムラブラリ の設定が /MD か /MDd の時しか対応していません。
-// また、g_vcrt_info にリストされている CRT の dll しか対応していませんが、未対応のものも調べて書き足せばたぶん動きます。
-// (調べ方:
-//  適当にデバッグを開始して逆アセンブルモードで malloc() の中を追い、HeapAlloc を呼んでる箇所を見ると、
-//  __imp__HeapAlloc みたいな名前のポインタ変数を経由して関数を呼んでいるのが分かります。
-//  __imp__HeapAlloc - CRT モジュールの開始アドレス が RVA_imp_HeapAlloc になります)
-// 
-// 
-// 機能に制限があるけどより portable なバージョン:
-// https://github.com/i-saint/scribble/blob/master/MemoryLeakBuster.cpp
+// CRT が呼ぶ HeapAlloc/Free を hook することで、new/delete も malloc 一族も、外部 dll のリークも捕捉できます。
+// CRT を static link したモジュールの場合追加の手順が必要で、下の g_crtdllnames に対象モジュールを追加する必要があります。
 
 
 #pragma warning(disable: 4073) // init_seg(lib) は普通は使っちゃダメ的な warning。正当な理由があるので黙らせる
@@ -39,22 +27,10 @@ namespace stl = std;
 
 namespace {
 
-// 以下の関数群はリーク判定しないようにする。
-// 一部の CRT 関数などは確保したメモリをモジュール開放時にまとめて開放する仕様になっており、
-// リーク情報を出力する時点ではモジュールはまだ開放されていないため、リーク判定されてしまう。そういう関数を無視できるようにしている。
-// (たぶん下記以外にもあるはず)
-const char *g_ignore_list[] = {
-    "!unlock",
-    "!fopen",
-    "!setlocale",
-    "!gmtime32_s",
-    "!_getmainargs",
-};
-
-// CRT dll のリスト。
-// これらのモジュールが使用する HeapAlloc に対して hook を仕掛ける。
+// リークチェッカを仕掛ける対象となるモジュール名のリスト。(dll or exe)
 // EnumProcessModules でロードされている全モジュールに仕掛けることもできるが、
 // 色々誤判定されるので絞ったほうがいいと思われる。
+// /MT や /MTd でビルドされたモジュールのリークチェックをしたい場合、このリストに対象モジュールを書けばいけるはず。
 const char *g_crtdllnames[] = {
     "msvcr110.dll",
     "msvcr110d.dll",
@@ -65,6 +41,18 @@ const char *g_crtdllnames[] = {
     "msvcr80.dll",
     "msvcr80d.dll",
     "msvcrt.dll",
+};
+
+// 以下の関数群はリーク判定しないようにする。
+// 一部の CRT 関数などは確保したメモリをモジュール開放時にまとめて開放する仕様になっており、
+// リーク情報を出力する時点ではモジュールはまだ開放されていないため、リーク判定されてしまう。そういう関数を無視できるようにしている。
+// (たぶん下記以外にもあるはず)
+const char *g_ignore_list[] = {
+    "!unlock",
+    "!fopen",
+    "!setlocale",
+    "!gmtime32_s",
+    "!_getmainargs",
 };
 
 // 保持する callstack の最大段数
