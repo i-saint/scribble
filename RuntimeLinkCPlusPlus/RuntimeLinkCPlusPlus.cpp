@@ -6,6 +6,9 @@
 #include <imagehlp.h>
 #include <cstdio>
 #include <vector>
+#include <string>
+#include <map>
+#include "Interface.h"
 #pragma comment(lib, "imagehlp.lib")
 #pragma warning(disable: 4996) // _s じゃない CRT 関数使うとでるやつ
 
@@ -79,143 +82,141 @@ bool MapFile(const char *path, std::vector<char> &data)
     return false;
 }
 
-
-char * SzStorageClass1[] = {
-    "NULL", "AUTOMATIC", "EXTERNAL", "STATIC", "REGISTER", "EXTERNAL_DEF", "LABEL",
-    "UNDEFINED_LABEL", "MEMBER_OF_STRUCT", "ARGUMENT", "STRUCT_TAG",
-    "MEMBER_OF_UNION", "UNION_TAG", "TYPE_DEFINITION", "UNDEFINED_STATIC",
-    "ENUM_TAG", "MEMBER_OF_ENUM", "REGISTER_PARAM", "BIT_FIELD"
-};
-char * SzStorageClass2[] = {
-    "BLOCK","FUNCTION","END_OF_STRUCT","FILE","SECTION","WEAK_EXTERNAL"
-};
-PSTR GetSZStorageClass(BYTE storageClass)
-{
-    if ( storageClass <= IMAGE_SYM_CLASS_BIT_FIELD )
-        return SzStorageClass1[storageClass];
-    else if ( (storageClass >= IMAGE_SYM_CLASS_BLOCK)
-        && (storageClass <= IMAGE_SYM_CLASS_WEAK_EXTERNAL) )
-        return SzStorageClass2[storageClass-IMAGE_SYM_CLASS_BLOCK];
-    else
-        return "???";
-}
-
-void GetSectionName(WORD section, PSTR buffer, unsigned cbBuffer)
-{
-    char tempbuffer[10];
-    switch ( (SHORT)section )
-    {
-    case IMAGE_SYM_UNDEFINED:   strcpy(tempbuffer, "UNDEF"); break;
-    case IMAGE_SYM_ABSOLUTE:    strcpy(tempbuffer, "ABS  "); break;
-    case IMAGE_SYM_DEBUG:       strcpy(tempbuffer, "DEBUG"); break;
-    default:                    sprintf(tempbuffer, "%-5X", section);
-    }
-    strncpy(buffer, tempbuffer, cbBuffer-1);
-}
-
-bool DynamicLink(void *objdata)
-{
-    size_t ImageBase = (size_t)objdata;
-    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
-    if( pDosHeader->e_magic!=IMAGE_FILE_MACHINE_I386 || pDosHeader->e_sp!=0 ) {
-        return false;
-    }
-
-    PIMAGE_FILE_HEADER pImageHeader = (PIMAGE_FILE_HEADER)ImageBase;
-    PIMAGE_OPTIONAL_HEADER *pOptionalHeader = (PIMAGE_OPTIONAL_HEADER*)(pImageHeader+1);
-
-    PIMAGE_SYMBOL pSymbolTable = (PIMAGE_SYMBOL)((size_t)pImageHeader + pImageHeader->PointerToSymbolTable);
-    DWORD SymbolCount = pImageHeader->NumberOfSymbols;
-
-    for(size_t si=0; si<pImageHeader->NumberOfSections; ++si) {
-        PIMAGE_SECTION_HEADER pSectionHeader = (PIMAGE_SECTION_HEADER)(ImageBase + sizeof(IMAGE_FILE_HEADER) + pImageHeader->SizeOfOptionalHeader) + si;
-        DWORD NumRelocations = pSectionHeader->NumberOfRelocations;
-        PIMAGE_RELOCATION pRelocation = (PIMAGE_RELOCATION)(ImageBase + pSectionHeader->PointerToRelocations);
-        for(size_t ri=0; ri<NumRelocations; ++ri) {
-            PIMAGE_RELOCATION pReloc = pRelocation + ri;
-            PIMAGE_SYMBOL pSym = pSymbolTable + pReloc->SymbolTableIndex;
-            istPrint("");
-        }
-    }
-    {
-
-        istPrint(
-            "Symbol Table - %X entries  (* = auxillary symbol)\n", SymbolCount);
-        istPrint(
-            "Indx Name                 Value    Section    cAux  Type    Storage\n"
-            "---- -------------------- -------- ---------- ----- ------- --------\n");
-
-        char SectionName[10];
-        PSTR StringTable = (PSTR)&pSymbolTable[SymbolCount]; 
-        for( size_t i=0; i < SymbolCount; ++i ) {
-            istPrint("%04X ", i);
-            if ( pSymbolTable->N.Name.Short != 0 ) {
-                istPrint("%-20.8s", pSymbolTable->N.ShortName);
-            }
-            else {
-                istPrint("%-20s", StringTable + pSymbolTable->N.Name.Long);
-            }
-
-            istPrint(" %08X", pSymbolTable->Value);
-
-            GetSectionName(pSymbolTable->SectionNumber, SectionName, sizeof(SectionName));
-            istPrint(" sect:%s aux:%X type:%02X st:%s\n",
-                SectionName,
-                pSymbolTable->NumberOfAuxSymbols,
-                pSymbolTable->Type,
-                GetSZStorageClass(pSymbolTable->StorageClass) );
-
-            i += pSymbolTable->NumberOfAuxSymbols;
-            pSymbolTable += pSymbolTable->NumberOfAuxSymbols;
-            pSymbolTable++;
-        }
-    }
-    return true;
-}
-
-
-
 void MakeExecutable(void *p, size_t size)
 {
     DWORD old_flag;
     VirtualProtect(p, size, PAGE_EXECUTE_READWRITE, &old_flag);
 }
 
-// f: functor [](const char *symbol_name, const void *data)
-template<class F>
-void EachSymbol(void *objdata, const F &f)
+
+class ObjLoader
 {
-    size_t ImageBase = (size_t)objdata;
-    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
-    if( pDosHeader->e_magic!=IMAGE_FILE_MACHINE_I386 || pDosHeader->e_sp!=0 ) {
-        return;
+public:
+    ObjLoader() {}
+    ObjLoader(const char *path) { load(path); }
+
+    void clear()
+    {
+        m_data.clear();
+        m_symbols.clear();
     }
 
-    PIMAGE_FILE_HEADER pImageHeader = (PIMAGE_FILE_HEADER)ImageBase;
-    PIMAGE_OPTIONAL_HEADER *pOptionalHeader = (PIMAGE_OPTIONAL_HEADER*)(pImageHeader+1);
-
-    PIMAGE_SYMBOL pSymbolTable = (PIMAGE_SYMBOL)((size_t)pImageHeader + pImageHeader->PointerToSymbolTable);
-    DWORD SymbolCount = pImageHeader->NumberOfSymbols;
-
-    PIMAGE_SECTION_HEADER pSectionHeader = (PIMAGE_SECTION_HEADER)(ImageBase + sizeof(IMAGE_FILE_HEADER) + pImageHeader->SizeOfOptionalHeader);
-    DWORD SectionCount = pImageHeader->NumberOfSections;
-
-    PSTR StringTable = (PSTR)&pSymbolTable[SymbolCount]; 
+    bool load(const char *path)
     {
-        for( size_t i=0; i < SymbolCount; ++i ) {
+        clear();
+        if(!MapFile(path, m_data)) {
+            return false;
+        }
 
+        size_t ImageBase = (size_t)(&m_data[0]);
+        PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
+        if( pDosHeader->e_magic!=IMAGE_FILE_MACHINE_I386 || pDosHeader->e_sp!=0 ) {
+            return false;
+        }
+
+        PIMAGE_FILE_HEADER pImageHeader = (PIMAGE_FILE_HEADER)ImageBase;
+        PIMAGE_OPTIONAL_HEADER *pOptionalHeader = (PIMAGE_OPTIONAL_HEADER*)(pImageHeader+1);
+
+        PIMAGE_SYMBOL pSymbolTable = (PIMAGE_SYMBOL)((size_t)pImageHeader + pImageHeader->PointerToSymbolTable);
+        DWORD SymbolCount = pImageHeader->NumberOfSymbols;
+
+        PIMAGE_SECTION_HEADER pSectionHeader = (PIMAGE_SECTION_HEADER)(ImageBase + sizeof(IMAGE_FILE_HEADER) + pImageHeader->SizeOfOptionalHeader);
+        DWORD SectionCount = pImageHeader->NumberOfSections;
+
+        PSTR StringTable = (PSTR)&pSymbolTable[SymbolCount];
+
+        // symbol 収集フェイズ
+        for( size_t i=0; i < SymbolCount; ++i ) {
             IMAGE_SYMBOL &sym = pSymbolTable[i];
             if(sym.N.Name.Short == 0) {
                 IMAGE_SECTION_HEADER &sect = pSectionHeader[sym.SectionNumber-1];
                 const char *name = (const char*)(StringTable + sym.N.Name.Long);
                 void *data = (void*)(ImageBase + sect.PointerToRawData);
-                MakeExecutable(data, sect.SizeOfRawData);
-                f(name, data);
+                if(sym.SectionNumber!=IMAGE_SYM_UNDEFINED) {
+                    MakeExecutable(data, sect.SizeOfRawData);
+                    m_symbols[name] = data;
+                }
             }
             i += pSymbolTable[i].NumberOfAuxSymbols;
         }
+
+        // link フェイズ
+        for( size_t i=0; i < SymbolCount; ++i ) {
+            IMAGE_SYMBOL &sym = pSymbolTable[i];
+            if(sym.N.Name.Short == 0 && sym.SectionNumber>0) {
+                IMAGE_SECTION_HEADER &sect = pSectionHeader[sym.SectionNumber-1];
+                const char *name = (const char*)(StringTable + sym.N.Name.Long);
+                size_t RawData = (size_t)(ImageBase + sect.PointerToRawData);
+
+                DWORD NumRelocations = sect.NumberOfRelocations;
+                PIMAGE_RELOCATION pRelocation = (PIMAGE_RELOCATION)(ImageBase + sect.PointerToRelocations);
+                for(size_t ri=0; ri<NumRelocations; ++ri) {
+                    PIMAGE_RELOCATION pReloc = pRelocation + ri;
+                    PIMAGE_SYMBOL pSym = pSymbolTable + pReloc->SymbolTableIndex;
+                    const char *name = (const char*)(StringTable + pSym->N.Name.Long);
+                    if(void *d = findSymbol(name)) {
+                        // jmp で飛ぶ場合は相対アドレスに変換
+                        if(*(unsigned char*)(RawData + pReloc->VirtualAddress - 1)==0xE9) {
+                            size_t addr = RawData + 5;
+                            size_t rel = (size_t)d - addr;
+                            d = (void*)rel;
+                        }
+                        *(void**)(RawData + pReloc->VirtualAddress) = d;
+                    }
+                }
+            }
+            i += pSymbolTable[i].NumberOfAuxSymbols;
+        }
+
+        return true;
     }
+
+
+    void* findInternalSymbol(const char *name)
+    {
+        SymbolTable::iterator i = m_symbols.find(name);
+        if(i == m_symbols.end()) { return NULL; }
+        return i->second;
+    }
+
+    void* findExternalSymbol(const char *name)
+    {
+        char buf[sizeof(SYMBOL_INFO)+MAX_PATH];
+        PSYMBOL_INFO sinfo = (PSYMBOL_INFO)buf;
+        sinfo->SizeOfStruct = sizeof(SYMBOL_INFO);
+        sinfo->MaxNameLen = MAX_PATH;
+        SymFromName(::GetCurrentProcess(), name, sinfo);
+        return (void*)sinfo->Address;
+    }
+
+    void* findSymbol(const char *name)
+    {
+        void *ret = findInternalSymbol(name);
+        if(!ret) { ret = findExternalSymbol(name); }
+        return ret;
+    }
+
+    // f: functor [](const std::string &symbol_name, const void *data)
+    template<class F>
+    void eachSymbol(const F &f)
+    {
+        for(SymbolTable::iterator i=m_symbols.begin(); i!=m_symbols.end(); ++i) {
+            f(i->first, i->second);
+        }
+    }
+
+private:
+    typedef std::map<std::string, void*> SymbolTable;
+    std::vector<char> m_data;
+    SymbolTable m_symbols;
+};
+
+void FuncInExe()
+{
+    istPrint("FuncInExe()\n");
 }
+
+
 
 
 typedef float (*FloatOpT)(float, float);
@@ -224,26 +225,52 @@ FloatOpT FloatSub = NULL;
 FloatOpT FloatMul = NULL;
 FloatOpT FloatDiv = NULL;
 
+typedef void (*CallExternalFuncT)();
+CallExternalFuncT CallExternalFunc = NULL;
+CallExternalFuncT CallExeFunc = NULL;
+
+typedef void (*IHogeReceiverT)(IHoge*);
+IHogeReceiverT IHogeReceiver = NULL;
+
+class Hoge : public IHoge
+{
+public:
+    virtual void DoSomething()
+    {
+        istPrint("Hoge::DoSomething()\n");
+    }
+};
+
 
 int main(int argc, _TCHAR* argv[])
 {
     InitializeDebugSymbol();
 
-    std::vector<char> obj;
-    if(!MapFile("DynamicFunc.obj", obj)) {
+    ObjLoader objloader;
+    if(!objloader.load("DynamicFunc.obj")) {
         return 1;
     }
-    EachSymbol(&obj[0], [](const char *name, const void *data){
-        if(strcmp(name, "_FloatAdd")==0)        { FloatAdd = (FloatOpT)data; }
-        else if(strcmp(name, "_FloatSub")==0)   { FloatSub = (FloatOpT)data; }
-        else if(strcmp(name, "_FloatMul")==0)   { FloatMul = (FloatOpT)data; }
-        else if(strcmp(name, "_FloatDiv")==0)   { FloatDiv = (FloatOpT)data; }
+    objloader.eachSymbol([](const std::string &name, const void *data){
+        if     (name=="_FloatAdd")          { FloatAdd = (FloatOpT)data; }
+        else if(name=="_FloatSub")          { FloatSub = (FloatOpT)data; }
+        else if(name=="_FloatMul")          { FloatMul = (FloatOpT)data; }
+        else if(name=="_FloatDiv")          { FloatDiv = (FloatOpT)data; }
+        else if(name=="_IHogeReceiver")     { IHogeReceiver = (IHogeReceiverT)data; }
+        else if(name=="_CallExternalFunc")  { CallExternalFunc = (CallExternalFuncT)data; }
+        else if(name=="_CallExeFunc")       { CallExeFunc = (CallExternalFuncT)data; }
     });
 
     istPrint("%.2f\n", FloatAdd(1.0f, 2.0f));
     istPrint("%.2f\n", FloatSub(1.0f, 2.0f));
     istPrint("%.2f\n", FloatMul(1.0f, 2.0f));
     istPrint("%.2f\n", FloatDiv(1.0f, 2.0f));
+    {
+        Hoge hoge;
+        IHogeReceiver(&hoge);
+    }
+
+    CallExternalFunc();
+    CallExeFunc();
 
     return 0;
 }
