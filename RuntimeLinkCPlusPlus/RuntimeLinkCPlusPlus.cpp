@@ -157,8 +157,7 @@ public:
                     if(void *d = findSymbol(name)) {
                         // jmp ‚Å”ò‚Ôê‡‚Í‘Š‘ÎƒAƒhƒŒƒX‚É•ÏŠ·
                         if(*(unsigned char*)(RawData + pReloc->VirtualAddress - 1)==0xE9) {
-                            size_t addr = RawData + 5;
-                            size_t rel = (size_t)d - addr;
+                            size_t rel = (size_t)d - RawData - 5;
                             d = (void*)rel;
                         }
                         *(void**)(RawData + pReloc->VirtualAddress) = d;
@@ -211,7 +210,7 @@ private:
     SymbolTable m_symbols;
 };
 
-void FuncInExe()
+__declspec(dllexport) void FuncInExe()
 {
     istPrint("FuncInExe()\n");
 }
