@@ -1,5 +1,11 @@
-// RuntimeLinkCPlusPlus.cpp : コンソール アプリケーションのエントリ ポイントを定義します。
-//
+// .obj ファイルを実行時にロード＆リンクして実行する試み。
+// 以下のような制限はあるものの、とりあえず目的は果たせているように見えます。
+// 
+// ・/GL でコンパイルした .obj は読めない (実行時リンク実現のためにフォーマットが変わるらしい)
+// ・exe 本体が import してない外部 dll の関数は呼べない (がんばれば対処できそうだが非常に面倒…)
+// ・.obj から exe の関数を呼ぶ場合、最適化で消えてないか注意が必要 (dllexport つけるとかで対処は可能)
+// ・.obj から関数を引っ張ってくる場合、関数名を手動で mangling する必要がある (extern "C" なら "_" をつけるだけだが、そうでない場合一苦労 )
+// 
 
 #include "stdafx.h"
 #include <windows.h>
@@ -128,7 +134,7 @@ public:
         // symbol 収集フェイズ
         for( size_t i=0; i < SymbolCount; ++i ) {
             IMAGE_SYMBOL &sym = pSymbolTable[i];
-            if(sym.N.Name.Short == 0) {
+            if(sym.N.Name.Short == 0 && sym.SectionNumber>0) {
                 IMAGE_SECTION_HEADER &sect = pSectionHeader[sym.SectionNumber-1];
                 const char *name = (const char*)(StringTable + sym.N.Name.Long);
                 void *data = (void*)(ImageBase + sect.PointerToRawData);
@@ -155,8 +161,9 @@ public:
                     PIMAGE_SYMBOL pSym = pSymbolTable + pReloc->SymbolTableIndex;
                     const char *name = (const char*)(StringTable + pSym->N.Name.Long);
                     if(void *d = findSymbol(name)) {
+                        unsigned char instruction = *(unsigned char*)(RawData + pReloc->VirtualAddress - 1);
                         // jmp で飛ぶ場合は相対アドレスに変換
-                        if(*(unsigned char*)(RawData + pReloc->VirtualAddress - 1)==0xE9) {
+                        if(instruction==0xE9) {
                             size_t rel = (size_t)d - RawData - 5;
                             d = (void*)rel;
                         }
@@ -210,6 +217,7 @@ private:
     SymbolTable m_symbols;
 };
 
+// .obj から呼ぶ関数。最適化で消えないように dllexport つけておく
 __declspec(dllexport) void FuncInExe()
 {
     istPrint("FuncInExe()\n");
