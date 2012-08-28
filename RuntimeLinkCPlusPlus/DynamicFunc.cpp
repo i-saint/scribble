@@ -29,7 +29,7 @@ extern "C" void IHogeReceiver(IHoge *hoge)
 
 extern "C" void CallExternalFunc()
 {
-    return OutputDebugStringA("CallExternalFunc()\n");
+    OutputDebugStringA("CallExternalFunc()\n");
 }
 
 void FuncInExe();
