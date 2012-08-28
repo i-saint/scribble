@@ -1,6 +1,21 @@
 #include <cstdio>
 
-__declspec(dllexport) void DoSomething()
+extern "C" float FloatAdd(float a, float b)
 {
-    printf("DynamicFunc.cpp: DoSomething()\n");
+    return a+b;
+}
+
+extern "C" float FloatSub(float a, float b)
+{
+    return a-b;
+}
+
+extern "C" float FloatMul(float a, float b)
+{
+    return a*b;
+}
+
+extern "C" float FloatDiv(float a, float b)
+{
+    return a/b;
 }

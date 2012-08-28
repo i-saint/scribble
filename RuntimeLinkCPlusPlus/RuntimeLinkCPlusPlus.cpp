@@ -63,10 +63,6 @@ bool InitializeDebugSymbol(HANDLE proc=::GetCurrentProcess())
 
 
 
-typedef void (*DoSomethingT)();
-
-DoSomethingT DoSomething = NULL;
-
 bool MapFile(const char *path, std::vector<char> &data)
 {
     if(FILE *f=fopen(path, "rb")) {
@@ -149,22 +145,22 @@ bool DynamicLink(void *objdata)
             "Indx Name                 Value    Section    cAux  Type    Storage\n"
             "---- -------------------- -------- ---------- ----- ------- --------\n");
 
-        char sectionName[10];
-        PSTR stringTable = (PSTR)&pSymbolTable[SymbolCount]; 
+        char SectionName[10];
+        PSTR StringTable = (PSTR)&pSymbolTable[SymbolCount]; 
         for( size_t i=0; i < SymbolCount; ++i ) {
             istPrint("%04X ", i);
             if ( pSymbolTable->N.Name.Short != 0 ) {
                 istPrint("%-20.8s", pSymbolTable->N.ShortName);
             }
             else {
-                istPrint("%-20s", stringTable + pSymbolTable->N.Name.Long);
+                istPrint("%-20s", StringTable + pSymbolTable->N.Name.Long);
             }
 
             istPrint(" %08X", pSymbolTable->Value);
 
-            GetSectionName(pSymbolTable->SectionNumber, sectionName, sizeof(sectionName));
+            GetSectionName(pSymbolTable->SectionNumber, SectionName, sizeof(SectionName));
             istPrint(" sect:%s aux:%X type:%02X st:%s\n",
-                sectionName,
+                SectionName,
                 pSymbolTable->NumberOfAuxSymbols,
                 pSymbolTable->Type,
                 GetSZStorageClass(pSymbolTable->StorageClass) );
@@ -177,6 +173,58 @@ bool DynamicLink(void *objdata)
     return true;
 }
 
+
+
+void MakeExecutable(void *p, size_t size)
+{
+    DWORD old_flag;
+    VirtualProtect(p, size, PAGE_EXECUTE_READWRITE, &old_flag);
+}
+
+// f: functor [](const char *symbol_name, const void *data)
+template<class F>
+void EachSymbol(void *objdata, const F &f)
+{
+    size_t ImageBase = (size_t)objdata;
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
+    if( pDosHeader->e_magic!=IMAGE_FILE_MACHINE_I386 || pDosHeader->e_sp!=0 ) {
+        return;
+    }
+
+    PIMAGE_FILE_HEADER pImageHeader = (PIMAGE_FILE_HEADER)ImageBase;
+    PIMAGE_OPTIONAL_HEADER *pOptionalHeader = (PIMAGE_OPTIONAL_HEADER*)(pImageHeader+1);
+
+    PIMAGE_SYMBOL pSymbolTable = (PIMAGE_SYMBOL)((size_t)pImageHeader + pImageHeader->PointerToSymbolTable);
+    DWORD SymbolCount = pImageHeader->NumberOfSymbols;
+
+    PIMAGE_SECTION_HEADER pSectionHeader = (PIMAGE_SECTION_HEADER)(ImageBase + sizeof(IMAGE_FILE_HEADER) + pImageHeader->SizeOfOptionalHeader);
+    DWORD SectionCount = pImageHeader->NumberOfSections;
+
+    PSTR StringTable = (PSTR)&pSymbolTable[SymbolCount]; 
+    {
+        for( size_t i=0; i < SymbolCount; ++i ) {
+
+            IMAGE_SYMBOL &sym = pSymbolTable[i];
+            if(sym.N.Name.Short == 0) {
+                IMAGE_SECTION_HEADER &sect = pSectionHeader[sym.SectionNumber-1];
+                const char *name = (const char*)(StringTable + sym.N.Name.Long);
+                void *data = (void*)(ImageBase + sect.PointerToRawData);
+                MakeExecutable(data, sect.SizeOfRawData);
+                f(name, data);
+            }
+            i += pSymbolTable[i].NumberOfAuxSymbols;
+        }
+    }
+}
+
+
+typedef float (*FloatOpT)(float, float);
+FloatOpT FloatAdd = NULL;
+FloatOpT FloatSub = NULL;
+FloatOpT FloatMul = NULL;
+FloatOpT FloatDiv = NULL;
+
+
 int main(int argc, _TCHAR* argv[])
 {
     InitializeDebugSymbol();
@@ -185,7 +233,17 @@ int main(int argc, _TCHAR* argv[])
     if(!MapFile("DynamicFunc.obj", obj)) {
         return 1;
     }
-    DynamicLink(&obj[0]);
+    EachSymbol(&obj[0], [](const char *name, const void *data){
+        if(strcmp(name, "_FloatAdd")==0)        { FloatAdd = (FloatOpT)data; }
+        else if(strcmp(name, "_FloatSub")==0)   { FloatSub = (FloatOpT)data; }
+        else if(strcmp(name, "_FloatMul")==0)   { FloatMul = (FloatOpT)data; }
+        else if(strcmp(name, "_FloatDiv")==0)   { FloatDiv = (FloatOpT)data; }
+    });
+
+    istPrint("%.2f\n", FloatAdd(1.0f, 2.0f));
+    istPrint("%.2f\n", FloatSub(1.0f, 2.0f));
+    istPrint("%.2f\n", FloatMul(1.0f, 2.0f));
+    istPrint("%.2f\n", FloatDiv(1.0f, 2.0f));
 
     return 0;
 }
