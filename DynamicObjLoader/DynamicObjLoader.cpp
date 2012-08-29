@@ -1,5 +1,5 @@
-﻿#include "RuntimeLinkCPlusPlus.h"
-#ifdef RLCPP_Enable_Dynamic_Link
+﻿#include "DynamicObjLoader.h"
+#ifdef DOL_Enable_Dynamic_Link
 
 #include <windows.h>
 #include <imagehlp.h>
@@ -88,12 +88,12 @@ void* FindSymbolInExe(const char *name)
 
 
 
-class ObjLoader;
+class DynamicObjLoader;
 
 class ObjFile
 {
 public:
-    ObjFile(ObjLoader *loader) : m_loader(loader) {}
+    ObjFile(DynamicObjLoader *loader) : m_loader(loader) {}
 
     bool load(const stl::string &path);
     void unload();
@@ -117,15 +117,15 @@ private:
     stl::vector<char> m_data;
     stl::string m_filepath;
     SymbolTable m_symbols;
-    ObjLoader *m_loader;
+    DynamicObjLoader *m_loader;
 };
 
 
-class ObjLoader
+class DynamicObjLoader
 {
 public:
-    ObjLoader();
-    ~ObjLoader();
+    DynamicObjLoader();
+    ~DynamicObjLoader();
 
     // .obj のロードを行う。
     // 既に読まれているファイルを指定した場合リロード処理を行う。
@@ -280,16 +280,16 @@ void* ObjFile::findSymbol(const char *name)
 typedef void (*Handler)();
 
 
-ObjLoader::ObjLoader()
+DynamicObjLoader::DynamicObjLoader()
 {
 }
 
-ObjLoader::~ObjLoader()
+DynamicObjLoader::~DynamicObjLoader()
 {
     unloadAll();
 }
 
-void ObjLoader::load( const stl::string &path )
+void DynamicObjLoader::load( const stl::string &path )
 {
     ObjFile *&loader = m_objs[path];
     if(loader==NULL) {
@@ -301,7 +301,7 @@ void ObjLoader::load( const stl::string &path )
     loader->eachSymbol([&](const stl::string &name, void *data){ m_symbols.insert(stl::make_pair(name, data)); });
 }
 
-void ObjLoader::link()
+void DynamicObjLoader::link()
 {
     for(ObjTable::iterator i=m_objs.begin(); i!=m_objs.end(); ++i) {
         i->second->link();
@@ -310,17 +310,17 @@ void ObjLoader::link()
         *i->second = findSymbol(i->first);
     }
     for(ObjTable::iterator i=m_objs.begin(); i!=m_objs.end(); ++i) {
-        if(Handler h = (Handler)i->second->findSymbol("_RLCPP_OnLoadHandler")) {
+        if(Handler h = (Handler)i->second->findSymbol("_DOL_OnLoadHandler")) {
             h();
         }
     }
 }
 
-void ObjLoader::unload( const stl::string &path )
+void DynamicObjLoader::unload( const stl::string &path )
 {
     ObjTable::iterator i = m_objs.find(path);
     if(i!=m_objs.end()) {
-        if(Handler h = (Handler)i->second->findSymbol("_RLCPP_OnUnloadHandler")) {
+        if(Handler h = (Handler)i->second->findSymbol("_DOL_OnUnloadHandler")) {
             h();
         }
         delete i->second;
@@ -328,10 +328,10 @@ void ObjLoader::unload( const stl::string &path )
     }
 }
 
-void ObjLoader::unloadAll()
+void DynamicObjLoader::unloadAll()
 {
     for(ObjTable::iterator i=m_objs.begin(); i!=m_objs.end(); ++i) {
-        if(Handler h = (Handler)i->second->findSymbol("_RLCPP_OnUnloadHandler")) {
+        if(Handler h = (Handler)i->second->findSymbol("_DOL_OnUnloadHandler")) {
             h();
         }
         delete i->second;
@@ -339,81 +339,81 @@ void ObjLoader::unloadAll()
     m_objs.clear();
 }
 
-ObjFile* ObjLoader::findObj( const stl::string &path )
+ObjFile* DynamicObjLoader::findObj( const stl::string &path )
 {
     ObjTable::iterator i = m_objs.find(path);
     if(i==m_objs.end()) { return NULL; }
     return i->second;
 }
 
-void* ObjLoader::findSymbol( const stl::string &name )
+void* DynamicObjLoader::findSymbol( const stl::string &name )
 {
     SymbolTable::iterator i = m_symbols.find(name);
     if(i==m_symbols.end()) { return NULL; }
     return i->second;
 }
 
-void* ObjLoader::resolveExternalSymbol( const stl::string &name )
+void* DynamicObjLoader::resolveExternalSymbol( const stl::string &name )
 {
     void *sym = findSymbol(name);
     if(sym==NULL) { sym=FindSymbolInExe(name.c_str()); }
     return sym;
 }
 
-void ObjLoader::addSymbolLink( const stl::string &name, void *&target )
+void DynamicObjLoader::addSymbolLink( const stl::string &name, void *&target )
 {
     m_links.insert(stl::make_pair(name, &target));
 }
 
 
 
-ObjLoader *m_objloader = NULL;
+DynamicObjLoader *m_objloader = NULL;
 
 
-class RLCPP_Initializer
+class DOL_Initializer
 {
 public:
-    RLCPP_Initializer()
+    DOL_Initializer()
     {
         InitializeDebugSymbol();
-        m_objloader = new ObjLoader();
+        m_objloader = new DynamicObjLoader();
     }
 
-    ~RLCPP_Initializer()
+    ~DOL_Initializer()
     {
         delete m_objloader;
         m_objloader = NULL;
     }
 
-} g_rlcpp_init;
+} g_dol_init;
 
 } // namespace rlcpp
 
 using namespace rlcpp;
 
-void  RLCPP_Load(const char *path)
+void  DOL_Load(const char *path)
 {
     m_objloader->load(path);
 }
 
-void RLCPP_Unload(const char *path)
+void DOL_Unload(const char *path)
 {
     m_objloader->unload(path);
 }
 
-void RLCPP_UnloadAll()
+void DOL_UnloadAll()
 {
     m_objloader->unloadAll();
 }
 
-void  RLCPP_Link()
+void  DOL_Link()
 {
     m_objloader->link();
 }
 
-void RLCPP_LinkSymbol(const char *name, void *&target)
+void DOL_LinkSymbol(const char *name, void *&target)
 {
     m_objloader->addSymbolLink(name, target);
 }
 
-#endif // RLCPP_Enable_Dynamic_Link
+#endif // DOL_Enable_Dynamic_Link

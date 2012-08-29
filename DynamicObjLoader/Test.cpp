@@ -1,6 +1,6 @@
 ﻿#include "stdafx.h"
 #include <windows.h>
-#include "RuntimeLinkCPlusPlus.h"
+#include "DynamicObjLoader.h"
 #include "Test.h"
 #pragma warning(disable: 4996) // _s じゃない CRT 関数使うとでるやつ
 
@@ -31,8 +31,8 @@ void DebugPrint(const char* fmt, ...)
 
 
 
-// .obj から呼ぶ関数。最適化で消えないように RLCPP_Fixate つけておく
-RLCPP_Fixate void FuncInExe()
+// .obj から呼ぶ関数。最適化で消えないように DOL_Fixate つけておく
+DOL_Fixate void FuncInExe()
 {
     istPrint("FuncInExe()\n");
 }
@@ -48,16 +48,16 @@ public:
 };
 
 
-RLCPP_DefineObjFunc(float, FloatAdd, float, float);
-RLCPP_DefineObjFunc(void, CallExternalFunc);
-RLCPP_DefineObjFunc(void, CallExeFunc);
-RLCPP_DefineObjFunc(void, IHogeReceiver, IHoge*);
-RLCPP_DefineObjFunc(IHoge*, CreateObjHoge);
+DOL_ObjFunc(float, FloatAdd, float, float);
+DOL_ObjFunc(void, CallExternalFunc);
+DOL_ObjFunc(void, CallExeFunc);
+DOL_ObjFunc(void, IHogeReceiver, IHoge*);
+DOL_ObjFunc(IHoge*, CreateObjHoge);
 
 int main(int argc, _TCHAR* argv[])
 {
-    RLCPP_Load("DynamicFunc.obj");
-    RLCPP_Link();
+    DOL_Load("DynamicFunc.obj");
+    DOL_Link();
 
     istPrint("%.2f\n", FloatAdd(1.0f, 2.0f));
 
@@ -74,6 +74,6 @@ int main(int argc, _TCHAR* argv[])
         delete hoge;
     }
 
-    RLCPP_UnloadAll();
+    DOL_UnloadAll();
     return 0;
 }
