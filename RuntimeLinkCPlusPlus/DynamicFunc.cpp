@@ -1,39 +1,68 @@
 #include <cstdio>
 #include <windows.h>
-#include "Interface.h"
+#include "RuntimeLinkCPlusPlus.h"
 
-extern "C" float FloatAdd(float a, float b)
+
+
+RLCPP_ObjExport float FloatAdd(float a, float b)
 {
     return a+b;
 }
 
-extern "C" float FloatSub(float a, float b)
-{
-    return a-b;
-}
-
-extern "C" float FloatMul(float a, float b)
-{
-    return a*b;
-}
-
-extern "C" float FloatDiv(float a, float b)
-{
-    return a/b;
-}
-
-extern "C" void IHogeReceiver(IHoge *hoge)
-{
-    hoge->DoSomething();
-}
-
-extern "C" void CallExternalFunc()
+RLCPP_ObjExport void CallExternalFunc()
 {
     OutputDebugStringA("CallExternalFunc()\n");
 }
 
 void FuncInExe();
-extern "C" void CallExeFunc()
+RLCPP_ObjExport void CallExeFunc()
 {
     return FuncInExe();
 }
+
+
+class IHoge
+{
+public:
+    virtual ~IHoge() {}
+    virtual void DoSomething()=0;
+};
+
+class ObjHoge : public IHoge
+{
+public:
+    ObjHoge()
+    {
+        OutputDebugStringA("ObjHoge::ObjHoge()\n");
+    }
+
+    virtual ~ObjHoge()
+    {
+        OutputDebugStringA("ObjHoge::~ObjHoge()\n");
+    }
+
+    virtual void DoSomething()
+    {
+        OutputDebugStringA("ObjHoge::DoSomething()\n");
+    }
+};
+
+RLCPP_ObjExport void IHogeReceiver(IHoge *hoge)
+{
+    hoge->DoSomething();
+}
+
+RLCPP_ObjExport IHoge* CreateObjHoge()
+{
+    return new ObjHoge();
+}
+
+
+
+RLCPP_OnLoad(
+    OutputDebugStringA("RLCPP_OnLoad Test\n");
+)
+
+RLCPP_OnUnload(
+    OutputDebugStringA("RLCPP_OnUnload Test\n");
+)

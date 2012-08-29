@@ -3,11 +3,12 @@
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="Interface.h" />
+    <ClInclude Include="RuntimeLinkCPlusPlus.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DynamicFunc.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="RuntimeLinkCPlusPlus.cpp" />
+    <ClCompile Include="Test.cpp" />
   </ItemGroup>
 </Project>

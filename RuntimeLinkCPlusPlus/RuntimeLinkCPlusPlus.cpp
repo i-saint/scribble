@@ -1,38 +1,38 @@
 // .obj ファイルを実行時にロード＆リンクして実行する試み。
 // 以下のような制限はあるものの、とりあえず目的は果たせているように見えます。
 // 
-// ・/GL でコンパイルした .obj は読めない (リンク時の関数inline 展開実現のためにフォーマットが変わるらしい)
-// ・exe 本体のデバッグ情報 (.pdb) が必要 (実行時リンクの際に文字列から関数のアドレスを取れないといけないので)
-// ・exe 本体が import してない外部 dll の関数は呼べない (.lib 読んで超頑張ればできそうだがあまりに面倒…)
-// ・.obj から exe の関数を呼ぶ場合、inline 展開とか最適化で消えてないかとかに注意が必要 (__declspec(dllexport) つければ対処可能)
-// ・.obj から関数を引っ張ってくる際、mangling 後の関数名を指定する必要がある (extern "C" なら "_" をつけるだけだが、そうでない場合面倒)
+// ・/GL でコンパイルした .obj は読めない
+//      リンク時の関数inline 展開実現のためにフォーマットが変わるらしい
+// ・exe 本体のデバッグ情報 (.pdb) が必要
+//      実行時リンクの際に文字列から関数のアドレスを取れないといけないので
+// ・exe 本体が import してない外部 dll の関数は呼べない
+//      .lib 読んで超頑張ればできそうだがあまりに面倒…
+// ・.obj から exe の関数を呼ぶ場合、対象が inline 展開されてたり最適化で消えてたりすると、あらぬところに jmp してクラッシュする
+//      とりあえず __declspec(dllexport) つければ対処可能
+// ・virtual 関数を使う場合、RTTI を無効にしておく必要がある
+//      RTTI の有無で vftable の内容が変わってしまうので。対処したいが方法がよくわからず。
+// ・.obj から関数を引っ張ってくる際、mangling 後の関数名を指定する必要がある
+//      とりあえずこのライブラリは extern "C" で解決している。(C linkage の場合 "_" をつけるだけで済む)
 // 
 
-#include "stdafx.h"
 #include <windows.h>
 #include <imagehlp.h>
 #include <cstdio>
 #include <vector>
 #include <string>
 #include <map>
-#include "Interface.h"
+#include "RuntimeLinkCPlusPlus.h"
 #pragma comment(lib, "imagehlp.lib")
 #pragma warning(disable: 4996) // _s じゃない CRT 関数使うとでるやつ
+
+#ifdef RLCPP_Enable_Dynamic_Link
+
+namespace rlcpp {
 
 namespace stl = std;
 
 
-
-
-template<size_t N>
-inline int istsprintf(char (&buf)[N], const char *format, ...)
-{
-    va_list vl;
-    va_start(vl, format);
-    int r = _vsnprintf(buf, N, format, vl);
-    va_end(vl);
-    return r;
-}
+#define istPrint(...) DebugPrint(__VA_ARGS__)
 
 template<size_t N>
 inline int istvsprintf(char (&buf)[N], const char *format, va_list vl)
@@ -40,24 +40,19 @@ inline int istvsprintf(char (&buf)[N], const char *format, va_list vl)
     return _vsnprintf(buf, N, format, vl);
 }
 
-#define istPrint(...) DebugPrint(__FILE__, __LINE__, __VA_ARGS__)
-
 static const int DPRINTF_MES_LENGTH  = 4096;
-void DebugPrintV(const char* /*file*/, int /*line*/, const char* fmt, va_list vl)
+void DebugPrintV(const char* fmt, va_list vl)
 {
     char buf[DPRINTF_MES_LENGTH];
-    //istsprintf(buf, "%s:%d - ", file, line);
-    //::OutputDebugStringA(buf);
-    //WriteLogFile(buf);
     istvsprintf(buf, fmt, vl);
     ::OutputDebugStringA(buf);
 }
 
-void DebugPrint(const char* file, int line, const char* fmt, ...)
+void DebugPrint(const char* fmt, ...)
 {
     va_list vl;
     va_start(vl, fmt);
-    DebugPrintV(file, line, fmt, vl);
+    DebugPrintV(fmt, vl);
     va_end(vl);
 }
 
@@ -71,12 +66,9 @@ bool InitializeDebugSymbol(HANDLE proc=::GetCurrentProcess())
     return true;
 }
 
-
-
-
-bool MapFile(const char *path, stl::vector<char> &data)
+bool MapFile(const stl::string &path, stl::vector<char> &data)
 {
-    if(FILE *f=fopen(path, "rb")) {
+    if(FILE *f=fopen(path.c_str(), "rb")) {
         fseek(f, 0, SEEK_END);
         size_t size = ftell(f);
         if(size > 0) {
@@ -109,51 +101,20 @@ void* FindSymbolInExe(const char *name)
 }
 
 
+
 class ObjLoader;
 
-class ObjManager
+class ObjFile
 {
 public:
-    ObjManager();
-    ~ObjManager();
+    ObjFile(ObjLoader *loader) : m_loader(loader) {}
 
-    // .obj のロードを行う。
-    // 既に読まれているファイルを指定した場合リロード処理を行う。
-    void load(const stl::string &path);
-
-    // 依存関係の解決処理。ロード後実行前に必ず呼ぶ必要がある。
-    // load の中で link までやってもいいが、.obj の数が増えるほど無駄が多くなる上、
-    // 未解決シンボルを判別しづらくなるので手順を分割した。
-    void link();
-
-    // 全ロード済み obj からシンボルを検索
-    void* findSymbol(const stl::string &name);
-
-    // exe 側 obj 側問わずシンボルを探す。link 処理用
-    void* resolveSymbol(const stl::string &name);
-
-private:
-    typedef stl::map<stl::string, ObjLoader*> ObjLoaderMap;
-    typedef stl::map<stl::string, void*> SymbolTable;
-
-    ObjLoaderMap m_loaders;
-    SymbolTable m_symbols;
-};
-
-class ObjLoader
-{
-public:
-    ObjLoader() {}
-    ObjLoader(const char *path) { load(path); }
-
-    void clear();
-
-    bool load(const char *path);
+    bool load(const stl::string &path);
+    void unload();
 
     // 外部シンボルのリンケージ解決
     void link();
 
-    void* findInternalSymbol(const char *name);
     void* findSymbol(const char *name);
 
     // f: functor [](const stl::string &symbol_name, const void *data)
@@ -170,19 +131,53 @@ private:
     stl::vector<char> m_data;
     stl::string m_filepath;
     SymbolTable m_symbols;
+    ObjLoader *m_loader;
 };
 
 
-void ObjLoader::clear()
+class ObjLoader
+{
+public:
+    ObjLoader();
+    ~ObjLoader();
+
+    // .obj のロードを行う。
+    // 既に読まれているファイルを指定した場合リロード処理を行う。
+    void load(const stl::string &path);
+
+    // 依存関係の解決処理。ロード後実行前に必ず呼ぶ必要がある。
+    // load の中で link までやってもいいが、.obj の数が増えるほど無駄が多くなる上、
+    // 未解決シンボルを判別しづらくなるので手順を分割した。
+    void link();
+
+    // ロード済み obj 検索
+    ObjFile* findObj(const stl::string &path);
+
+    // 全ロード済み obj からシンボルを検索
+    void* findSymbol(const stl::string &name);
+
+    // exe 側 obj 側問わずシンボルを探す。link 処理用
+    void* resolveExternalSymbol(const stl::string &name);
+
+private:
+    typedef stl::map<stl::string, ObjFile*> ObjTable;
+    typedef stl::map<stl::string, void*> SymbolTable;
+
+    ObjTable m_objs;
+    SymbolTable m_symbols;
+};
+
+
+
+void ObjFile::unload()
 {
     m_data.clear();
     m_filepath.clear();
     m_symbols.clear();
 }
 
-bool ObjLoader::load(const char *path)
+bool ObjFile::load(const stl::string &path)
 {
-    clear();
     m_filepath = path;
     if(!MapFile(path, m_data)) {
         return false;
@@ -209,7 +204,7 @@ bool ObjLoader::load(const char *path)
         if(sym.N.Name.Short == 0 && sym.SectionNumber>0) {
             IMAGE_SECTION_HEADER &sect = pSectionHeader[sym.SectionNumber-1];
             const char *name = (const char*)(StringTable + sym.N.Name.Long);
-            void *data = (void*)(ImageBase + sect.PointerToRawData);
+            void *data = (void*)(ImageBase + sect.PointerToRawData + sym.Value);
             if(sym.SectionNumber!=IMAGE_SYM_UNDEFINED) {
                 MakeExecutable(data, sect.SizeOfRawData);
                 m_symbols[name] = data;
@@ -222,7 +217,7 @@ bool ObjLoader::load(const char *path)
 }
 
 // 外部シンボルのリンケージ解決
-void ObjLoader::link()
+void ObjFile::link()
 {
     size_t ImageBase = (size_t)(&m_data[0]);
     PIMAGE_FILE_HEADER pImageHeader = (PIMAGE_FILE_HEADER)ImageBase;
@@ -239,111 +234,129 @@ void ObjLoader::link()
         if(sym.N.Name.Short == 0 && sym.SectionNumber>0) {
             IMAGE_SECTION_HEADER &sect = pSectionHeader[sym.SectionNumber-1];
             const char *name = (const char*)(StringTable + sym.N.Name.Long);
-            size_t RawData = (size_t)(ImageBase + sect.PointerToRawData);
+            size_t SectionBase = (size_t)(ImageBase + sect.PointerToRawData + sym.Value);
 
             DWORD NumRelocations = sect.NumberOfRelocations;
             PIMAGE_RELOCATION pRelocation = (PIMAGE_RELOCATION)(ImageBase + sect.PointerToRelocations);
             for(size_t ri=0; ri<NumRelocations; ++ri) {
                 PIMAGE_RELOCATION pReloc = pRelocation + ri;
-                PIMAGE_SYMBOL pSym = pSymbolTable + pReloc->SymbolTableIndex;
-                const char *name = (const char*)(StringTable + pSym->N.Name.Long);
-                void *symdata = findSymbol(name);
-                if(symdata==NULL) {
-                    istPrint("!danger! %s: シンボル %s を解決できませんでした。\n", m_filepath.c_str(), name);
+                PIMAGE_SYMBOL rsym = pSymbolTable + pReloc->SymbolTableIndex;
+                const char *rname = (const char*)(StringTable + rsym->N.Name.Long);
+                void *rdata = m_loader->resolveExternalSymbol(rname);
+                if(rdata==NULL) {
+                    istPrint("!danger! %s: シンボル %s を解決できませんでした。\n", m_filepath.c_str(), rname);
                     continue;
                 }
-                unsigned char instruction = *(unsigned char*)(RawData + pReloc->VirtualAddress - 1);
-                // jmp で飛ぶ場合は相対アドレスに変換
-                if(instruction==0xE9) {
-                    size_t rel = (size_t)symdata - RawData - 5;
-                    symdata = (void*)rel;
+                // IMAGE_REL_I386_REL32 の場合相対アドレスに直す必要がある
+                if(pReloc->Type==IMAGE_REL_I386_REL32) {
+                    size_t rel = (size_t)rdata - SectionBase - pReloc->VirtualAddress - 4;
+                    rdata = (void*)rel;
                 }
-                *(void**)(RawData + pReloc->VirtualAddress) = symdata;
+                *(void**)(SectionBase + pReloc->VirtualAddress) = rdata;
             }
         }
         i += pSymbolTable[i].NumberOfAuxSymbols;
     }
 }
 
-void* ObjLoader::findInternalSymbol(const char *name)
+void* ObjFile::findSymbol(const char *name)
 {
     SymbolTable::iterator i = m_symbols.find(name);
     if(i == m_symbols.end()) { return NULL; }
     return i->second;
 }
 
-void* ObjLoader::findSymbol(const char *name)
+
+
+ObjLoader::ObjLoader()
 {
-    void *ret = findInternalSymbol(name);
-    if(!ret) { ret = FindSymbolInExe(name); }
-    return ret;
+}
+
+ObjLoader::~ObjLoader()
+{
+    for(ObjTable::iterator i=m_objs.begin(); i!=m_objs.end(); ++i) {
+        delete i->second;
+    }
+    m_objs.clear();
+}
+
+void ObjLoader::load( const stl::string &path )
+{
+    ObjFile *&loader = m_objs[path];
+    if(loader==NULL) {
+        loader = new ObjFile(this);
+    }
+    loader->eachSymbol([&](const stl::string &name, void *data){ m_symbols.erase(name); });
+    loader->unload();
+    loader->load(path);
+    loader->eachSymbol([&](const stl::string &name, void *data){ m_symbols.insert(stl::make_pair(name, data)); });
+}
+
+void ObjLoader::link()
+{
+    for(ObjTable::iterator i=m_objs.begin(); i!=m_objs.end(); ++i) {
+        i->second->link();
+    }
+}
+
+ObjFile* ObjLoader::findObj( const stl::string &path )
+{
+    ObjTable::iterator i = m_objs.find(path);
+    if(i==m_objs.end()) { return NULL; }
+    return i->second;
+}
+
+void* ObjLoader::findSymbol( const stl::string &name )
+{
+    SymbolTable::iterator i = m_symbols.find(name);
+    if(i==m_symbols.end()) { return NULL; }
+    return i->second;
+}
+
+void* ObjLoader::resolveExternalSymbol( const stl::string &name )
+{
+    void *sym = findSymbol(name);
+    if(sym==NULL) { sym=FindSymbolInExe(name.c_str()); }
+    return sym;
 }
 
 
 
+ObjLoader *m_objs = NULL;
 
+} // namespace rlcpp
 
-// .obj から呼ぶ関数。最適化で消えないように dllexport つけておく
-__declspec(dllexport) void FuncInExe()
+using namespace rlcpp;
+
+void  _RLCPP_InitializeLoader()
 {
-    istPrint("FuncInExe()\n");
+    if(m_objs==NULL) {
+        InitializeDebugSymbol();
+        m_objs = new ObjLoader();
+    }
 }
 
-
-
-
-class Hoge : public IHoge
+void  _RLCPP_FinalizeLoader()
 {
-public:
-    virtual void DoSomething()
-    {
-        istPrint("Hoge::DoSomething()\n");
+    if(m_objs!=NULL) {
+        delete m_objs;
+        m_objs = NULL;
     }
-};
-
-typedef float (*FloatOpT)(float, float);
-FloatOpT FloatAdd = NULL;
-FloatOpT FloatSub = NULL;
-FloatOpT FloatMul = NULL;
-FloatOpT FloatDiv = NULL;
-
-typedef void (*CallExternalFuncT)();
-CallExternalFuncT CallExternalFunc = NULL;
-CallExternalFuncT CallExeFunc = NULL;
-
-typedef void (*IHogeReceiverT)(IHoge*);
-IHogeReceiverT IHogeReceiver = NULL;
-
-
-int main(int argc, _TCHAR* argv[])
-{
-    InitializeDebugSymbol();
-
-    ObjLoader objloader;
-    if(!objloader.load("DynamicFunc.obj")) {
-        return 1;
-    }
-    objloader.link();
-    FloatAdd = (FloatOpT)objloader.findInternalSymbol("_FloatAdd");
-    FloatSub = (FloatOpT)objloader.findInternalSymbol("_FloatSub");
-    FloatMul = (FloatOpT)objloader.findInternalSymbol("_FloatMul");
-    FloatDiv = (FloatOpT)objloader.findInternalSymbol("_FloatDiv");
-    IHogeReceiver = (IHogeReceiverT)objloader.findInternalSymbol("_IHogeReceiver");
-    CallExternalFunc = (CallExternalFuncT)objloader.findInternalSymbol("_CallExternalFunc");
-    CallExeFunc = (CallExternalFuncT)objloader.findInternalSymbol("_CallExeFunc");
-
-    istPrint("%.2f\n", FloatAdd(1.0f, 2.0f));
-    istPrint("%.2f\n", FloatSub(1.0f, 2.0f));
-    istPrint("%.2f\n", FloatMul(1.0f, 2.0f));
-    istPrint("%.2f\n", FloatDiv(1.0f, 2.0f));
-    {
-        Hoge hoge;
-        IHogeReceiver(&hoge);
-    }
-
-    CallExternalFunc();
-    CallExeFunc();
-
-    return 0;
 }
 
+void  _RLCPP_Load(const char *path)
+{
+    m_objs->load(path);
+}
+
+void  _RLCPP_Link()
+{
+    m_objs->link();
+}
+
+void* _RLCPP_FindSymbol(const char *name)
+{
+    return m_objs->findSymbol(name);
+}
+
+#endif // RLCPP_Enable_Dynamic_Link
