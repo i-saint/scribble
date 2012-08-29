@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include <windows.h>
 #include "RuntimeLinkCPlusPlus.h"
+#include "Test.h"
 #pragma warning(disable: 4996) // _s じゃない CRT 関数使うとでるやつ
 
 
@@ -37,13 +38,6 @@ RLCPP_Fixate void FuncInExe()
 }
 
 
-class IHoge
-{
-public:
-    virtual ~IHoge() {}
-    virtual void DoSomething()=0;
-};
-
 class Hoge : public IHoge
 {
 public:
@@ -62,15 +56,8 @@ RLCPP_DefineObjFunc(IHoge*, CreateObjHoge);
 
 int main(int argc, _TCHAR* argv[])
 {
-    RLCPP_InitializeLoader();
     RLCPP_Load("DynamicFunc.obj");
     RLCPP_Link();
-
-    RLCPP_GetFunction(FloatAdd);
-    RLCPP_GetFunction(CallExternalFunc);
-    RLCPP_GetFunction(CallExeFunc);
-    RLCPP_GetFunction(IHogeReceiver);
-    RLCPP_GetFunction(CreateObjHoge);
 
     istPrint("%.2f\n", FloatAdd(1.0f, 2.0f));
 
@@ -87,7 +74,6 @@ int main(int argc, _TCHAR* argv[])
         delete hoge;
     }
 
-    RLCPP_FinalizeLoader();
-
+    RLCPP_UnloadAll();
     return 0;
 }

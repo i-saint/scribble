@@ -1,6 +1,7 @@
 ﻿#include <cstdio>
 #include <windows.h>
 #include "RuntimeLinkCPlusPlus.h"
+#include "Test.h"
 
 
 
@@ -20,13 +21,6 @@ RLCPP_ObjExport void CallExeFunc()
     return FuncInExe();
 }
 
-
-class IHoge
-{
-public:
-    virtual ~IHoge() {}
-    virtual void DoSomething()=0;
-};
 
 class ObjHoge : public IHoge
 {

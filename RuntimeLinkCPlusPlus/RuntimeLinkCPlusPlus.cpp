@@ -10,6 +10,8 @@
 #pragma comment(lib, "imagehlp.lib")
 #pragma warning(disable: 4996) // _s じゃない CRT 関数使うとでるやつ
 
+#pragma warning(disable: 4073) // init_seg(lib) は普通は使っちゃダメ的な warning
+#pragma init_seg(lib) // global オブジェクトの初期化の優先順位上げる
 
 namespace rlcpp {
 
@@ -128,6 +130,8 @@ public:
     // .obj のロードを行う。
     // 既に読まれているファイルを指定した場合リロード処理を行う。
     void load(const stl::string &path);
+    void unload(const stl::string &path);
+    void unloadAll();
 
     // 依存関係の解決処理。ロード後実行前に必ず呼ぶ必要がある。
     // load の中で link までやってもいいが、.obj の数が増えるほど無駄が多くなる上、
@@ -143,12 +147,34 @@ public:
     // exe 側 obj 側問わずシンボルを探す。link 処理用
     void* resolveExternalSymbol(const stl::string &name);
 
+    void addSymbolLink(const stl::string &name, void *&target);
+
+    // f: functor [](const stl::string &symbol_name, const void *data)
+    template<class F>
+    void eachSymbol(const F &f)
+    {
+        for(SymbolTable::iterator i=m_symbols.begin(); i!=m_symbols.end(); ++i) {
+            f(i->first, i->second);
+        }
+    }
+
+    // f: functor [](const stl::string &symbol_name, ObjTable *data)
+    template<class F>
+    void eachObj(const F &f)
+    {
+        for(ObjTable::iterator i=m_symbols.begin(); i!=m_symbols.end(); ++i) {
+            f(i->first, i->second);
+        }
+    }
+
 private:
     typedef stl::map<stl::string, ObjFile*> ObjTable;
-    typedef stl::map<stl::string, void*> SymbolTable;
+    typedef stl::map<stl::string, void*>    SymbolTable;
+    typedef stl::map<stl::string, void**>   SymbolLinkTable;
 
     ObjTable m_objs;
     SymbolTable m_symbols;
+    SymbolLinkTable m_links;
 };
 
 
@@ -228,7 +254,7 @@ void ObjFile::link()
                 const char *rname = (const char*)(StringTable + rsym->N.Name.Long);
                 void *rdata = m_loader->resolveExternalSymbol(rname);
                 if(rdata==NULL) {
-                    istPrint("!danger! %s: シンボル %s を解決できませんでした。\n", m_filepath.c_str(), rname);
+                    istPrint("RLCPP error: %s のシンボル %s を解決できませんでした。\n", m_filepath.c_str(), rname);
                     continue;
                 }
                 // IMAGE_REL_I386_REL32 の場合相対アドレスに直す必要がある
@@ -251,6 +277,8 @@ void* ObjFile::findSymbol(const char *name)
 }
 
 
+typedef void (*Handler)();
+
 
 ObjLoader::ObjLoader()
 {
@@ -258,10 +286,7 @@ ObjLoader::ObjLoader()
 
 ObjLoader::~ObjLoader()
 {
-    for(ObjTable::iterator i=m_objs.begin(); i!=m_objs.end(); ++i) {
-        delete i->second;
-    }
-    m_objs.clear();
+    unloadAll();
 }
 
 void ObjLoader::load( const stl::string &path )
@@ -281,6 +306,37 @@ void ObjLoader::link()
     for(ObjTable::iterator i=m_objs.begin(); i!=m_objs.end(); ++i) {
         i->second->link();
     }
+    for(SymbolLinkTable::iterator i=m_links.begin(); i!=m_links.end(); ++i) {
+        *i->second = findSymbol(i->first);
+    }
+    for(ObjTable::iterator i=m_objs.begin(); i!=m_objs.end(); ++i) {
+        if(Handler h = (Handler)i->second->findSymbol("_RLCPP_OnLoadHandler")) {
+            h();
+        }
+    }
+}
+
+void ObjLoader::unload( const stl::string &path )
+{
+    ObjTable::iterator i = m_objs.find(path);
+    if(i!=m_objs.end()) {
+        if(Handler h = (Handler)i->second->findSymbol("_RLCPP_OnUnloadHandler")) {
+            h();
+        }
+        delete i->second;
+        m_objs.erase(i);
+    }
+}
+
+void ObjLoader::unloadAll()
+{
+    for(ObjTable::iterator i=m_objs.begin(); i!=m_objs.end(); ++i) {
+        if(Handler h = (Handler)i->second->findSymbol("_RLCPP_OnUnloadHandler")) {
+            h();
+        }
+        delete i->second;
+    }
+    m_objs.clear();
 }
 
 ObjFile* ObjLoader::findObj( const stl::string &path )
@@ -304,43 +360,60 @@ void* ObjLoader::resolveExternalSymbol( const stl::string &name )
     return sym;
 }
 
+void ObjLoader::addSymbolLink( const stl::string &name, void *&target )
+{
+    m_links.insert(stl::make_pair(name, &target));
+}
 
 
-ObjLoader *m_objs = NULL;
+
+ObjLoader *m_objloader = NULL;
+
+
+class RLCPP_Initializer
+{
+public:
+    RLCPP_Initializer()
+    {
+        InitializeDebugSymbol();
+        m_objloader = new ObjLoader();
+    }
+
+    ~RLCPP_Initializer()
+    {
+        delete m_objloader;
+        m_objloader = NULL;
+    }
+
+} g_rlcpp_init;
 
 } // namespace rlcpp
 
 using namespace rlcpp;
 
-void  _RLCPP_InitializeLoader()
+void  RLCPP_Load(const char *path)
 {
-    if(m_objs==NULL) {
-        InitializeDebugSymbol();
-        m_objs = new ObjLoader();
-    }
+    m_objloader->load(path);
 }
 
-void  _RLCPP_FinalizeLoader()
+void RLCPP_Unload(const char *path)
 {
-    if(m_objs!=NULL) {
-        delete m_objs;
-        m_objs = NULL;
-    }
+    m_objloader->unload(path);
 }
 
-void  _RLCPP_Load(const char *path)
+void RLCPP_UnloadAll()
 {
-    m_objs->load(path);
+    m_objloader->unloadAll();
 }
 
-void  _RLCPP_Link()
+void  RLCPP_Link()
 {
-    m_objs->link();
+    m_objloader->link();
 }
 
-void* _RLCPP_FindSymbol(const char *name)
+void RLCPP_LinkSymbol(const char *name, void *&target)
 {
-    return m_objs->findSymbol(name);
+    m_objloader->addSymbolLink(name, target);
 }
 
 #endif // RLCPP_Enable_Dynamic_Link
