@@ -1,19 +1,5 @@
-// .obj ƒtƒ@ƒCƒ‹‚ðŽÀsŽž‚Éƒ[ƒh•ƒŠƒ“ƒN‚µ‚ÄŽÀs‚·‚éŽŽ‚ÝB
-// ˆÈ‰º‚Ì‚æ‚¤‚È§ŒÀ‚Í‚ ‚é‚à‚Ì‚ÌA‚Æ‚è‚ ‚¦‚¸–Ú“I‚Í‰Ê‚½‚¹‚Ä‚¢‚é‚æ‚¤‚ÉŒ©‚¦‚Ü‚·B
-// 
-// E/GL ‚ÅƒRƒ“ƒpƒCƒ‹‚µ‚½ .obj ‚Í“Ç‚ß‚È‚¢
-//      ƒŠƒ“ƒNŽž‚ÌŠÖ”inline “WŠJŽÀŒ»‚Ì‚½‚ß‚ÉƒtƒH[ƒ}ƒbƒg‚ª•Ï‚í‚é‚ç‚µ‚¢
-// Eexe –{‘Ì‚ÌƒfƒoƒbƒOî•ñ (.pdb) ‚ª•K—v
-//      ŽÀsŽžƒŠƒ“ƒN‚ÌÛ‚É•¶Žš—ñ‚©‚çŠÖ”‚ÌƒAƒhƒŒƒX‚ðŽæ‚ê‚È‚¢‚Æ‚¢‚¯‚È‚¢‚Ì‚Å
-// Eexe –{‘Ì‚ª import ‚µ‚Ä‚È‚¢ŠO•” dll ‚ÌŠÖ”‚ÍŒÄ‚×‚È‚¢
-//      .lib “Ç‚ñ‚Å’´Šæ’£‚ê‚Î‚Å‚«‚»‚¤‚¾‚ª‚ ‚Ü‚è‚É–Ê“|c
-// E.obj ‚©‚ç exe ‚ÌŠÖ”‚ðŒÄ‚Ôê‡A‘ÎÛ‚ª inline “WŠJ‚³‚ê‚Ä‚½‚èÅ“K‰»‚ÅÁ‚¦‚Ä‚½‚è‚·‚é‚ÆA‚ ‚ç‚Ê‚Æ‚±‚ë‚É jmp ‚µ‚ÄƒNƒ‰ƒbƒVƒ…‚·‚é
-//      ‚Æ‚è‚ ‚¦‚¸ __declspec(dllexport) ‚Â‚¯‚ê‚Î‘Îˆ‰Â”\
-// Evirtual ŠÖ”‚ðŽg‚¤ê‡ARTTI ‚ð–³Œø‚É‚µ‚Ä‚¨‚­•K—v‚ª‚ ‚é
-//      RTTI ‚Ì—L–³‚Å vftable ‚Ì“à—e‚ª•Ï‚í‚Á‚Ä‚µ‚Ü‚¤‚Ì‚ÅB‘Îˆ‚µ‚½‚¢‚ª•û–@‚ª‚æ‚­‚í‚©‚ç‚¸B
-// E.obj ‚©‚çŠÖ”‚ðˆø‚Á’£‚Á‚Ä‚­‚éÛAmangling Œã‚ÌŠÖ”–¼‚ðŽw’è‚·‚é•K—v‚ª‚ ‚é
-//      ‚Æ‚è‚ ‚¦‚¸‚±‚Ìƒ‰ƒCƒuƒ‰ƒŠ‚Í extern "C" ‚Å‰ðŒˆ‚µ‚Ä‚¢‚éB(C linkage ‚Ìê‡ "_" ‚ð‚Â‚¯‚é‚¾‚¯‚ÅÏ‚Þ)
-// 
+ï»¿#include "RuntimeLinkCPlusPlus.h"
+#ifdef RLCPP_Enable_Dynamic_Link
 
 #include <windows.h>
 #include <imagehlp.h>
@@ -21,11 +7,9 @@
 #include <vector>
 #include <string>
 #include <map>
-#include "RuntimeLinkCPlusPlus.h"
 #pragma comment(lib, "imagehlp.lib")
-#pragma warning(disable: 4996) // _s ‚¶‚á‚È‚¢ CRT ŠÖ”Žg‚¤‚Æ‚Å‚é‚â‚Â
+#pragma warning(disable: 4996) // _s ã˜ã‚ƒãªã„ CRT é–¢æ•°ä½¿ã†ã¨ã§ã‚‹ã‚„ã¤
 
-#ifdef RLCPP_Enable_Dynamic_Link
 
 namespace rlcpp {
 
@@ -112,7 +96,7 @@ public:
     bool load(const stl::string &path);
     void unload();
 
-    // ŠO•”ƒVƒ“ƒ{ƒ‹‚ÌƒŠƒ“ƒP[ƒW‰ðŒˆ
+    // å¤–éƒ¨ã‚·ãƒ³ãƒœãƒ«ã®ãƒªãƒ³ã‚±ãƒ¼ã‚¸è§£æ±º
     void link();
 
     void* findSymbol(const char *name);
@@ -141,22 +125,22 @@ public:
     ObjLoader();
     ~ObjLoader();
 
-    // .obj ‚Ìƒ[ƒh‚ðs‚¤B
-    // Šù‚É“Ç‚Ü‚ê‚Ä‚¢‚éƒtƒ@ƒCƒ‹‚ðŽw’è‚µ‚½ê‡ƒŠƒ[ƒhˆ—‚ðs‚¤B
+    // .obj ã®ãƒ­ãƒ¼ãƒ‰ã‚’è¡Œã†ã€‚
+    // æ—¢ã«èª­ã¾ã‚Œã¦ã„ã‚‹ãƒ•ã‚¡ã‚¤ãƒ«ã‚’æŒ‡å®šã—ãŸå ´åˆãƒªãƒ­ãƒ¼ãƒ‰å‡¦ç†ã‚’è¡Œã†ã€‚
     void load(const stl::string &path);
 
-    // ˆË‘¶ŠÖŒW‚Ì‰ðŒˆˆ—Bƒ[ƒhŒãŽÀs‘O‚É•K‚¸ŒÄ‚Ô•K—v‚ª‚ ‚éB
-    // load ‚Ì’†‚Å link ‚Ü‚Å‚â‚Á‚Ä‚à‚¢‚¢‚ªA.obj ‚Ì”‚ª‘‚¦‚é‚Ù‚Ç–³‘Ê‚ª‘½‚­‚È‚éãA
-    // –¢‰ðŒˆƒVƒ“ƒ{ƒ‹‚ð”»•Ê‚µ‚Ã‚ç‚­‚È‚é‚Ì‚ÅŽè‡‚ð•ªŠ„‚µ‚½B
+    // ä¾å­˜é–¢ä¿‚ã®è§£æ±ºå‡¦ç†ã€‚ãƒ­ãƒ¼ãƒ‰å¾Œå®Ÿè¡Œå‰ã«å¿…ãšå‘¼ã¶å¿…è¦ãŒã‚ã‚‹ã€‚
+    // load ã®ä¸­ã§ link ã¾ã§ã‚„ã£ã¦ã‚‚ã„ã„ãŒã€.obj ã®æ•°ãŒå¢—ãˆã‚‹ã»ã©ç„¡é§„ãŒå¤šããªã‚‹ä¸Šã€
+    // æœªè§£æ±ºã‚·ãƒ³ãƒœãƒ«ã‚’åˆ¤åˆ¥ã—ã¥ã‚‰ããªã‚‹ã®ã§æ‰‹é †ã‚’åˆ†å‰²ã—ãŸã€‚
     void link();
 
-    // ƒ[ƒhÏ‚Ý obj ŒŸõ
+    // ãƒ­ãƒ¼ãƒ‰æ¸ˆã¿ obj æ¤œç´¢
     ObjFile* findObj(const stl::string &path);
 
-    // ‘Sƒ[ƒhÏ‚Ý obj ‚©‚çƒVƒ“ƒ{ƒ‹‚ðŒŸõ
+    // å…¨ãƒ­ãƒ¼ãƒ‰æ¸ˆã¿ obj ã‹ã‚‰ã‚·ãƒ³ãƒœãƒ«ã‚’æ¤œç´¢
     void* findSymbol(const stl::string &name);
 
-    // exe ‘¤ obj ‘¤–â‚í‚¸ƒVƒ“ƒ{ƒ‹‚ð’T‚·Blink ˆ——p
+    // exe å´ obj å´å•ã‚ãšã‚·ãƒ³ãƒœãƒ«ã‚’æŽ¢ã™ã€‚link å‡¦ç†ç”¨
     void* resolveExternalSymbol(const stl::string &name);
 
 private:
@@ -189,7 +173,7 @@ bool ObjFile::load(const stl::string &path)
         return false;
     }
 
-    // ˆÈ‰º symbol ŽûWˆ—
+    // ä»¥ä¸‹ symbol åŽé›†å‡¦ç†
     PIMAGE_FILE_HEADER pImageHeader = (PIMAGE_FILE_HEADER)ImageBase;
     PIMAGE_OPTIONAL_HEADER *pOptionalHeader = (PIMAGE_OPTIONAL_HEADER*)(pImageHeader+1);
 
@@ -216,7 +200,7 @@ bool ObjFile::load(const stl::string &path)
     return true;
 }
 
-// ŠO•”ƒVƒ“ƒ{ƒ‹‚ÌƒŠƒ“ƒP[ƒW‰ðŒˆ
+// å¤–éƒ¨ã‚·ãƒ³ãƒœãƒ«ã®ãƒªãƒ³ã‚±ãƒ¼ã‚¸è§£æ±º
 void ObjFile::link()
 {
     size_t ImageBase = (size_t)(&m_data[0]);
@@ -244,10 +228,10 @@ void ObjFile::link()
                 const char *rname = (const char*)(StringTable + rsym->N.Name.Long);
                 void *rdata = m_loader->resolveExternalSymbol(rname);
                 if(rdata==NULL) {
-                    istPrint("!danger! %s: ƒVƒ“ƒ{ƒ‹ %s ‚ð‰ðŒˆ‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B\n", m_filepath.c_str(), rname);
+                    istPrint("!danger! %s: ã‚·ãƒ³ãƒœãƒ« %s ã‚’è§£æ±ºã§ãã¾ã›ã‚“ã§ã—ãŸã€‚\n", m_filepath.c_str(), rname);
                     continue;
                 }
-                // IMAGE_REL_I386_REL32 ‚Ìê‡‘Š‘ÎƒAƒhƒŒƒX‚É’¼‚·•K—v‚ª‚ ‚é
+                // IMAGE_REL_I386_REL32 ã®å ´åˆç›¸å¯¾ã‚¢ãƒ‰ãƒ¬ã‚¹ã«ç›´ã™å¿…è¦ãŒã‚ã‚‹
                 if(pReloc->Type==IMAGE_REL_I386_REL32) {
                     size_t rel = (size_t)rdata - SectionBase - pReloc->VirtualAddress - 4;
                     rdata = (void*)rel;

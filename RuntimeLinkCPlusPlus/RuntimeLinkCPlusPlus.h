@@ -1,3 +1,21 @@
+﻿// .obj ファイルを実行時にロード＆リンクして実行する試み。
+// 以下のような制限はあるものの、とりあえず目的は果たせているように見えます。
+// 
+// ・/GL でコンパイルした .obj は読めない
+//      リンク時の関数inline 展開実現のためにフォーマットが変わるらしい
+// ・exe 本体のデバッグ情報 (.pdb) が必要
+//      実行時リンクの際に文字列から関数のアドレスを取れないといけないので
+// ・exe 本体が import してない外部 dll の関数は呼べない
+//      .lib 読んで超頑張ればできそうだがあまりに面倒…
+// ・.obj から exe の関数を呼ぶ場合、対象が inline 展開されてたり最適化で消えてたりすると、あらぬところに jmp してクラッシュする
+//      とりあえず __declspec(dllexport) つければ対処可能
+// ・virtual 関数を使う場合、RTTI を無効にしておく必要がある
+//      RTTI の有無で vftable の内容が変わってしまうので。対処したいが方法がよくわからず。
+// ・.obj から関数を引っ張ってくる際、mangling 後の関数名を指定する必要がある
+//      とりあえずこのライブラリは extern "C" で解決している。(C linkage の場合 "_" をつけるだけで済む)
+// ・.obj 側のコードはデバッガでは逆アセンブルモードでしか追えない
+//      デバッグ情報はロードしていないため。これは解決困難で諦めモード。
+
 #ifndef __RuntimeLinkCPlusPlus_h__
 #define __RuntimeLinkCPlusPlus_h__
 
@@ -5,7 +23,7 @@
 #define RLCPP_Enable_Dynamic_Link
 
 
-#ifdef RLCPP_Enable_Dynamic_Link
+#if defined(_WIN32) && defined(RLCPP_Enable_Dynamic_Link)
 
 void  _RLCPP_InitializeLoader();
 void  _RLCPP_FinalizeLoader();

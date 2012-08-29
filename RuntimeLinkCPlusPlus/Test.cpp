@@ -1,7 +1,7 @@
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
 #include <windows.h>
 #include "RuntimeLinkCPlusPlus.h"
-#pragma warning(disable: 4996) // _s ‚¶‚á‚È‚¢ CRT ŠÖ”g‚¤‚Æ‚Å‚é‚â‚Â
+#pragma warning(disable: 4996) // _s ã˜ã‚ƒãªã„ CRT é–¢æ•°ä½¿ã†ã¨ã§ã‚‹ã‚„ã¤
 
 
 #define istPrint(...) DebugPrint(__VA_ARGS__)
@@ -30,7 +30,7 @@ void DebugPrint(const char* fmt, ...)
 
 
 
-// .obj ‚©‚çŒÄ‚ÔŠÖ”BÅ“K‰»‚ÅÁ‚¦‚È‚¢‚æ‚¤‚É RLCPP_Fixate ‚Â‚¯‚Ä‚¨‚­
+// .obj ã‹ã‚‰å‘¼ã¶é–¢æ•°ã€‚æœ€é©åŒ–ã§æ¶ˆãˆãªã„ã‚ˆã†ã« RLCPP_Fixate ã¤ã‘ã¦ãŠã
 RLCPP_Fixate void FuncInExe()
 {
     istPrint("FuncInExe()\n");
