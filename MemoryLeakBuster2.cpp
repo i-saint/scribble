@@ -53,6 +53,9 @@ const char *g_ignore_list[] = {
     "!setlocale",
     "!gmtime32_s",
     "!_getmainargs",
+    "!mbtowc_l",
+    "!std::time_get",
+    "!std::time_put",
 };
 
 // 保持する callstack の最大段数
@@ -369,12 +372,6 @@ public:
         , m_enabled(true)
     {
         InitializeDebugSymbol();
-
-        // import table の HeapAlloc/Free の位置を調べる時用
-        //{
-        //    void *t = malloc(1024);
-        //    free(t);
-        //}
 
         HeapAlloc_Orig = &HeapAlloc;
         HeapFree_Orig = &HeapFree;
