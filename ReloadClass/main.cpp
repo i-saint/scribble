@@ -13,47 +13,23 @@ Hoge::~Hoge()
 {
 }
 
+DEFINE_MAIN_MEMFUN(void, Hoge, doSomething, ());
 
 
-// write protect Ç™Ç©Ç©Ç¡ÇΩÉÅÉÇÉäóÃàÊÇã≠à¯Ç…èëÇ´ä∑Ç¶ÇÈ
-template<class T>
-inline void ForceWrite(T &dst, const T &src)
+
+
+template<class To, class From>
+To ForceCast(From from)
 {
-    DWORD old_flag;
-    VirtualProtect(&dst, sizeof(T), PAGE_EXECUTE_READWRITE, &old_flag);
-    dst = src;
-    VirtualProtect(&dst, sizeof(T), old_flag, &old_flag);
+    union { From from; To to; } u;
+    u.from = from;
+    return u.to;
 }
 
-// dllname: ëÂï∂éöè¨ï∂éöãÊï ÇµÇ‹ÇπÇÒ
-// F: functorÅBà¯êîÇÕ (const char *funcname, void *&imp_func)
-template<class F>
-bool EachImportFunction(HMODULE module, const char *dllname, const F &f)
+template<class To, class From>
+To ForceCast(From from, To /*å^êÑë™ÇÃÇΩÇﬂÇæÇØÇÃà¯êî*/)
 {
-    if(module==0) { return false; }
-
-    size_t ImageBase = (size_t)module;
-    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
-    if(pDosHeader->e_magic!=IMAGE_DOS_SIGNATURE) { return false; }
-    PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)(ImageBase + pDosHeader->e_lfanew);
-
-    size_t RVAImports = pNTHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-    if(RVAImports==0) { return false; }
-
-    IMAGE_IMPORT_DESCRIPTOR *pImportDesc = (IMAGE_IMPORT_DESCRIPTOR*)(ImageBase + RVAImports);
-    while(pImportDesc->Name != 0) {
-        if(stricmp((const char*)(ImageBase+pImportDesc->Name), dllname)==0) {
-            IMAGE_IMPORT_BY_NAME **func_names = (IMAGE_IMPORT_BY_NAME**)(ImageBase+pImportDesc->Characteristics);
-            void **import_table = (void**)(ImageBase+pImportDesc->FirstThunk);
-            for(size_t i=0; ; ++i) {
-                if((size_t)func_names[i] == 0) { break;}
-                const char *funcname = (const char*)(ImageBase+(size_t)func_names[i]->Name);
-                f(funcname, import_table[i]);
-            }
-        }
-        ++pImportDesc;
-    }
-    return true;
+    return ForceCast<To, From>(from);
 }
 
 
@@ -63,21 +39,10 @@ int main()
     hoge.doSomething();
 
     {
-        const char mangled_func_name[] =
-#ifdef _WIN64
-        "?doSomething@Hoge@@QEAAXXZ";
-#else
-        "?doSomething@Hoge@@QAEXXZ";
-#endif
         HMODULE module_main = ::GetModuleHandle("main.exe");
         HMODULE module_after = ::LoadLibrary("after.dll");
-        void *replacement = ::GetProcAddress(module_after, mangled_func_name);
-
-        EachImportFunction(module_main, "before.dll", [&](const char *funcname, void *&imp_func){
-            if(strcmp(funcname, mangled_func_name)==0) {
-                ForceWrite<void*>(imp_func, replacement);
-            }
-        });
+        printf("%s\n", g_Hoge_doSomething_Name);
+        g_Hoge_doSomething = *ForceCast(::GetProcAddress(module_after, g_Hoge_doSomething_Name), &g_Hoge_doSomething);
     }
 
     hoge.doSomething();

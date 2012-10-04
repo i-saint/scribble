@@ -2,7 +2,7 @@
 #define IMPLEMENT_MODULE
 #include "module.h"
 
-void MODULE_API Hoge::doSomething()
+DEFINE_MODULE_MEMFUN(void, Hoge, doSomething, ())
 {
-    printf("Hoge::doSomething() before: %d\n", m_data);
+    printf("Hoge::doSomethingImpl() before: %d\n", m_data);
 }
