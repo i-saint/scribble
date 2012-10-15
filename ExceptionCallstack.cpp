@@ -1,8 +1,8 @@
 ﻿#include <windows.h>
-#include <imagehlp.h>
+#include <dbghelp.h>
 #include <string>
 
-#pragma comment(lib, "imagehlp.lib")
+#pragma comment(lib, "dbghelp.lib")
 
 
 std::string AddressToSymbolName(void *address)

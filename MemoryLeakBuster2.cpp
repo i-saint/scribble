@@ -8,11 +8,11 @@
 #pragma warning(disable: 4073) // init_seg(lib) は普通は使っちゃダメ的な warning。正当な理由があるので黙らせる
 #pragma warning(disable: 4996) // _s じゃない CRT 関数使うとでるやつ
 #pragma init_seg(lib) // global オブジェクトの初期化の優先順位上げる
-#pragma comment(lib, "imagehlp.lib")
+#pragma comment(lib, "dbghelp.lib")
 #pragma comment(lib, "psapi.lib")
 
 #include <windows.h>
-#include <imagehlp.h>
+#include <dbghelp.h>
 #include <psapi.h>
 #include <string>
 #include <vector>

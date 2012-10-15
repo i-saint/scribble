@@ -20,7 +20,7 @@ const size_t MaxCallstackDepth = 32;
 #pragma init_seg(lib) // global オブジェクトの初期化の優先順位上げる
 
 #include <windows.h>
-#include <imagehlp.h>
+#include <dbghelp.h>
 #include <string>
 #include <map>
 namespace stl = std;
@@ -31,7 +31,7 @@ namespace stl = std;
 #undef  min
 #endif // max
 
-#pragma comment(lib, "imagehlp.lib")
+#pragma comment(lib, "dbghelp.lib")
 
 
 
