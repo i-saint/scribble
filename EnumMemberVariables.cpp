@@ -3,16 +3,15 @@
 
 #define _NO_CVCONST_H
 #include <windows.h>
+#include <intrin.h>
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
-
 
 
 struct EMVContext
 {
     HANDLE hprocess;
     ULONG64 modbase;
-    const void *callback;
     std::string current_class;
 };
 
@@ -68,15 +67,6 @@ void EnumMemberVariables(EMVContext &ctx, DWORD t, const Func &f)
     }
 }
 
-template<class Func>
-BOOL CALLBACK EnumMembersCallback(PSYMBOL_INFO pSymInfo, ULONG SymbolSize, void *_ctx)
-{
-    EMVContext &ctx = *(EMVContext*)_ctx;
-    ctx.modbase = pSymInfo->ModBase;
-    EnumMemberVariables(ctx, pSymInfo->TypeIndex, *(const Func*)(ctx.callback));
-    return TRUE;
-}
-
 // Func: (std::string &name_of_member_variable)
 template<class Func>
 bool EnumMemberVariables(const char *classname, const Func &f)
@@ -86,12 +76,19 @@ bool EnumMemberVariables(const char *classname, const Func &f)
     sinfo->SizeOfStruct = sizeof(SYMBOL_INFO);
     sinfo->MaxNameLen = MAX_PATH;
 
-    EMVContext ctx = {::GetCurrentProcess(), 0, &f};
-    std::string mask = "*!";
-    mask += classname;
-    ::SymEnumTypesByName(ctx.hprocess, 0, mask.c_str(), &EnumMembersCallback<Func>, &ctx);
+    EMVContext ctx = {::GetCurrentProcess(), 0};
+    {
+        HMODULE mod = 0;
+        void *addr = *(void**)_AddressOfReturnAddress();
+        ::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)addr, &mod);
+        ctx.modbase = (ULONG64)mod;
+    }
 
-    return true;
+    if(::SymGetTypeFromName(ctx.hprocess, ctx.modbase, classname, sinfo)) {
+        EnumMemberVariables(ctx, sinfo->TypeIndex, f);
+        return true;
+    }
+    return false;
 }
 
 
