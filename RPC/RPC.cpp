@@ -35,6 +35,12 @@ enum ArgTypes {
     ArgType_Other,
 };
 
+enum CallingConvention {
+    CC_cdecl,
+    CC_thiscall,
+    CC_stdcall,
+};
+
 struct ArgTypeInfo
 {
     size_t type; // ArgTypes
@@ -70,8 +76,14 @@ struct ArgTypeInfo
 struct RPCInfo
 {
     char module_name[64];
-    void *function;
-    size_t num_args;
+    union {
+        struct {
+            void *function;
+            short num_args;
+            short calling_convention;
+        };
+        char pad[16];
+    };
     // ArgTypeInfo types[num_args];
     // ArgData<types[0].size> data[0]
     // ArgData<types[1].size> data[1]
@@ -80,7 +92,7 @@ struct RPCInfo
 
 
 template<typename Ret>
-RPCInfo* CreateRPCInfo(Ret (*f)())
+RPCInfo* _CreateRPCInfo(Ret (*f)())
 {
     size_t alloc_size = sizeof(ArgTypeInfo);
     RPCInfo *ret = (RPCInfo*)_aligned_malloc(alloc_size, 16);
@@ -91,7 +103,7 @@ RPCInfo* CreateRPCInfo(Ret (*f)())
 }
 
 template<typename Ret, typename Arg1>
-RPCInfo* CreateRPCInfo(Ret (*f)(Arg1), Arg1 arg1)
+RPCInfo* _CreateRPCInfo(Ret (*f)(Arg1), Arg1 arg1)
 {
     ArgTypeInfo types[1];
     ArgTypeInfo::Create<Arg1>(types[0]);
@@ -111,7 +123,7 @@ RPCInfo* CreateRPCInfo(Ret (*f)(Arg1), Arg1 arg1)
 }
 
 template<typename Ret, typename Arg1, typename Arg2>
-RPCInfo* CreateRPCInfo(Ret (*f)(Arg1, Arg2), Arg1 arg1, Arg2 arg2)
+RPCInfo* _CreateRPCInfo(Ret (*f)(Arg1, Arg2), Arg1 arg1, Arg2 arg2)
 {
     ArgTypeInfo types[2];
     ArgTypeInfo::Create<Arg1>(types[0]);
@@ -133,7 +145,7 @@ RPCInfo* CreateRPCInfo(Ret (*f)(Arg1, Arg2), Arg1 arg1, Arg2 arg2)
 }
 
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3>
-RPCInfo* CreateRPCInfo(Ret (*f)(Arg1, Arg2, Arg3), Arg1 arg1, Arg2 arg2, Arg3 arg3)
+RPCInfo* _CreateRPCInfo(Ret (*f)(Arg1, Arg2, Arg3), Arg1 arg1, Arg2 arg2, Arg3 arg3)
 {
     ArgTypeInfo types[3];
     ArgTypeInfo::Create<Arg1>(types[0]);
@@ -157,7 +169,7 @@ RPCInfo* CreateRPCInfo(Ret (*f)(Arg1, Arg2, Arg3), Arg1 arg1, Arg2 arg2, Arg3 ar
 }
 
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
-RPCInfo* CreateRPCInfo(Ret (*f)(Arg1, Arg2, Arg3, Arg4), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4)
+RPCInfo* _CreateRPCInfo(Ret (*f)(Arg1, Arg2, Arg3, Arg4), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4)
 {
     ArgTypeInfo types[4];
     ArgTypeInfo::Create<Arg1>(types[0]);
@@ -182,19 +194,27 @@ RPCInfo* CreateRPCInfo(Ret (*f)(Arg1, Arg2, Arg3, Arg4), Arg1 arg1, Arg2 arg2, A
     return ret;
 }
 
+template<typename Ret> RPCInfo* CreateRPCInfo(Ret (*f)());
+template<typename Ret, typename Arg1> RPCInfo* CreateRPCInfo(Ret (*f)(Arg1), Arg1 arg1);
+template<typename Ret, typename Arg1, typename Arg2> RPCInfo* CreateRPCInfo(Ret (*f)(Arg1, Arg2), Arg1 arg1, Arg2 arg2);
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3> RPCInfo* CreateRPCInfo(Ret (*f)(Arg1, Arg2, Arg3), Arg1 arg1, Arg2 arg2, Arg3 arg3);
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4> RPCInfo* CreateRPCInfo(Ret (*f)(Arg1, Arg2, Arg3, Arg4), Arg1 arg1, Arg2 arg2, Arg3 arg3, Arg4 arg4);
+
+
 extern "C" void RPCCall(const void *args);
 
 
-void Test1(int i)
+void Test1(float f)
 {
-    printf("Test1(%d)\n", i);
+    printf("Test1(%f)\n", f);
 }
 
 
 int main()
 {
+    Test1(100.0f);
     {
-        RPCInfo *ri = CreateRPCInfo(&Test1, 100);
+        RPCInfo *ri = CreateRPCInfo(&Test1, 100.0f);
         RPCCall(ri);
         _aligned_free(ri);
     }

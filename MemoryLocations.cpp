@@ -28,6 +28,9 @@ bool IsStackMemory(void *addr)
 // 指定のアドレスが heap 領域内であれば true
 bool IsHeapMemory(void *addr)
 {
+    // static 領域ではない && stack 領域でもない && 有効なメモリ (::VirtualQuery() が成功する) なら true
+    // ::HeapWalk() で照合するのが礼儀正しいアプローチだが、
+    // こっちの方が速いし、別スレッドや別モジュールから呼び出されるのでなければ結果も正しいはず
     MEMORY_BASIC_INFORMATION meminfo;
     return !IsStackMemory(addr) && !IsStaticMemory(addr) && ::VirtualQuery(addr, &meminfo, sizeof(meminfo));
 }
