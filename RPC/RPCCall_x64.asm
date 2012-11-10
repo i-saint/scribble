@@ -1,8 +1,15 @@
 .code
 RPCCall PROC
+    push rax
+    push r10
+    push r11
+    push r12
+    push r13
+
     mov rax, rcx                    ; rax: RPCInfo
 
-    mov r10, qword ptr [rax+48h] ; r10: num_args
+    xor r10, r10
+    mov r10w, word ptr [rax+48h] ; r10: num_args
 
     mov r11, rax    ; r11: pointer to ArgTypeInfo[]
     add r11, 50h
@@ -102,6 +109,14 @@ Arg4End@RPCCall:
 
 
 Jump@RPCCall:
-    jmp qword ptr [rax+40h]
+    call qword ptr [rax+40h]
+
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop rax
+    ret
+
 RPCCall ENDP
 END
