@@ -8,6 +8,9 @@
 // 指定のアドレスが現在のモジュールの static 領域内であれば true
 bool IsStaticMemory(void *addr)
 {
+    // static 領域はモジュール (exe,dll) が map されている領域内にある
+    // 高速化のため呼び出し元モジュールのみ調べる
+    // 他モジュールも調べる場合 ::EnumProcessModules() とかを使う
     MODULEINFO modinfo;
     {
         HMODULE mod = 0;
@@ -21,6 +24,10 @@ bool IsStaticMemory(void *addr)
 // 指定アドレスが現在のスレッドの stack 領域内であれば true
 bool IsStackMemory(void *addr)
 {
+    // Thread Information Block に上限下限情報が入っている
+    // (これだと現在のスレッドの stack 領域しか判別できない。
+    //  別スレッドの stack かも調べたい場合のいい方法がよくわからず。
+    //  ::Thread32First(), ::Thread32Next() で全プロセスの全スレッドを巡回するしかない…？)
     NT_TIB *tib = reinterpret_cast<NT_TIB*>(::NtCurrentTeb());
     return addr>=tib->StackLimit && addr<tib->StackBase;
 }
