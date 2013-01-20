@@ -358,7 +358,7 @@ void UnhookHeapAlloc()
                 ForceWrite<void*>(imp_func, HeapAlloc_Orig);
             }
             else if(strcmp(funcname, "HeapFree")==0) {
-                ForceWrite<void*>(imp_func, HeapAlloc_Orig);
+                ForceWrite<void*>(imp_func, HeapFree_Orig);
             }
         });
     }
