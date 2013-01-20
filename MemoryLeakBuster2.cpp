@@ -368,7 +368,8 @@ class MemoryLeakBuster
 {
 public:
     MemoryLeakBuster()
-        : m_leakinfo(NULL)
+        : m_mutex(NULL)
+        , m_leakinfo(NULL)
         , m_enabled(true)
     {
         InitializeDebugSymbol();
@@ -378,12 +379,13 @@ public:
 
         // CRT モジュールの中の import table の HeapAlloc/Free を塗り替えて hook を仕込む
         HookHeapAlloc();
+        m_mutex = new (HeapAlloc_Orig((HANDLE)_get_heap_handle(), 0, sizeof(Mutex))) Mutex();
         m_leakinfo = new (HeapAlloc_Orig((HANDLE)_get_heap_handle(), 0, sizeof(DataTableT))) DataTableT();
     }
 
     ~MemoryLeakBuster()
     {
-        Mutex::ScopedLock l(m_mutex);
+        Mutex::ScopedLock l(*m_mutex);
 
         printLeakInfo();
 
@@ -395,6 +397,10 @@ public:
         m_leakinfo->~DataTableT();
         HeapFree_Orig((HANDLE)_get_heap_handle(), 0, m_leakinfo);
         m_leakinfo = NULL;
+
+        // m_mutex は開放しません
+        // 別スレッドから HeapFree_Hooked() が呼ばれて mutex を待ってる間に
+        // ここでその mutex を破棄してしまうとクラッシュしてしまうためです。
 
         FinalizeDebugSymbol();
     }
@@ -408,7 +414,7 @@ public:
         AllocInfo cs;
         cs.depth = GetCallstack(cs.stack, _countof(cs.stack), 3);
         {
-            Mutex::ScopedLock l(m_mutex);
+            Mutex::ScopedLock l(*m_mutex);
             if(m_leakinfo==NULL) { return; }
             (*m_leakinfo)[p] = cs;
         }
@@ -416,7 +422,7 @@ public:
 
     void eraseAllocationInfo(void *p)
     {
-        Mutex::ScopedLock l(m_mutex);
+        Mutex::ScopedLock l(*m_mutex);
         if(m_leakinfo==NULL) { return; }
         m_leakinfo->erase(p);
     }
@@ -444,8 +450,8 @@ public:
 
 private:
     typedef stl::map<void*, AllocInfo, stl::less<void*>, OrigHeapAllocator<stl::pair<const void*, AllocInfo> > > DataTableT;
+    Mutex *m_mutex;
     DataTableT *m_leakinfo;
-    Mutex m_mutex;
     bool m_enabled;
 };
 
