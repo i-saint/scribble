@@ -1,4 +1,7 @@
-﻿// メモリリーク検出器。
+﻿// this code is public domain.
+// latest version: https://github.com/i-saint/scribble/blob/master/MemoryLeakBuster2.cpp
+
+// メモリリーク検出器。
 // この .cpp をプロジェクトに含めるだけで有効になり、プログラム終了時にリーク領域の確保時のコールスタックをデバッグ出力に表示します。
 // 
 // CRT が呼ぶ HeapAlloc/Free を hook することで、new/delete も malloc 一族も、外部 dll のリークも捕捉できます。
@@ -59,7 +62,7 @@ const char *g_ignore_list[] = {
 };
 
 // 保持する callstack の最大段数
-const size_t MaxCallstackDepth = 32;
+const size_t MaxCallstackDepth = 64;
 
 
 typedef LPVOID (WINAPI *HeapAllocT)( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes );
