@@ -5,11 +5,11 @@
 #pragma intrinsic(memset)
 #pragma intrinsic(memcmp)
 
-typedef __m128i                 uint128;
-typedef unsigned long long	uint64;
-typedef unsigned int		uint32;
-typedef unsigned short		uint16;
-typedef unsigned char		uint8;
+typedef __m128i             uint128;
+typedef unsigned long long  uint64;
+typedef unsigned int        uint32;
+typedef unsigned short      uint16;
+typedef unsigned char       uint8;
 
 __forceinline void memset128(uint128 *dst, uint128 pattern, size_t size_byte)
 {
