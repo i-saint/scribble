@@ -4,7 +4,10 @@
 // メモリリーク検出器。
 // この .cpp をプロジェクトに含めるだけで有効になり、プログラム終了時にリーク領域の確保時のコールスタックをデバッグ出力に表示します。
 // 
-// CRT が呼ぶ HeapAlloc/Free を hook することで、new/delete も malloc 一族も、外部 dll のリークも捕捉できます。
+// また、デバッガで止めた際、イミディエイトウィンドウに以下のコマンドを打つことで、指定メモリ領域の確保時のコールスタックを出すことができます。
+//  PrintAllocInfo((void*)address)
+// 
+// CRT が呼ぶ HeapAlloc/Free を hook することで、new/delete も malloc 一族も、外部 dll のリークも捕捉可能にしています。
 // CRT を static link したモジュールの場合追加の手順が必要で、下の g_crtdllnames に対象モジュールを追加する必要があります。
 
 
@@ -29,6 +32,9 @@ namespace stl = std;
 #endif // max
 
 namespace {
+
+// 保持する callstack の最大段数
+const size_t MaxCallstackDepth = 64;
 
 // リークチェッカを仕掛ける対象となるモジュール名のリスト。(dll or exe)
 // EnumProcessModules でロードされている全モジュールに仕掛けることもできるが、
@@ -61,9 +67,6 @@ const char *g_ignore_list[] = {
     "!std::time_put",
 };
 
-// 保持する callstack の最大段数
-const size_t MaxCallstackDepth = 64;
-
 
 typedef LPVOID (WINAPI *HeapAllocT)( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes );
 typedef BOOL (WINAPI *HeapFreeT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem );
@@ -80,7 +83,7 @@ BOOL WINAPI HeapFree_Hooked( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem );
 
 
 template<size_t N>
-inline int istsprintf(char (&buf)[N], const char *format, ...)
+inline int istSPrintf(char (&buf)[N], const char *format, ...)
 {
     va_list vl;
     va_start(vl, format);
@@ -90,7 +93,7 @@ inline int istsprintf(char (&buf)[N], const char *format, ...)
 }
 
 template<size_t N>
-inline int istvsprintf(char (&buf)[N], const char *format, va_list vl)
+inline int istVSprintf(char (&buf)[N], const char *format, va_list vl)
 {
     return _vsnprintf(buf, N, format, vl);
 }
@@ -104,7 +107,7 @@ void DebugPrintV(const char* /*file*/, int /*line*/, const char* fmt, va_list vl
     //istsprintf(buf, "%s:%d - ", file, line);
     //::OutputDebugStringA(buf);
     //WriteLogFile(buf);
-    istvsprintf(buf, fmt, vl);
+    istVSprintf(buf, fmt, vl);
     ::OutputDebugStringA(buf);
 }
 
@@ -139,7 +142,8 @@ int GetCallstack(void **callstack, int callstack_size, int skip_size)
     return CaptureStackBackTrace(skip_size, callstack_size, callstack, NULL);
 }
 
-stl::string AddressToSymbolName(void *address, HANDLE proc=::GetCurrentProcess())
+template<class String>
+void AddressToSymbolName(String &out_text, void *address, HANDLE proc=::GetCurrentProcess())
 {
 #ifdef _WIN64
     typedef DWORD64 DWORDX;
@@ -162,31 +166,30 @@ stl::string AddressToSymbolName(void *address, HANDLE proc=::GetCurrentProcess()
     imageSymbol->MaxNameLength = MAX_PATH;
 
     if(!::SymGetModuleInfo(process, (DWORDX)address, &imageModule)) {
-        istsprintf(buf, "[0x%p]\n", address);
+        istSPrintf(buf, "[0x%p]\n", address);
     }
     else if(!::SymGetSymFromAddr(process, (DWORDX)address, &dispSym, imageSymbol)) {
-        istsprintf(buf, "%s + 0x%x [0x%p]\n", imageModule.ModuleName, ((size_t)address-(size_t)imageModule.BaseOfImage), address);
+        istSPrintf(buf, "%s + 0x%x [0x%p]\n", imageModule.ModuleName, ((size_t)address-(size_t)imageModule.BaseOfImage), address);
     }
     else if(!::SymGetLineFromAddr(process, (DWORDX)address, &dispLine, &line)) {
-        istsprintf(buf, "%s!%s + 0x%x [0x%p]\n", imageModule.ModuleName, imageSymbol->Name, ((size_t)address-(size_t)imageSymbol->Address), address);
+        istSPrintf(buf, "%s!%s + 0x%x [0x%p]\n", imageModule.ModuleName, imageSymbol->Name, ((size_t)address-(size_t)imageSymbol->Address), address);
     }
     else {
-        istsprintf(buf, "%s(%d): %s!%s + 0x%x [0x%p]\n", line.FileName, line.LineNumber,
+        istSPrintf(buf, "%s(%d): %s!%s + 0x%x [0x%p]\n", line.FileName, line.LineNumber,
             imageModule.ModuleName, imageSymbol->Name, ((size_t)address-(size_t)imageSymbol->Address), address);
     }
-    return buf;
+    out_text += buf;
 }
 
-stl::string CallstackToSymbolNames(void **callstack, int callstack_size, int clamp_head=0, int clamp_tail=0, const char *indent="")
+template<class String>
+void CallstackToSymbolNames(String &out_text, void * const *callstack, int callstack_size, int clamp_head=0, int clamp_tail=0, const char *indent="")
 {
-    stl::string tmp;
     int begin = stl::max<int>(0, clamp_head);
     int end = stl::max<int>(0, callstack_size-clamp_tail);
     for(int i=begin; i<end; ++i) {
-        tmp += indent;
-        tmp += AddressToSymbolName(callstack[i]);
+        out_text += indent;
+        AddressToSymbolName(out_text, callstack[i]);
     }
-    return tmp;
 }
 
 
@@ -276,13 +279,6 @@ template<class T, typename Alloc> inline bool operator!=(const OrigHeapAllocator
 
 
 
-// アロケート時の callstack を保持
-struct AllocInfo
-{
-    void *stack[MaxCallstackDepth];
-    int depth;
-};
-
 
 // write protect がかかったメモリ領域を強引に書き換える
 template<class T> inline void ForceWrite(T &dst, const T &src)
@@ -370,6 +366,17 @@ void UnhookHeapAlloc()
 class MemoryLeakBuster
 {
 public:
+    // アロケート時の callstack を保持
+    struct AllocInfo
+    {
+        void *location;
+        size_t size;
+        void *stack[MaxCallstackDepth];
+        int depth;
+    };
+    typedef stl::map<void*, AllocInfo, stl::less<void*>, OrigHeapAllocator<stl::pair<const void*, AllocInfo> > > DataTableT;
+    typedef stl::basic_string<char, std::char_traits<char>, OrigHeapAllocator<char> > TempString;
+
     MemoryLeakBuster()
         : m_mutex(NULL)
         , m_leakinfo(NULL)
@@ -410,11 +417,13 @@ public:
 
     void enableLeakCheck(bool v) { m_enabled=v; }
 
-    void addAllocationInfo(void *p)
+    void addAllocationInfo(void *p, size_t size)
     {
         if(!m_enabled) { return; }
 
         AllocInfo cs;
+        cs.location = p;
+        cs.size = size;
         cs.depth = GetCallstack(cs.stack, _countof(cs.stack), 3);
         {
             Mutex::ScopedLock l(*m_mutex);
@@ -430,11 +439,32 @@ public:
         m_leakinfo->erase(p);
     }
 
+    const AllocInfo* findAllocationInfo(void *p) const
+    {
+        for(DataTableT::const_iterator li=m_leakinfo->begin(); li!=m_leakinfo->end(); ++li) {
+            const AllocInfo &ai = li->second;
+            if(p>=ai.location && (size_t)p<=(size_t)ai.location+ai.size) {
+                return &ai;
+            }
+        }
+        return NULL;
+    }
+
     void printLeakInfo()
     {
         if(m_leakinfo==NULL) { return; }
+
+        char buf[128];
+        TempString text;
+        text.reserve(1024*16);
+
         for(DataTableT::iterator li=m_leakinfo->begin(); li!=m_leakinfo->end(); ++li) {
-            stl::string text = CallstackToSymbolNames(li->second.stack, li->second.depth);
+            text.clear();
+
+            sprintf(buf, "memory leak: 0x%p (%llu byte)\n", li->second.location, (unsigned long long)li->second.size);
+            text += buf;
+            CallstackToSymbolNames(text, li->second.stack, li->second.depth);
+            text += "\n";
 
             bool ignore = false;
             for(size_t ii=0; ii<_countof(g_ignore_list); ++ii) {
@@ -445,14 +475,11 @@ public:
             }
             if(ignore) { continue; }
 
-            istPrint("memory leak: %p\n", li->first);
-            istPrint(text.c_str());
-            istPrint("\n");
+            OutputDebugStringA(text.c_str());
         }
     }
 
 private:
-    typedef stl::map<void*, AllocInfo, stl::less<void*>, OrigHeapAllocator<stl::pair<const void*, AllocInfo> > > DataTableT;
     Mutex *m_mutex;
     DataTableT *m_leakinfo;
     bool m_enabled;
@@ -467,7 +494,7 @@ MemoryLeakBuster g_memory_leak_buster;
 LPVOID WINAPI HeapAlloc_Hooked( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes )
 {
     LPVOID p = HeapAlloc_Orig(hHeap, dwFlags, dwBytes);
-    g_memory_leak_buster.addAllocationInfo(p);
+    g_memory_leak_buster.addAllocationInfo(p, dwBytes);
     return p;
 }
 
@@ -479,3 +506,26 @@ BOOL WINAPI HeapFree_Hooked( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem )
 }
 
 } /// namespace
+
+
+// イメディエイトウィンドウから実行可能な、指定メモリ領域の情報を出す関数。
+// リンク時最適化で消されないようにするため dllexport
+__declspec(dllexport) void PrintAllocInfo(void *p)
+{
+    const MemoryLeakBuster::AllocInfo *ai = g_memory_leak_buster.findAllocationInfo(p);
+    if(ai==NULL) {
+        OutputDebugStringA("no information.\n");
+        return;
+    }
+
+    char buf[128];
+    MemoryLeakBuster::TempString text;
+    text.reserve(1024*16);
+
+    sprintf(buf, "0x%p (%llu byte)\n", ai->location, (unsigned long long)ai->size);
+    text += buf;
+    CallstackToSymbolNames(text, ai->stack, ai->depth);
+    text += "\n";
+
+    OutputDebugStringA(text.c_str());
+}
