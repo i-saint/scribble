@@ -1,6 +1,7 @@
-﻿#include <type_traits>
+﻿#ifndef VariantCall_h
+#define VariantCall_h
+#include <type_traits>
 #include "Variant.h"
-
 
 
 #define RemoveCR(T) typename std::remove_const<typename std::remove_reference<T>::type>::type
@@ -462,8 +463,16 @@ template<class R, size_t SR>
 inline void VariantCall(R (*f)(), TVariant<SR> &r)
 { VC_Fn0<R,SR>()(f, &r); }
 
+template<class R, size_t SR, size_t SA0>
+inline void VariantCall(R (*f)(), TVariant<SR> &r, const TVariant<SA0> *va)
+{ VC_Fn0<R,SR>()(f, &r); }
+
 template<class R, size_t SR>
 inline void VariantCall(R (*f)(), TVariant<SR> *r)
+{ VC_Fn0<R,SR>()(f, r); }
+
+template<class R, size_t SR, size_t SA0>
+inline void VariantCall(R (*f)(), TVariant<SR> *r, const TVariant<SA0> *va)
 { VC_Fn0<R,SR>()(f, r); }
 
 template<class R>
@@ -475,8 +484,16 @@ template<class R, class C, size_t SR>
 inline void VariantCall(R (C::*f)(), C &o, TVariant<SR> &r)
 { VC_MemFn0<R,C,SR>()(f, o, &r); }
 
+template<class R, class C, size_t SR, size_t SA0>
+inline void VariantCall(R (C::*f)(), C &o, TVariant<SR> &r, const TVariant<SA0> *va)
+{ VC_MemFn0<R,C,SR>()(f, o, &r); }
+
 template<class R, class C, size_t SR>
 inline void VariantCall(R (C::*f)(), C &o, TVariant<SR> *r)
+{ VC_MemFn0<R,C,SR>()(f, o, r); }
+
+template<class R, class C, size_t SR, size_t SA0>
+inline void VariantCall(R (C::*f)(), C &o, TVariant<SR> *r, const TVariant<SA0> *va)
 { VC_MemFn0<R,C,SR>()(f, o, r); }
 
 template<class R, class C>
@@ -488,8 +505,16 @@ template<class R, class C, size_t SR>
 inline void VariantCall(R (C::*f)() const, const C &o, TVariant<SR> &r)
 { VC_ConstMemFn0<R,C,SR>()(f, o, &r); }
 
+template<class R, class C, size_t SR, size_t SA0>
+inline void VariantCall(R (C::*f)() const, const C &o, TVariant<SR> &r, const TVariant<SA0> *va)
+{ VC_ConstMemFn0<R,C,SR>()(f, o, &r); }
+
 template<class R, class C, size_t SR>
 inline void VariantCall(R (C::*f)() const, const C &o, TVariant<SR> *r)
+{ VC_ConstMemFn0<R,C,SR>()(f, o, r); }
+
+template<class R, class C, size_t SR, size_t SA0>
+inline void VariantCall(R (C::*f)() const, const C &o, TVariant<SR> *r, const TVariant<SA0> *va)
 { VC_ConstMemFn0<R,C,SR>()(f, o, r); }
 
 template<class R, class C>
@@ -800,4 +825,8 @@ inline void VariantCall(R (C::*f)(A0,A1,A2,A3) const, const C &o, TVariant<SA0> 
 template<class R, class C, class A0, class A1, class A2, class A3, size_t SA>
 inline void VariantCall(R (C::*f)(A0,A1,A2,A3) const, const C &o, const TVariant<SA> *va)
 { VC_ConstMemFn4<R,C,A0,A1,A2,A3,4,SA,SA,SA,SA>()(f, o, NULL, va[0], va[1], va[2], va[3]); }
+
+
+
+#endif // VariantCall_h
 
