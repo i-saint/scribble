@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     VariantCall(Func0, ret);
     assert(ret.cast<int32>()==1);
 
-    // variant 引数渡し (VariantCall(Func2, ret, 2, 4); とも書ける)
+    // variant 引数渡し
     VariantCall(Func2, ret, var(2), var(4));
     assert(ret.cast<int32>()==8);
 
