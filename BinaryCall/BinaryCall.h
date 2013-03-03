@@ -5,18 +5,26 @@
 
 #define RemoveCR(T) typename std::remove_const<typename std::remove_reference<T>::type>::type
 
-template<class A0=void, class A1=void, class A2=void, class A3=void, class A4=void, class A5=void> struct ArgList;
+template<class A0=void, class A1=void, class A2=void, class A3=void, class A4=void, class A5=void>
+struct ArgList;
 
+template<>
+struct ArgList<>
+{
+    ArgList() {}
+};
 template<class A0>
 struct ArgList<A0>
 {
     A0 a0;
+    ArgList(const A0 &_0=A0()) : a0(_0) {}
 };
 template<class A0, class A1>
 struct ArgList<A0, A1>
 {
     A0 a0;
     A1 a1;
+    ArgList(const A0 &_0=A0(), const A1 &_1=A1()) : a0(_0), a1(_1) {}
 };
 template<class A0, class A1, class A2>
 struct ArgList<A0, A1, A2>
@@ -24,6 +32,7 @@ struct ArgList<A0, A1, A2>
     A0 a0;
     A1 a1;
     A2 a2;
+    ArgList(const A0 &_0=A0(), const A1 &_1=A1(), const A2 &_2=A2()) : a0(_0), a1(_1), a2(_2) {}
 };
 template<class A0, class A1, class A2, class A3>
 struct ArgList<A0, A1, A2, A3>
@@ -32,6 +41,7 @@ struct ArgList<A0, A1, A2, A3>
     A1 a1;
     A2 a2;
     A3 a3;
+    ArgList(const A0 &_0=A0(), const A1 &_1=A1(), const A2 &_2=A2(), const A3 &_3=A3()) : a0(_0), a1(_1), a2(_2), a3(_3) {}
 };
 
 
@@ -408,65 +418,245 @@ template<class R>
 inline void BinaryCall(R (*f)(), void *r, const void *a=NULL)
 { BC_Fn0<R>()(f, r, a); }
 
+template<class R>
+inline void BinaryCall(R (*f)(), R &r)
+{ BC_Fn0<R>()(f, &r, NULL); }
+
+template<class R>
+inline void BinaryCall(R (*f)(), const void *a=NULL)
+{ BC_Fn0<R>()(f, NULL, a); }
+
+
 template<class R, class C>
 inline void BinaryCall(R (C::*f)(), C &o, void *r, const void *a=NULL)
 { BC_MemFn0<R,C>()(f, o, r, a); }
 
 template<class R, class C>
+inline void BinaryCall(R (C::*f)(), C &o, R &r)
+{ BC_MemFn0<R,C>()(f, o, &r, NULL); }
+
+template<class R, class C>
+inline void BinaryCall(R (C::*f)(), C &o, const void *a=NULL)
+{ BC_MemFn0<R,C>()(f, o, NULL, a); }
+
+
+template<class R, class C>
 inline void BinaryCall(R (C::*f)() const, const C &o, void *r, const void *a=NULL)
 { BC_ConstMemFn0<R,C>()(f, o, r, a); }
+
+template<class R, class C>
+inline void BinaryCall(R (C::*f)() const, const C &o, R &r)
+{ BC_ConstMemFn0<R,C>()(f, o, &r, NULL); }
+
+template<class R, class C>
+inline void BinaryCall(R (C::*f)() const, const C &o, const void *a=NULL)
+{ BC_ConstMemFn0<R,C>()(f, o, NULL, a); }
+
+
 
 
 template<class R, class A0>
 inline void BinaryCall(R (*f)(A0), void *r, const void *a)
 { BC_Fn1<R,A0>()(f, r, a); }
 
+template<class R, class A0>
+inline void BinaryCall(R (*f)(A0), R &r, const A0 &a)
+{ BC_Fn1<R,A0>()(f, &r, &a); }
+
+template<class R, class A0>
+inline void BinaryCall(R (*f)(A0), const void *a)
+{ BC_Fn1<R,A0>()(f, NULL, a); }
+
+template<class R, class A0>
+inline void BinaryCall(R (*f)(A0), const A0 &a)
+{ BC_Fn1<R,A0>()(f, NULL, &a); }
+
+
 template<class R, class C, class A0>
 inline void BinaryCall(R (C::*f)(A0), C &o, void *r, const void *a)
 { BC_MemFn1<R,C,A0>()(f, o, r, a); }
 
 template<class R, class C, class A0>
+inline void BinaryCall(R (C::*f)(A0), C &o, R &r, const A0 &a)
+{ BC_MemFn1<R,C,A0>()(f, o, &r, &a); }
+
+template<class R, class C, class A0>
+inline void BinaryCall(R (C::*f)(A0), C &o, const void *a)
+{ BC_MemFn1<R,C,A0>()(f, o, NULL, a); }
+
+template<class R, class C, class A0>
+inline void BinaryCall(R (C::*f)(A0), C &o, const A0 &a)
+{ BC_MemFn1<R,C,A0>()(f, o, NULL, &a); }
+
+
+template<class R, class C, class A0>
 inline void BinaryCall(R (C::*f)(A0) const, const C &o, void *r, const void *a)
 { BC_ConstMemFn1<R,C,A0>()(f, o, r, a); }
+
+template<class R, class C, class A0>
+inline void BinaryCall(R (C::*f)(A0) const, const C &o, R &r, const A0 &a)
+{ BC_ConstMemFn1<R,C,A0>()(f, o, &r, &a); }
+
+template<class R, class C, class A0>
+inline void BinaryCall(R (C::*f)(A0) const, const C &o, const void *a)
+{ BC_ConstMemFn1<R,C,A0>()(f, o, NULL, a); }
+
+template<class R, class C, class A0>
+inline void BinaryCall(R (C::*f)(A0) const, const C &o, const A0 &a)
+{ BC_ConstMemFn1<R,C,A0>()(f, o, NULL, &a); }
 
 
 template<class R, class A0, class A1>
 inline void BinaryCall(R (*f)(A0,A1), void *r, const void *a)
 { BC_Fn2<R,A0,A1>()(f, r, a); }
 
+template<class R, class A0, class A1>
+inline void BinaryCall(R (*f)(A0,A1), R &r, const ArgList<A0,A1> &a)
+{ BC_Fn2<R,A0,A1>()(f, &r, &a); }
+
+template<class R, class A0, class A1>
+inline void BinaryCall(R (*f)(A0,A1), const void *a)
+{ BC_Fn2<R,A0,A1>()(f, NULL, a); }
+
+template<class R, class A0, class A1>
+inline void BinaryCall(R (*f)(A0,A1), const ArgList<A0,A1> &a)
+{ BC_Fn2<R,A0,A1>()(f, NULL, &a); }
+
+
 template<class R, class C, class A0, class A1>
 inline void BinaryCall(R (C::*f)(A0,A1), C &o, void *r, const void *a)
 { BC_MemFn2<R,C,A0,A1>()(f, o, r, a); }
 
 template<class R, class C, class A0, class A1>
+inline void BinaryCall(R (C::*f)(A0,A1), C &o, R &r, const ArgList<A0,A1> &a)
+{ BC_MemFn2<R,C,A0,A1>()(f, o, &r, &a); }
+
+template<class R, class C, class A0, class A1>
+inline void BinaryCall(R (C::*f)(A0,A1), C &o, const void *a)
+{ BC_MemFn2<R,C,A0,A1>()(f, o, NULL, a); }
+
+template<class R, class C, class A0, class A1>
+inline void BinaryCall(R (C::*f)(A0,A1), C &o, const ArgList<A0,A1> &a)
+{ BC_MemFn2<R,C,A0,A1>()(f, o, NULL, &a); }
+
+
+template<class R, class C, class A0, class A1>
 inline void BinaryCall(R (C::*f)(A0,A1) const, const C &o, void *r, const void *a)
 { BC_ConstMemFn2<R,C,A0,A1>()(f, o, r, a); }
+
+template<class R, class C, class A0, class A1>
+inline void BinaryCall(R (C::*f)(A0,A1) const, const C &o, R &r, const ArgList<A0,A1> &a)
+{ BC_ConstMemFn2<R,C,A0,A1>()(f, o, &r, &a); }
+
+template<class R, class C, class A0, class A1>
+inline void BinaryCall(R (C::*f)(A0,A1) const, const C &o, const void *a)
+{ BC_ConstMemFn2<R,C,A0,A1>()(f, o, NULL, a); }
+
+template<class R, class C, class A0, class A1>
+inline void BinaryCall(R (C::*f)(A0,A1) const, const C &o, const ArgList<A0,A1> &a)
+{ BC_ConstMemFn2<R,C,A0,A1>()(f, o, NULL, &a); }
 
 
 template<class R, class A0, class A1, class A2>
 inline void BinaryCall(R (*f)(A0,A1,A2), void *r, const void *a)
 { BC_Fn3<R,A0,A1,A2>()(f, r, a); }
 
+template<class R, class A0, class A1, class A2>
+inline void BinaryCall(R (*f)(A0,A1,A2), R &r, const ArgList<A0,A1,A2> &a)
+{ BC_Fn3<R,A0,A1,A2>()(f, &r, &a); }
+
+template<class R, class A0, class A1, class A2>
+inline void BinaryCall(R (*f)(A0,A1,A2), const void *a)
+{ BC_Fn3<R,A0,A1,A2>()(f, NULL, a); }
+
+template<class R, class A0, class A1, class A2>
+inline void BinaryCall(R (*f)(A0,A1,A2), const ArgList<A0,A1,A2> &a)
+{ BC_Fn3<R,A0,A1,A2>()(f, NULL, &a); }
+
+
 template<class R, class C, class A0, class A1, class A2>
 inline void BinaryCall(R (C::*f)(A0,A1,A2), C &o, void *r, const void *a)
 { BC_MemFn3<R,C,A0,A1,A2>()(f, o, r, a); }
 
 template<class R, class C, class A0, class A1, class A2>
+inline void BinaryCall(R (C::*f)(A0,A1,A2), C &o, R &r, const ArgList<A0,A1,A2> &a)
+{ BC_MemFn3<R,C,A0,A1,A2>()(f, o, &r, &a); }
+
+template<class R, class C, class A0, class A1, class A2>
+inline void BinaryCall(R (C::*f)(A0,A1,A2), C &o, const void *a)
+{ BC_MemFn3<R,C,A0,A1,A2>()(f, o, NULL, a); }
+
+template<class R, class C, class A0, class A1, class A2>
+inline void BinaryCall(R (C::*f)(A0,A1,A2), C &o, const ArgList<A0,A1,A2> &a)
+{ BC_MemFn3<R,C,A0,A1,A2>()(f, o, NULL, &a); }
+
+
+template<class R, class C, class A0, class A1, class A2>
 inline void BinaryCall(R (C::*f)(A0,A1,A2) const, const C &o, void *r, const void *a)
 { BC_ConstMemFn3<R,C,A0,A1,A2>()(f, o, r, a); }
+
+template<class R, class C, class A0, class A1, class A2>
+inline void BinaryCall(R (C::*f)(A0,A1,A2) const, const C &o, R &r, const ArgList<A0,A1,A2> &a)
+{ BC_ConstMemFn3<R,C,A0,A1,A2>()(f, o, &r, &a); }
+
+template<class R, class C, class A0, class A1, class A2>
+inline void BinaryCall(R (C::*f)(A0,A1,A2) const, const C &o, const void *a)
+{ BC_ConstMemFn3<R,C,A0,A1,A2>()(f, o, NULL, a); }
+
+template<class R, class C, class A0, class A1, class A2>
+inline void BinaryCall(R (C::*f)(A0,A1,A2) const, const C &o, const ArgList<A0,A1,A2> &a)
+{ BC_ConstMemFn3<R,C,A0,A1,A2>()(f, o, NULL, &a); }
 
 
 template<class R, class A0, class A1, class A2, class A3>
 inline void BinaryCall(R (*f)(A0,A1,A2,A3), void *r, const void *a)
 { BC_Fn4<R,A0,A1,A2,A3>()(f, r, a); }
 
+template<class R, class A0, class A1, class A2, class A3>
+inline void BinaryCall(R (*f)(A0,A1,A2,A3), R &r, const ArgList<A0,A1,A2,A3> &a)
+{ BC_Fn4<R,A0,A1,A2,A3>()(f, &r, &a); }
+
+template<class R, class A0, class A1, class A2, class A3>
+inline void BinaryCall(R (*f)(A0,A1,A2,A3), const void *a)
+{ BC_Fn4<R,A0,A1,A2,A3>()(f, NULL, a); }
+
+template<class R, class A0, class A1, class A2, class A3>
+inline void BinaryCall(R (*f)(A0,A1,A2,A3), const ArgList<A0,A1,A2,A3> &a)
+{ BC_Fn4<R,A0,A1,A2,A3>()(f, NULL, &a); }
+
+
 template<class R, class C, class A0, class A1, class A2, class A3>
 inline void BinaryCall(R (C::*f)(A0,A1,A2,A3), C &o, void *r, const void *a)
 { BC_MemFn4<R,C,A0,A1,A2,A3>()(f, o, r, a); }
 
 template<class R, class C, class A0, class A1, class A2, class A3>
+inline void BinaryCall(R (C::*f)(A0,A1,A2,A3), C &o, R &r, const ArgList<A0,A1,A2,A3> &a)
+{ BC_MemFn4<R,C,A0,A1,A2,A3>()(f, o, &r, &a); }
+
+template<class R, class C, class A0, class A1, class A2, class A3>
+inline void BinaryCall(R (C::*f)(A0,A1,A2,A3), C &o, const void *a)
+{ BC_MemFn4<R,C,A0,A1,A2,A3>()(f, o, NULL, a); }
+
+template<class R, class C, class A0, class A1, class A2, class A3>
+inline void BinaryCall(R (C::*f)(A0,A1,A2,A3), C &o, const ArgList<A0,A1,A2,A3> &a)
+{ BC_MemFn4<R,C,A0,A1,A2,A3>()(f, o, NULL, &a); }
+
+
+template<class R, class C, class A0, class A1, class A2, class A3>
 inline void BinaryCall(R (C::*f)(A0,A1,A2,A3) const, const C &o, void *r, const void *a)
 { BC_ConstMemFn4<R,C,A0,A1,A2,A3>()(f, o, r, a); }
+
+template<class R, class C, class A0, class A1, class A2, class A3>
+inline void BinaryCall(R (C::*f)(A0,A1,A2,A3) const, const C &o, R &r, const ArgList<A0,A1,A2,A3> &a)
+{ BC_ConstMemFn4<R,C,A0,A1,A2,A3>()(f, o, &r, &a); }
+
+template<class R, class C, class A0, class A1, class A2, class A3>
+inline void BinaryCall(R (C::*f)(A0,A1,A2,A3) const, const C &o, const void *a)
+{ BC_ConstMemFn4<R,C,A0,A1,A2,A3>()(f, o, NULL, a); }
+
+template<class R, class C, class A0, class A1, class A2, class A3>
+inline void BinaryCall(R (C::*f)(A0,A1,A2,A3) const, const C &o, const ArgList<A0,A1,A2,A3> &a)
+{ BC_ConstMemFn4<R,C,A0,A1,A2,A3>()(f, o, NULL, &a); }
 
 
 #endif // BinaryCall_h
