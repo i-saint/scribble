@@ -21,13 +21,20 @@ int main(int argc, char *argv[])
     Test obj;
     var ret;
     var args[2] = {int32(2), int(4)};
-    
+
     VariantCall(Func0, ret);
     assert(ret.cast<int32>()==1);
 
+    // variant 引数渡し (VariantCall(Func2, ret, 2, 4); とも書ける)
+    VariantCall(Func2, ret, var(2), var(4));
+    assert(ret.cast<int32>()==8);
+
+    // variant の配列で引数渡し
     VariantCall(Func2, ret, args);
     assert(ret.cast<int32>()==8);
 
+
+    // メンバ関数、const メンバ関数も行ける
     VariantCall(&Test::MemFn0, obj);
     assert(obj.value==2);
 
