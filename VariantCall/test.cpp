@@ -27,15 +27,15 @@ int main(int argc, char *argv[])
     VariantCall(Func2, &ret, args);
     assert(ret.cast<int32>()==8);
 
-    VariantCall(&Test::MemFn0, &obj);
+    VariantCall(&Test::MemFn0, obj);
     assert(obj.value==2);
 
-    VariantCall(&Test::MemFn2, &obj, &ret, args);
+    VariantCall(&Test::MemFn2, obj, &ret, args);
     assert(ret.cast<int32>()==16);
 
-    VariantCall(&Test::ConstMemFn0, &obj, &ret);
+    VariantCall(&Test::ConstMemFn0, obj, &ret);
     assert(ret.cast<int32>()==3);
 
-    VariantCall(&Test::ConstMemFn2, &obj, &ret, args);
+    VariantCall(&Test::ConstMemFn2, obj, &ret, args);
     assert(ret.cast<int32>()==32);
 }
