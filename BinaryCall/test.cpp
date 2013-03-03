@@ -18,11 +18,7 @@ int main(int argc, char *argv[])
 {
     Test obj;
     int ret;
-    struct Args {
-        int a0;
-        int a1;
-    }
-    args = {int(2), int(4)};
+    ArgList<int,int> args = {2, 4};
 
     BinaryCall(Func0, &ret);
     assert(ret==1);

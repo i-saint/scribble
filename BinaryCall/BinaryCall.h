@@ -5,6 +5,37 @@
 
 #define RemoveCR(T) typename std::remove_const<typename std::remove_reference<T>::type>::type
 
+template<class A0=void, class A1=void, class A2=void, class A3=void, class A4=void, class A5=void> struct ArgList;
+
+template<class A0>
+struct ArgList<A0>
+{
+    A0 a0;
+};
+template<class A0, class A1>
+struct ArgList<A0, A1>
+{
+    A0 a0;
+    A1 a1;
+};
+template<class A0, class A1, class A2>
+struct ArgList<A0, A1, A2>
+{
+    A0 a0;
+    A1 a1;
+    A2 a2;
+};
+template<class A0, class A1, class A2, class A3>
+struct ArgList<A0, A1, A2, A3>
+{
+    A0 a0;
+    A1 a1;
+    A2 a2;
+    A3 a3;
+};
+
+
+
 template<class R>
 struct BC_Fn0
 {
@@ -69,18 +100,16 @@ struct BC_ConstMemFn0<void, C>
 };
 
 
+
 template<class R, class A0>
 struct BC_Fn1
 {
     typedef R (*F)(A0);
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    struct Args {
-        A0T a0;
-    };
+    typedef ArgList<RemoveCR(A0)> ArgListT;
     void operator()(F f, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=f(args.a0); }
         else  {         f(args.a0); }
     }
@@ -89,13 +118,10 @@ template<class A0>
 struct BC_Fn1<void, A0>
 {
     typedef void (*F)(A0);
-    typedef RemoveCR(A0) A0T;
-    struct Args {
-        A0T a0;
-    };
+    typedef ArgList<RemoveCR(A0)> ArgListT;
     void operator()(F f, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         f(args.a0);
     }
 };
@@ -105,13 +131,10 @@ struct BC_MemFn1
 {
     typedef R (C::*F)(A0);
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    struct Args {
-        A0T a0;
-    };
+    typedef ArgList<RemoveCR(A0)> ArgListT;
     void operator()(F f, C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=(o.*f)(args.a0); }
         else  {         (o.*f)(args.a0); }
     }
@@ -120,13 +143,10 @@ template<class C, class A0>
 struct BC_MemFn1<void, C, A0>
 {
     typedef void (C::*F)(A0);
-    typedef RemoveCR(A0) A0T;
-    struct Args {
-        A0T a0;
-    };
+    typedef ArgList<RemoveCR(A0)> ArgListT;
     void operator()(F f, C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         (o.*f)(args.a0);
     }
 };
@@ -136,13 +156,10 @@ struct BC_ConstMemFn1
 {
     typedef R (C::*F)(A0) const;
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    struct Args {
-        A0T a0;
-    };
+    typedef ArgList<RemoveCR(A0)> ArgListT;
     void operator()(F f, const C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=(o.*f)(args.a0); }
         else  {         (o.*f)(args.a0); }
     }
@@ -151,13 +168,10 @@ template<class C, class A0>
 struct BC_ConstMemFn1<void, C, A0>
 {
     typedef void (C::*F)(A0) const;
-    typedef RemoveCR(A0) A0T;
-    struct Args {
-        A0T a0;
-    };
+    typedef ArgList<RemoveCR(A0)> ArgListT;
     void operator()(F f, const C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         (o.*f)(args.a0);
     }
 };
@@ -167,15 +181,10 @@ struct BC_Fn2
 {
     typedef R (*F)(A0, A1);
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1)> ArgListT;
     void operator()(F f, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=f(args.a0, args.a1); }
         else  {         f(args.a0, args.a1); }
     }
@@ -184,15 +193,10 @@ template<class A0, class A1>
 struct BC_Fn2<void, A0, A1>
 {
     typedef void (*F)(A0, A1);
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1)> ArgListT;
     void operator()(F f, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         f(args.a0, args.a1);
     }
 };
@@ -202,15 +206,10 @@ struct BC_MemFn2
 {
     typedef R (C::*F)(A0, A1);
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1)> ArgListT;
     void operator()(F f, C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=(o.*f)(args.a0, args.a1); }
         else  {         (o.*f)(args.a0, args.a1); }
     }
@@ -219,15 +218,10 @@ template<class C, class A0, class A1>
 struct BC_MemFn2<void, C, A0, A1>
 {
     typedef void (C::*F)(A0, A1);
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1)> ArgListT;
     void operator()(F f, C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         (o.*f)(args.a0, args.a1);
     }
 };
@@ -237,15 +231,10 @@ struct BC_ConstMemFn2
 {
     typedef R (C::*F)(A0, A1) const;
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1)> ArgListT;
     void operator()(F f, const C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=(o.*f)(args.a0, args.a1); }
         else  {         (o.*f)(args.a0, args.a1); }
     }
@@ -254,15 +243,10 @@ template<class C, class A0, class A1>
 struct BC_ConstMemFn2<void, C, A0, A1>
 {
     typedef void (C::*F)(A0, A1) const;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1)> ArgListT;
     void operator()(F f, const C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         (o.*f)(args.a0, args.a1);
     }
 };
@@ -272,17 +256,10 @@ struct BC_Fn3
 {
     typedef R (*F)(A0, A1, A2);
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2)> ArgListT;
     void operator()(F f, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=f(args.a0, args.a1, args.a2); }
         else  {         f(args.a0, args.a1, args.a2); }
     }
@@ -291,17 +268,10 @@ template<class A0, class A1, class A2>
 struct BC_Fn3<void, A0, A1, A2>
 {
     typedef void (*F)(A0, A1, A2);
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2)> ArgListT;
     void operator()(F f, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         f(args.a0, args.a1, args.a2);
     }
 };
@@ -311,17 +281,10 @@ struct BC_MemFn3
 {
     typedef R (C::*F)(A0, A1, A2);
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2)> ArgListT;
     void operator()(F f, C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=(o.*f)(args.a0, args.a1, args.a2); }
         else  {         (o.*f)(args.a0, args.a1, args.a2); }
     }
@@ -330,17 +293,10 @@ template<class C, class A0, class A1, class A2>
 struct BC_MemFn3<void, C, A0, A1, A2>
 {
     typedef void (C::*F)(A0, A1, A2);
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2)> ArgListT;
     void operator()(F f, C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         (o.*f)(args.a0, args.a1, args.a2);
     }
 };
@@ -350,17 +306,10 @@ struct BC_ConstMemFn3
 {
     typedef R (C::*F)(A0, A1, A2) const;
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2)> ArgListT;
     void operator()(F f, const C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=(o.*f)(args.a0, args.a1, args.a2); }
         else  {         (o.*f)(args.a0, args.a1, args.a2); }
     }
@@ -369,17 +318,10 @@ template<class C, class A0, class A1, class A2>
 struct BC_ConstMemFn3<void, C, A0, A1, A2>
 {
     typedef void (C::*F)(A0, A1, A2) const;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2)> ArgListT;
     void operator()(F f, const C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         (o.*f)(args.a0, args.a1, args.a2);
     }
 };
@@ -389,19 +331,10 @@ struct BC_Fn4
 {
     typedef R (*F)(A0, A1, A2, A3);
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    typedef RemoveCR(A3) A3T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-        A3T a3;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2), RemoveCR(A3)> ArgListT;
     void operator()(F f, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=f(args.a0, args.a1, args.a2, args.a3); }
         else  {         f(args.a0, args.a1, args.a2, args.a3); }
     }
@@ -410,19 +343,10 @@ template<class A0, class A1, class A2, class A3>
 struct BC_Fn4<void, A0, A1, A2, A3>
 {
     typedef void (*F)(A0, A1, A2, A3);
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    typedef RemoveCR(A3) A3T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-        A3T a3;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2), RemoveCR(A3)> ArgListT;
     void operator()(F f, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         f(args.a0, args.a1, args.a2, args.a3);
     }
 };
@@ -432,19 +356,10 @@ struct BC_MemFn4
 {
     typedef R (C::*F)(A0, A1, A2, A3);
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    typedef RemoveCR(A3) A3T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-        A3T a3;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2), RemoveCR(A3)> ArgListT;
     void operator()(F f, C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=(o.*f)(args.a0, args.a1, args.a2, args.a3); }
         else  {         (o.*f)(args.a0, args.a1, args.a2, args.a3); }
     }
@@ -453,19 +368,10 @@ template<class C, class A0, class A1, class A2, class A3>
 struct BC_MemFn4<void, C, A0, A1, A2, A3>
 {
     typedef void (C::*F)(A0, A1, A2, A3);
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    typedef RemoveCR(A3) A3T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-        A3T a3;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2), RemoveCR(A3)> ArgListT;
     void operator()(F f, C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         (o.*f)(args.a0, args.a1, args.a2, args.a3);
     }
 };
@@ -475,19 +381,10 @@ struct BC_ConstMemFn4
 {
     typedef R (C::*F)(A0, A1, A2, A3) const;
     typedef RemoveCR(R) RT;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    typedef RemoveCR(A3) A3T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-        A3T a3;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2), RemoveCR(A3)> ArgListT;
     void operator()(F f, const C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         if(r) { *(RT*)r=(o.*f)(args.a0, args.a1, args.a2, args.a3); }
         else  {         (o.*f)(args.a0, args.a1, args.a2, args.a3); }
     }
@@ -496,19 +393,10 @@ template<class C, class A0, class A1, class A2, class A3>
 struct BC_ConstMemFn4<void, C, A0, A1, A2, A3>
 {
     typedef void (C::*F)(A0, A1, A2, A3) const;
-    typedef RemoveCR(A0) A0T;
-    typedef RemoveCR(A1) A1T;
-    typedef RemoveCR(A2) A2T;
-    typedef RemoveCR(A3) A3T;
-    struct Args {
-        A0T a0;
-        A1T a1;
-        A2T a2;
-        A3T a3;
-    };
+    typedef ArgList<RemoveCR(A0), RemoveCR(A1), RemoveCR(A2), RemoveCR(A3)> ArgListT;
     void operator()(F f, const C &o, void *r, const void *a)
     {
-        Args &args = *(Args*)a;
+        ArgListT &args = *(ArgListT*)a;
         (o.*f)(args.a0, args.a1, args.a2, args.a3);
     }
 };
