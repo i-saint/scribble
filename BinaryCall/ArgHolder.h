@@ -100,8 +100,8 @@ struct ValueList<A0, A1, A2>
     ValueHolder<A2> a2;
     ValueList(
         A0 _0=ValueHolder<A0>::value_type(),
-        A1 _1=ValueHolder<A0>::value_type(),
-        A2 _2=ValueHolder<A0>::value_type()
+        A1 _1=ValueHolder<A1>::value_type(),
+        A2 _2=ValueHolder<A2>::value_type()
         ) : a0(_0), a1(_1), a2(_2) {}
 };
 template<class A0, class A1, class A2, class A3>
@@ -113,9 +113,9 @@ struct ValueList<A0, A1, A2, A3>
     ValueHolder<A3> a3;
     ValueList(
         A0 _0=ValueHolder<A0>::value_type(),
-        A1 _1=ValueHolder<A0>::value_type(),
-        A2 _2=ValueHolder<A0>::value_type(),
-        A3 _3=ValueHolder<A0>::value_type()
+        A1 _1=ValueHolder<A1>::value_type(),
+        A2 _2=ValueHolder<A2>::value_type(),
+        A3 _3=ValueHolder<A3>::value_type()
         ) : a0(_0), a1(_1), a2(_2), a3(_3) {}
 };
 
