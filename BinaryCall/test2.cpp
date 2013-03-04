@@ -12,7 +12,11 @@
 #define ImplCall(funcname) \
     case FID_##funcname: BinaryCall(&this_t::funcname, *this, ret, args); return true;
 
-#define Call(obj, funcname, ...) obj->call(FID_##funcname, __VA_ARGS__)
+class ICallable;
+enum FunctionID;
+template<class Arg> inline bool CallImpl(ICallable *e, FunctionID fid, const Arg &args) { return e->call(fid, &args, NULL); }
+template<class Arg, class Ret> inline bool CallImpl(ICallable *e, FunctionID fid, const Arg &args, Ret &ret) { return e->call(fid, &args, &ret); }
+#define Call(obj, funcname, ...) CallImpl(obj, FID_##funcname, __VA_ARGS__)
 
 
 enum FunctionID {
@@ -43,7 +47,7 @@ int main()
     int arg = 10;
     int ret;
 
-    Call(test, doSomething, &arg, &ret);
+    Call(test, doSomething, arg, ret);
     assert(ret==100);
 
     delete test;
