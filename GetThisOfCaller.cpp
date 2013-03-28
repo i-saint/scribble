@@ -45,7 +45,7 @@ public:
     }
 };
 
-void main()
+int main(int argc, char *argv[])
 {
     ::SymInitialize(::GetCurrentProcess(), NULL, TRUE);
     ::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
@@ -57,6 +57,10 @@ void main()
     Test();
 }
 /*
+ GetThisOfCaller() は pdb がないと機能しない。/Zi 必須。
+
+$ cl /Zi GetThisOfCaller.cpp
+$ ./GetThisOfCaller
 Hoge: this is 0x003AFD57
 this of caller: 0x003AFD57
 this of caller: 0x003AFD57
@@ -69,7 +73,7 @@ this of caller: 0x00000000
 
 
 
-BOOL CALLBACK EnumSymbolsCallback( SYMBOL_INFO* si, ULONG size, PVOID p )
+BOOL CALLBACK CB_GetThisOfCaller( SYMBOL_INFO* si, ULONG size, PVOID p )
 {
     if(si && si->NameLen==4 && strncmp(si->Name, "this", 4)==0) {
         auto *ret = (std::pair<ULONG64,bool>*)p;
@@ -131,7 +135,7 @@ void* GetThisOfCaller()
     sf.StackOffset = stackFrame.AddrStack.Offset;
     sf.InstructionOffset = stackFrame.AddrPC.Offset;
     ::SymSetContext(hProcess, &sf, 0 );
-    ::SymEnumSymbols(hProcess, 0, 0, EnumSymbolsCallback, &ret);
+    ::SymEnumSymbols(hProcess, 0, 0, CB_GetThisOfCaller, &ret);
 
     if(!ret.second) { return NULL; }
 #ifdef _WIN64
