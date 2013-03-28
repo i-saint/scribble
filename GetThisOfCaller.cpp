@@ -1,6 +1,7 @@
 ﻿#include <windows.h>
 #include <dbghelp.h>
 #include <cstdio>
+#include <string>
 #pragma comment(lib, "dbghelp.lib")
 
 void* GetThisOfCaller();
@@ -25,15 +26,22 @@ public:
 
     void test2()
     {
-        int a,b,c; // 適当にスタック散らかす
+        // 適当にスタック散らかす
+        int a=1, b=2, c=3;
+        std::string make_it_messy("foo");
         Test();
-        int d,e,f;
+        int d=4, e=5, f=6;
     }
 
     void test3()
     {
-        test2();
-        test1();
+        int a = 0;
+        std::string make_it_messy("foo");
+        for(int i=0; i<5; ++i) {
+            a += i;
+            std::string make_it_more_messy("bar");
+            Test();
+        }
     }
 };
 
@@ -48,11 +56,14 @@ void main()
     hoge.test3();
 }
 /*
-Hoge: this is 0x0044FC97
-this of caller: 0x0044FC97
-this of caller: 0x0044FC97
-this of caller: 0x0044FC97
-this of caller: 0x0044FC97
+Hoge: this is 0x002EF9CF
+this of caller: 0x002EF9CF
+this of caller: 0x002EF9CF
+this of caller: 0x002EF9CF
+this of caller: 0x002EF9CF
+this of caller: 0x002EF9CF
+this of caller: 0x002EF9CF
+this of caller: 0x002EF9CF
 */
 
 
@@ -61,7 +72,7 @@ this of caller: 0x0044FC97
 BOOL CALLBACK EnumSymbolsCallback( SYMBOL_INFO* si, ULONG SymbolSize, PVOID UserContext ) 
 {
     if(si && si->NameLen==4 && strncmp(si->Name, "this", 4)==0) {
-        *(ULONG64*)UserContext = si->Address + si->Size;
+        *(ULONG64*)UserContext = si->Address;
         return FALSE;
     }
     return TRUE;
@@ -70,21 +81,24 @@ BOOL CALLBACK EnumSymbolsCallback( SYMBOL_INFO* si, ULONG SymbolSize, PVOID User
 void* GetThisOfCaller()
 {
     CONTEXT context;
+#ifdef _WIN64
+    RtlCaptureContext(&context);
+#else
     ZeroMemory( &context, sizeof( CONTEXT ) );
     context.ContextFlags = CONTEXT_CONTROL;
     __asm
     {
-EIP:
+        EIP:
         mov [context.Ebp], ebp;
         mov [context.Esp], esp;
         mov eax, [EIP];
         mov [context.Eip], eax;
     }
+#endif 
 
     STACKFRAME64 stackFrame;
     memset(&stackFrame, 0, sizeof(stackFrame));
-
-#if defined(_WIN64)
+#ifdef _WIN64
     DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
     stackFrame.AddrPC.Offset = context.Rip;
     stackFrame.AddrPC.Mode = AddrModeFlat;
@@ -92,7 +106,7 @@ EIP:
     stackFrame.AddrFrame.Mode = AddrModeFlat;
     stackFrame.AddrStack.Offset = context.Rsp;
     stackFrame.AddrStack.Mode = AddrModeFlat;
-#elif defined(_WIN32)
+#else
     DWORD machineType = IMAGE_FILE_MACHINE_I386;
     stackFrame.AddrPC.Offset = context.Eip;
     stackFrame.AddrPC.Mode = AddrModeFlat;
@@ -115,6 +129,10 @@ EIP:
     sf.StackOffset = stackFrame.AddrStack.Offset;
     sf.InstructionOffset = stackFrame.AddrPC.Offset;
     ::SymSetContext(hProcess, &sf, 0 );
-    ::SymEnumSymbols(hProcess, 0, 0, EnumSymbolsCallback, &offset); 
-    return *(void**)(stackFrame.AddrStack.Offset - offset);
+    ::SymEnumSymbols(hProcess, 0, 0, EnumSymbolsCallback, &offset);
+#ifdef _WIN64
+    return *(void**)(stackFrame.AddrStack.Offset + offset);
+#else
+    return *(void**)(stackFrame.AddrFrame.Offset + offset);
+#endif
 }
