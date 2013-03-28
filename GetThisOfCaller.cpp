@@ -69,10 +69,12 @@ this of caller: 0x002EF9CF
 
 
 
-BOOL CALLBACK EnumSymbolsCallback( SYMBOL_INFO* si, ULONG SymbolSize, PVOID UserContext ) 
+BOOL CALLBACK EnumSymbolsCallback( SYMBOL_INFO* si, ULONG size, PVOID p )
 {
     if(si && si->NameLen==4 && strncmp(si->Name, "this", 4)==0) {
-        *(ULONG64*)UserContext = si->Address;
+        auto *ret = (std::pair<ULONG64,bool>*)p;
+        ret->first = si->Address;
+        ret->second = true;
         return FALSE;
     }
     return TRUE;
@@ -122,17 +124,19 @@ void* GetThisOfCaller()
     StackWalk64(machineType, hProcess, hThread, &stackFrame, &context, NULL, NULL, NULL, NULL); // 呼び出し元
     StackWalk64(machineType, hProcess, hThread, &stackFrame, &context, NULL, NULL, NULL, NULL); // 呼び出し元の呼び出し元 (ターゲット)
 
-    ULONG64 offset = NULL;
+    std::pair<ULONG64,bool> ret(0,false);
     IMAGEHLP_STACK_FRAME sf; 
     sf.ReturnOffset = stackFrame.AddrReturn.Offset;
     sf.FrameOffset = stackFrame.AddrFrame.Offset;
     sf.StackOffset = stackFrame.AddrStack.Offset;
     sf.InstructionOffset = stackFrame.AddrPC.Offset;
     ::SymSetContext(hProcess, &sf, 0 );
-    ::SymEnumSymbols(hProcess, 0, 0, EnumSymbolsCallback, &offset);
+    ::SymEnumSymbols(hProcess, 0, 0, EnumSymbolsCallback, &ret);
+
+    if(!ret.second) { return NULL; }
 #ifdef _WIN64
-    return *(void**)(stackFrame.AddrStack.Offset + offset);
+    return *(void**)(stackFrame.AddrStack.Offset + ret.first);
 #else
-    return *(void**)(stackFrame.AddrFrame.Offset + offset);
+    return *(void**)(stackFrame.AddrFrame.Offset + ret.first);
 #endif
 }
