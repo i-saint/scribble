@@ -37,7 +37,7 @@ public:
     {
         int a = 0;
         std::string make_it_messy("foo");
-        for(int i=0; i<5; ++i) {
+        for(int i=0; i<3; ++i) {
             a += i;
             std::string make_it_more_messy("bar");
             Test();
@@ -54,16 +54,16 @@ void main()
     hoge.test1();
     hoge.test2();
     hoge.test3();
+    Test();
 }
 /*
-Hoge: this is 0x002EF9CF
-this of caller: 0x002EF9CF
-this of caller: 0x002EF9CF
-this of caller: 0x002EF9CF
-this of caller: 0x002EF9CF
-this of caller: 0x002EF9CF
-this of caller: 0x002EF9CF
-this of caller: 0x002EF9CF
+Hoge: this is 0x003AFD57
+this of caller: 0x003AFD57
+this of caller: 0x003AFD57
+this of caller: 0x003AFD57
+this of caller: 0x003AFD57
+this of caller: 0x003AFD57
+this of caller: 0x00000000
 */
 
 
@@ -84,9 +84,9 @@ void* GetThisOfCaller()
 {
     CONTEXT context;
 #ifdef _WIN64
-    RtlCaptureContext(&context);
+    ::RtlCaptureContext(&context);
 #else
-    ZeroMemory( &context, sizeof( CONTEXT ) );
+    ::ZeroMemory( &context, sizeof( CONTEXT ) );
     context.ContextFlags = CONTEXT_CONTROL;
     __asm
     {
@@ -120,9 +120,9 @@ void* GetThisOfCaller()
 
     HANDLE hProcess = ::GetCurrentProcess();
     HANDLE hThread = ::GetCurrentThread();
-    StackWalk64(machineType, hProcess, hThread, &stackFrame, &context, NULL, NULL, NULL, NULL); // この関数のスタックフレーム
-    StackWalk64(machineType, hProcess, hThread, &stackFrame, &context, NULL, NULL, NULL, NULL); // 呼び出し元
-    StackWalk64(machineType, hProcess, hThread, &stackFrame, &context, NULL, NULL, NULL, NULL); // 呼び出し元の呼び出し元 (ターゲット)
+    ::StackWalk64(machineType, hProcess, hThread, &stackFrame, &context, NULL, NULL, NULL, NULL); // この関数のスタックフレーム
+    ::StackWalk64(machineType, hProcess, hThread, &stackFrame, &context, NULL, NULL, NULL, NULL); // 呼び出し元
+    ::StackWalk64(machineType, hProcess, hThread, &stackFrame, &context, NULL, NULL, NULL, NULL); // 呼び出し元の呼び出し元 (ターゲット)
 
     std::pair<ULONG64,bool> ret(0,false);
     IMAGEHLP_STACK_FRAME sf; 
