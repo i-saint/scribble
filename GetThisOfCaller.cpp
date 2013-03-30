@@ -86,11 +86,12 @@ BOOL CALLBACK CB_GetThisOfCaller( SYMBOL_INFO* si, ULONG size, PVOID p )
 
 void* GetThisOfCaller()
 {
+    // thanks to http://jpassing.com/2008/03/12/walking-the-stack-of-the-current-thread/
     CONTEXT context;
 #ifdef _WIN64
     ::RtlCaptureContext(&context);
 #else
-    ::ZeroMemory( &context, sizeof( CONTEXT ) );
+    ::ZeroMemory( &context, sizeof(context) );
     context.ContextFlags = CONTEXT_CONTROL;
     __asm
     {
@@ -103,7 +104,7 @@ void* GetThisOfCaller()
 #endif 
 
     STACKFRAME64 stackFrame;
-    memset(&stackFrame, 0, sizeof(stackFrame));
+    ::ZeroMemory( &stackFrame, sizeof(stackFrame) );
 #ifdef _WIN64
     DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
     stackFrame.AddrPC.Offset = context.Rip;
