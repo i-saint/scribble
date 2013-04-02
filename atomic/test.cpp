@@ -2,11 +2,9 @@
 #include "atomic.h"
 
 #ifdef _WIN64
-#   define P64F " i64:%lld->%lld"
-#   define P64V , t64, i64
+#   define PRINT_ARGS " i8:%d->%d i16:%d->%d i32:%d->%d i64:%lld->%lld\n", (int)t8,(int)i8, (int)t16,(int)i16, (int)t32,(int)i32, t64,i64
 #else // _WIN64
-#   define P64F
-#   define P64V
+#   define PRINT_ARGS " i8:%d->%d i16:%d->%d i32:%d->%d\n", (int)t8,(int)i8, (int)t16,(int)i16, (int)t32,(int)i32
 #endif // _WIN64
 
 int main(int argc, char *argv[])
@@ -26,7 +24,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN64
     t64 = atomic_inc64(&i64);
 #endif // _WIN64
-    printf("inc i8:%d->%d i16:%d->%d i32:%d->%d" P64F "\n", (int)t8,(int)i8, (int)t16,(int)i16, (int)t32,(int)i32 P64V);
+    printf("inc" PRINT_ARGS);
 
     t8  = atomic_dec8( &i8);
     t16 = atomic_dec16(&i16);
@@ -34,7 +32,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN64
     t64 = atomic_dec64(&i64);
 #endif // _WIN64
-    printf("dec i8:%d->%d i16:%d->%d i32:%d->%d" P64F "\n", (int)t8,(int)i8, (int)t16,(int)i16, (int)t32,(int)i32 P64V);
+    printf("dec" PRINT_ARGS);
 
     t8  = atomic_add8( &i8,  2);
     t16 = atomic_add16(&i16, 2);
@@ -42,7 +40,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN64
     t64 = atomic_add64(&i64, 2);
 #endif // _WIN64
-    printf("add i8:%d->%d i16:%d->%d i32:%d->%d" P64F "\n", (int)t8,(int)i8, (int)t16,(int)i16, (int)t32,(int)i32 P64V);
+    printf("add" PRINT_ARGS);
 
     t8  = atomic_sub8( &i8,  2);
     t16 = atomic_sub16(&i16, 2);
@@ -50,7 +48,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN64
     t64 = atomic_sub64(&i64, 2);
 #endif // _WIN64
-    printf("sub i8:%d->%d i16:%d->%d i32:%d->%d" P64F "\n", (int)t8,(int)i8, (int)t16,(int)i16, (int)t32,(int)i32 P64V);
+    printf("sub" PRINT_ARGS);
 
     t8  = atomic_swap8( &i8,  2);
     t16 = atomic_swap16(&i16, 2);
@@ -58,7 +56,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN64
     t64 = atomic_swap64(&i64, 2);
 #endif // _WIN64
-    printf("swap i8:%d->%d i16:%d->%d i32:%d->%d" P64F "\n", (int)t8,(int)i8, (int)t16,(int)i16, (int)t32,(int)i32 P64V);
+    printf("swap" PRINT_ARGS);
 
     t8  = atomic_cas8( &i8,  0, 3);
     t16 = atomic_cas16(&i16, 0, 3);
@@ -66,7 +64,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN64
     t64 = atomic_cas64(&i64, 0, 3);
 #endif // _WIN64
-    printf("cas1 i8:%d->%d i16:%d->%d i32:%d->%d" P64F "\n", (int)t8,(int)i8, (int)t16,(int)i16, (int)t32,(int)i32 P64V);
+    printf("cas1" PRINT_ARGS);
 
     t8  = atomic_cas8( &i8,  2, 4);
     t16 = atomic_cas16(&i16, 2, 4);
@@ -74,5 +72,5 @@ int main(int argc, char *argv[])
 #ifdef _WIN64
     t64 = atomic_cas64(&i64, 2, 4);
 #endif // _WIN64
-    printf("cas2 i8:%d->%d i16:%d->%d i32:%d->%d" P64F "\n", (int)t8,(int)i8, (int)t16,(int)i16, (int)t32,(int)i32 P64V);
+    printf("cas2" PRINT_ARGS);
 }
