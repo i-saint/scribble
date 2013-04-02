@@ -1,26 +1,32 @@
 public atomic_inc8
 public atomic_inc16
 public atomic_inc32
+public atomic_inc64
 
 public atomic_dec8
 public atomic_dec16
 public atomic_dec32
+public atomic_dec64
 
 public atomic_add8
 public atomic_add16
 public atomic_add32
+public atomic_add64
 
 public atomic_sub8
 public atomic_sub16
 public atomic_sub32
+public atomic_sub64
 
 public atomic_swap8
 public atomic_swap16
 public atomic_swap32
+public atomic_swap64
 
 public atomic_cas8
 public atomic_cas16
 public atomic_cas32
+public atomic_cas64
 
 .code
 
@@ -42,6 +48,12 @@ atomic_inc32:
     mov eax, edx
     ret
 
+atomic_inc64:
+    mov rdx, 1
+    lock xadd qword ptr [rcx], rdx
+    mov rax, rdx
+    ret
+
 
 atomic_dec8:
     mov dl, -1
@@ -61,6 +73,12 @@ atomic_dec32:
     mov eax, edx
     ret
 
+atomic_dec64:
+    mov rdx, -1
+    lock xadd qword ptr [rcx], rdx
+    mov rax, rdx
+    ret
+
 
 atomic_add8:
     lock xadd byte ptr [rcx], dl
@@ -75,6 +93,11 @@ atomic_add16:
 atomic_add32:
     lock xadd dword ptr [rcx], edx
     mov eax, edx
+    ret
+
+atomic_add64:
+    lock xadd qword ptr [rcx], rdx
+    mov rax, rdx
     ret
 
 
@@ -97,6 +120,12 @@ atomic_sub32:
     lock xadd dword ptr [rcx], eax
     ret
 
+atomic_sub64:
+    xor rax, rax
+    sub rax, rdx
+    lock xadd qword ptr [rcx], rax
+    ret
+
 
 atomic_swap8:
     lock xchg byte ptr [rcx], dl
@@ -113,6 +142,11 @@ atomic_swap32:
     mov eax, edx
     ret
 
+atomic_swap64:
+    lock xchg qword ptr [rcx], rdx
+    mov rax, rdx
+    ret
+
 
 atomic_cas8:
     mov al, dl
@@ -127,6 +161,11 @@ atomic_cas16:
 atomic_cas32:
     mov eax, edx
     lock cmpxchg dword ptr [rcx], r8d
+    ret
+
+atomic_cas64:
+    mov rax, rdx
+    lock cmpxchg qword ptr [rcx], r8
     ret
 
 end
