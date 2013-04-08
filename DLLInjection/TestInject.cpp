@@ -8,7 +8,7 @@
 // 結果、対象プロセス内で任意の dll を実行させる。 
 bool InjectDLL(HANDLE hProcess, const char* dllname)
 {
-    DWORD bytesRet = 0;
+    SIZE_T bytesRet = 0;
     DWORD oldProtect = 0;
     LPVOID remote_addr = NULL;
     HANDLE hThread = NULL;
