@@ -1,12 +1,6 @@
-#pragma comment(lib, "dbghelp.lib")
-#pragma comment(lib, "psapi.lib")
-
+﻿#pragma comment(lib, "psapi.lib")
 #include <windows.h>
-#include <dbghelp.h>
 #include <psapi.h>
-#include <string>
-#include <vector>
-#include <map>
 #include <cstdio>
 
 
@@ -88,19 +82,27 @@ bool EachImportFunction(HMODULE module, const char *dllname, const F &f)
 
 extern "C" void __declspec(dllexport) TestInjection()
 {
-	printf("TestInjected()\n");
-	fflush(stdout);
+    printf("TestInjection()\n");
+    fflush(stdout);
 
     for(size_t i=0; i<_countof(g_crtdllnames); ++i) {
         EachImportFunction(::GetModuleHandleA(g_crtdllnames[i]), "kernel32.dll", [](const char *funcname, void *&imp_func){
             if(strcmp(funcname, "HeapAlloc")==0) {
-            	(void*&)HeapAlloc_Orig = imp_func;
+                (void*&)HeapAlloc_Orig = imp_func;
                 ForceWrite<void*>(imp_func, HeapAlloc_Hooked);
             }
             else if(strcmp(funcname, "HeapFree")==0) {
-            	(void*&)HeapFree_Orig = imp_func;
+                (void*&)HeapFree_Orig = imp_func;
                 ForceWrite<void*>(imp_func, HeapFree_Hooked);
             }
         });
+    }
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+{
+    if(fdwReason==DLL_PROCESS_ATTACH) {
+        TestInjection();
+        ExitThread(0);
     }
 }
