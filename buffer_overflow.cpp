@@ -12,7 +12,7 @@ void vulnerable(char *data, size_t size)
 int main()
 {
     char data[0x18];
-    *(void**)(&data[0x14]) = shellcode;
+    *(void**)(&data[0x14]) = shellcode; // return address を shellcode に書き換える
     vulnerable(data, sizeof(data)); // main() -> vulnerable() -> shellcode
 }
 // cl /Zi /GS- buffer_overflow.cpp
