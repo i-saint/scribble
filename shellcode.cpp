@@ -1,22 +1,21 @@
-#ifdef __GNUC__
+ï»¿#ifdef __GNUC__
 // g++ shellcode.cpp && ./a
-char main[] = "\x55\x8B\xEC\x83\xEC\x34\x53\x56\x57\xC7\x45\xD8\x75\x73\x65\x72\xC7\x45\xDC\x33\x32\x2E\x64\xC7\x45\xE0\x6C\x6C\x00\x00\xC7\x45\xCC\x4D\x65\x73\x73\xC7\x45\xD0\x61\x67\x65\x42\xC7\x45\xD4\x6F\x78\x41\x00\xC7\x45\xE4\x68\x65\x6C\x6C\xC7\x45\xE8\x6F\x21\x00\x00\x33\xC9\x64\x8B\x35\x30\x00\x00\x00\x8B\x76\x0C\x8B\x76\x1C\x8B\x46\x08\x8B\x7E\x20\x8B\x36\x38\x4F\x18\x75\xF3\x89\x45\xF8\x8B\x5D\xF8\x8B\x43\x3C\x83\x65\xFC\x00\x03\xC3\x0F\xB7\x48\x14\x8D\x4C\x01\x18\x8B\x40\x78\x2B\x41\x0C\x03\x41\x14\x03\xC3\x8B\x48\x20\x8B\x50\x24\x8B\x70\x1C\x8B\x40\x14\x03\xCB\x03\xD3\x03\xF3\x89\x45\xF4\x85\xC0\x74\x4C\xEB\x03\x8B\x5D\xF8\x8B\x45\xFC\x8B\x3C\x81\x0F\xB7\x04\x42\x03\xFB\x8B\x1C\x86\x8B\x07\x03\x5D\xF8\x3D\x4C\x6F\x61\x64\x75\x0E\x81\x7F\x08\x61\x72\x79\x41\x75\x05\x89\x5D\xF0\xEB\x13\x3D\x47\x65\x74\x50\x75\x0C\x81\x7F\x08\x64\x64\x72\x65\x75\x03\x89\x5D\xEC\xFF\x45\xFC\x8B\x45\xFC\x3B\x45\xF4\x72\xB6\x8D\x45\xD8\x50\xFF\x55\xF0\x8D\x4D\xCC\x51\x50\xFF\x55\xEC\x6A\x00\x8D\x4D\xE4\x51\x51\x6A\x00\xFF\xD0\x5F\x5E\x5B\xC9\xC3";
+char main[] = "\x55\x8B\xEC\x83\xEC\x38\x53\x56\x57\xC7\x45\xD4\x75\x73\x65\x72\xC7\x45\xD8\x33\x32\x2E\x64\xC7\x45\xDC\x6C\x6C\x00\x00\xC7\x45\xC8\x4D\x65\x73\x73\xC7\x45\xCC\x61\x67\x65\x42\xC7\x45\xD0\x6F\x78\x41\x00\xC7\x45\xE0\x68\x65\x6C\x6C\xC7\x45\xE4\x6F\x21\x00\x00\x33\xC9\x64\x8B\x35\x30\x00\x00\x00\x8B\x76\x0C\x8B\x76\x1C\x8B\x46\x08\x8B\x7E\x20\x8B\x36\x38\x4F\x18\x75\xF3\x89\x45\xF8\x8B\x55\xF8\x8B\x42\x3C\x8B\x44\x10\x78\x83\x65\xFC\x00\x03\xC2\x8B\x70\x20\x8B\x78\x24\x8B\x58\x1C\x8B\x40\x14\x03\xF2\x03\xFA\x03\xDA\x89\x45\xF0\x85\xC0\x74\x50\x8B\x45\xFC\x8B\x0C\x86\x0F\xB7\x04\x47\x8B\x04\x83\x03\xC2\x89\x45\xF4\x8B\x04\x11\x3D\x4C\x6F\x61\x64\x75\x12\x81\x7C\x11\x08\x61\x72\x79\x41\x75\x08\x8B\x45\xF4\x89\x45\xEC\xEB\x17\x3D\x47\x65\x74\x50\x75\x10\x81\x7C\x11\x08\x64\x64\x72\x65\x75\x06\x8B\x45\xF4\x89\x45\xE8\xFF\x45\xFC\x8B\x45\xFC\x3B\x45\xF0\x72\xB0\x8D\x45\xD4\x50\xFF\x55\xEC\x8D\x4D\xC8\x51\x50\xFF\x55\xE8\x6A\x00\x8D\x4D\xE0\x51\x51\x6A\x00\xFF\xD0\x5F\x5E\x5B\xC9\xC3";
 
-// VisualC++ ‚Ìê‡Apragma ‚Å exec ‘®«‚Â‚¢‚½ section ì‚Á‚Ä __declspec(allocate()) ‚Å‚»‚Ì section ‚Éƒf[ƒ^‚ğ”z’u‚µ‚Ä /link /entry:main ‚Â‚¯‚ÄƒRƒ“ƒpƒCƒ‹‚·‚ê‚Îˆê‰“®‚­‚ª‚È‚º‚©³íI—¹‚µ‚È‚¢
+// VisualC++ ã®å ´åˆã€pragma ã§ exec å±æ€§ã¤ã„ãŸ section ä½œã£ã¦ __declspec(allocate()) ã§ãã® section ã«ãƒ‡ãƒ¼ã‚¿ã‚’é…ç½®ã—ã¦ /link /entry:main ã¤ã‘ã¦ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«ã™ã‚Œã°ä¸€å¿œå‹•ããŒãªãœã‹æ­£å¸¸çµ‚äº†ã—ãªã„
 
 
 #else // VisualC++
-// Œ³ƒR[ƒhB
-// ÅI“I‚É shellcode ‚É‚·‚é‚½‚ßAŠO•” symbol ‚ğˆêØQÆ‚µ‚È‚¢‘‚«•û‚É‚·‚é•K—v‚ª‚ ‚éB
+// å…ƒã‚³ãƒ¼ãƒ‰ã€‚
+// æœ€çµ‚çš„ã« shellcode ã«ã™ã‚‹ãŸã‚ã€å¤–éƒ¨ symbol ã‚’ä¸€åˆ‡å‚ç…§ã—ãªã„æ›¸ãæ–¹ã«ã™ã‚‹å¿…è¦ãŒã‚ã‚‹ã€‚
 //
 // cl /Zi /GS- /Ox /Os shellcode.cpp
 
 #include <windows.h>
-
 int main()
 {
-    // •¶š—ñ literal ‚¾‚Æ symbol ‚ª•ª—£‚µ‚Ä‚µ‚Ü‚¤‚Ì‚ÅAmov address, number ‚Å‘S•”ƒoƒCƒiƒŠ‚Éû‚Ü‚é‘‚«•û‚É‚·‚éB
-    // char ‚Å‚Í‚È‚­ int ‚È‚Ì‚Í’Pƒ‚ÉƒR[ƒh‚ğk‚ß‚é‚½‚ßB
+    // æ–‡å­—åˆ— literal ã ã¨ symbol ãŒåˆ†é›¢ã—ã¦ã—ã¾ã†ã®ã§ã€mov address, number ã§å…¨éƒ¨ãƒã‚¤ãƒŠãƒªã«åã¾ã‚‹æ›¸ãæ–¹ã«ã™ã‚‹ã€‚
+    // char ã§ã¯ãªã int ãªã®ã¯å˜ç´”ã«ã‚³ãƒ¼ãƒ‰ã‚’ç¸®ã‚ã‚‹ãŸã‚ã€‚
 
     int strLoadLibraryA[4]; // "LoadLibraryA"
     strLoadLibraryA[0] = 0x64616F4C;
@@ -45,16 +44,16 @@ int main()
 
 
     HMODULE kernel32;
-    // ‚Ü‚¸‚Í kernel32.dll ‚ğ’T‚µ‚Ä LoadLibrary() ‚Æ GetProcAddress() ‚ğŒ©‚Â‚¯‚È‚¢‚Æ‚È‚É‚à‚Å‚«‚È‚¢B
-    // kernel32.dll ‚Í fs ƒŒƒWƒXƒ^‚©‚ç’H‚Á‚ÄŒ©‚Â‚¯‚ç‚ê‚éB
+    // ã¾ãšã¯ kernel32.dll ã‚’æ¢ã—ã¦ LoadLibrary() ã¨ GetProcAddress() ã‚’è¦‹ã¤ã‘ãªã„ã¨ãªã«ã‚‚ã§ããªã„ã€‚
+    // kernel32.dll ã¯ fs ãƒ¬ã‚¸ã‚¹ã‚¿ã‹ã‚‰è¾¿ã£ã¦è¦‹ã¤ã‘ã‚‰ã‚Œã‚‹ã€‚
     // thanks to http://skypher.com/wiki/index.php/Hacking/Shellcode/kernel32
     __asm {
-            XOR     ECX, ECX            ; ECX = 0
+        XOR     ECX, ECX            ; ECX = 0
             MOV     ESI, FS:[0x30]      ; ESI = &(PEB) ([FS:0x30])
             MOV     ESI, [ESI + 0x0C]   ; ESI = PEB->Ldr
             MOV     ESI, [ESI + 0x1C]   ; ESI = PEB->Ldr.InInitOrder
 next_module:
-            MOV     EAX, [ESI + 0x08]   ; EAX = InInitOrder[X].base_address
+        MOV     EAX, [ESI + 0x08]   ; EAX = InInitOrder[X].base_address
             MOV     EDI, [ESI + 0x20]   ; EDI = InInitOrder[X].module_name (unicode)
             MOV     ESI, [ESI]          ; ESI = InInitOrder[X].flink (next module)
             CMP     [EDI + 12*2], CL    ; modulename[12] == 0 ?
@@ -67,21 +66,14 @@ next_module:
     LoadLibraryAT pLoadLibraryA;
     GetProcAddressT pGetProcAddress;
     {
-        // kernel32.dll ‚Ì exports ‚ğ„‰ñ‚µ‚Ä LoadLibraryA ‚Æ GetProcAddress ‚ğ get
+        // kernel32.dll ã® exports ã‚’å·¡å›ã—ã¦ LoadLibraryA ã¨ GetProcAddress ã‚’ get
         size_t ImageBase = (size_t)kernel32;
         PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
         PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)(ImageBase + pDosHeader->e_lfanew);
         IMAGE_SECTION_HEADER *pFirstSectionHeader = (IMAGE_SECTION_HEADER*)((PBYTE)&pNTHeader->OptionalHeader + pNTHeader->FileHeader.SizeOfOptionalHeader);
         DWORD RVAExports = pNTHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+        IMAGE_EXPORT_DIRECTORY *pExportDirectory = (IMAGE_EXPORT_DIRECTORY *)(ImageBase + RVAExports);
 
-        // kernel32.dll ‚ÍÅ‰‚Ì section ‚ªŠY“–‚·‚é‚Ì‚Å section „‰ñ‚ÍÈ—ª
-        //for(int i=0; i<pNTHeader->FileHeader.NumberOfSections; ++i) {
-        //    if(pFirstSectionHeader[i].VirtualAddress <= RVAExports && RVAExports < pFirstSectionHeader[i].VirtualAddress + pFirstSectionHeader[i].Misc.VirtualSize) {
-        //    }
-        //}
-
-        IMAGE_SECTION_HEADER *pSectionHeader = &pFirstSectionHeader[0];
-        IMAGE_EXPORT_DIRECTORY *pExportDirectory = (IMAGE_EXPORT_DIRECTORY *)(ImageBase + pSectionHeader->PointerToRawData + RVAExports - pSectionHeader->VirtualAddress);
         DWORD *RVANames = (DWORD*)(ImageBase+pExportDirectory->AddressOfNames);
         WORD *RVANameOrdinals = (WORD*)(ImageBase+pExportDirectory->AddressOfNameOrdinals);
         DWORD *RVAFunctions = (DWORD*)(ImageBase+pExportDirectory->AddressOfFunctions);
@@ -91,6 +83,7 @@ next_module:
             if     (name[0]==strLoadLibraryA[0]   && name[2]==strLoadLibraryA[2])  { (void*&)pLoadLibraryA=func; }
             else if(name[0]==strGetProcAddress[0] && name[2]==strGetProcAddress[2]){ (void*&)pGetProcAddress=func; }
         }
+
     }
 
     typedef int (__stdcall *MessageBoxAT)(HWND , LPCTSTR , LPCTSTR , UINT);
@@ -98,4 +91,7 @@ next_module:
     MessageBoxAT pMessageBoxA = (MessageBoxAT) pGetProcAddress(mod, (char*)strMessageboxA);
     pMessageBoxA(NULL, (char*)strHello, (char*)strHello, 0);
 }
+
+// cl /Zi /Ox /Os /Oy /GS- shellcode.cpp
+
 #endif // __GNUC__
