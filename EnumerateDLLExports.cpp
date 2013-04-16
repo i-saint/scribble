@@ -3,7 +3,7 @@
 
 // F: functor(const char *funcname, void *funcptr)
 template<class F>
-void EnumerateDLLExports(HMODULE module, const F &f)
+inline void EnumerateDLLExports(HMODULE module, const F &f)
 {
     if(module==NULL) { return; }
 
@@ -29,7 +29,7 @@ void EnumerateDLLExports(HMODULE module, const F &f)
 // dllname: 特定の dll からの import のみを巡回したい場合指定。大文字小文字区別しません。 NULL の場合全ての dll からの import を巡回。
 // F: functor (const char *funcname, void *&funcptr)
 template<class F>
-void EnumerateDLLImports(HMODULE module, const char *dllname, const F &f)
+inline void EnumerateDLLImports(HMODULE module, const char *dllname, const F &f)
 {
     if(module==NULL) { return; }
 
@@ -44,13 +44,20 @@ void EnumerateDLLImports(HMODULE module, const char *dllname, const F &f)
     IMAGE_IMPORT_DESCRIPTOR *pImportDesc = (IMAGE_IMPORT_DESCRIPTOR*)(ImageBase + RVAImports);
     while(pImportDesc->Name!=0) {
         const char *pDLLName = (const char*)(ImageBase+pImportDesc->Name);
-        if(dllname==NULL || stricmp(pDLLName, dllname)==0) {
-            IMAGE_IMPORT_BY_NAME **ppSymbolNames = (IMAGE_IMPORT_BY_NAME**)(ImageBase+pImportDesc->Characteristics);
-            void **ppFuncs = (void**)(ImageBase+pImportDesc->FirstThunk);
-            for(int i=0; ; ++i) {
-                if(ppSymbolNames[i]==NULL) { break; }
-                char *pName = (char*)(ImageBase+(size_t)ppSymbolNames[i]->Name);
-                f(pName, ppFuncs[i]);
+        if(dllname==NULL || _stricmp(pDLLName, dllname)==0) {
+            IMAGE_THUNK_DATA* pThunkOrig = (IMAGE_THUNK_DATA*)(ImageBase + pImportDesc->OriginalFirstThunk);
+            IMAGE_THUNK_DATA* pThunk = (IMAGE_THUNK_DATA*)(ImageBase + pImportDesc->FirstThunk);
+            while(pThunkOrig->u1.AddressOfData!=0) {
+                if((pThunkOrig->u1.Ordinal & 0x80000000) > 0) {
+                    DWORD Ordinal = pThunkOrig->u1.Ordinal & 0xffff;
+                    // nameless function
+                }
+                else {
+                    IMAGE_IMPORT_BY_NAME* pIBN = (IMAGE_IMPORT_BY_NAME*)(ImageBase + pThunkOrig->u1.AddressOfData);
+                    f((char*)pIBN->Name, *(void**)pThunk);
+                }
+                ++pThunkOrig;
+                ++pThunk;
             }
         }
         ++pImportDesc;
