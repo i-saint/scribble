@@ -19,7 +19,7 @@ bool InjectDLL(HANDLE hProcess, const char* dllname)
     ::VirtualProtectEx(hProcess, remote_addr, len, PAGE_EXECUTE_READWRITE, &oldProtect);
     ::WriteProcessMemory(hProcess, remote_addr, dllname, len, &bytesRet);
     ::VirtualProtectEx(hProcess, remote_addr, len, oldProtect, &oldProtect);
-    ::FlushInstructionCache(hProcess, remote_addr, len);
+    //::FlushInstructionCache(hProcess, remote_addr, len); // 今回は不要
 
     hThread = ::CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)((void*)&LoadLibraryA), remote_addr, 0, NULL);
     ::WaitForSingleObject(hThread, INFINITE); 
@@ -27,7 +27,7 @@ bool InjectDLL(HANDLE hProcess, const char* dllname)
     return true;
 }
 
-bool TryInject()
+bool TryInject(const char *process_name, const char *dllname)
 {
     DWORD aProcesses[1024], cbNeeded, cProcesses;
     unsigned int i;
@@ -37,7 +37,7 @@ bool TryInject()
     }
 
     cProcesses = cbNeeded / sizeof(DWORD);
-    for( i = 0; i < cProcesses; i++ ) {
+    for(i=0; i<cProcesses; i++) {
         if( aProcesses[i] == 0 ) { continue; }
         HANDLE hProcess = ::OpenProcess(PROCESS_ALL_ACCESS, FALSE, aProcesses[i]);
         if(hProcess==NULL) { continue; }
@@ -47,7 +47,7 @@ bool TryInject()
         DWORD cbNeeded2;
         if(::EnumProcessModules(hProcess, &hMod, sizeof(hMod), &cbNeeded2)) {
             ::GetModuleBaseName(hProcess, hMod, szProcessName, sizeof(szProcessName)/sizeof(TCHAR));
-            if(strstr(szProcessName, "TestInjected")!=NULL && InjectDLL(hProcess, "TestDLL.dll")) {
+            if(strstr(szProcessName, process_name)!=NULL && InjectDLL(hProcess, dllname)) {
                 printf("injection completed\n");
                 fflush(stdout);
                 return true;
@@ -59,11 +59,15 @@ bool TryInject()
     return false;
 }
 
+// argv[1]: process name, argv[2]: dll name
 int main(int argc, char *argv[])
 {
+    if(argc<3) { return 0; }
     for(;;) {
-        if(TryInject()) { break; }
-        printf("TestInjected.exe not found. retrying...\n");
+        char dll_fullpath[MAX_PATH];
+        GetFullPathName(argv[2], MAX_PATH, dll_fullpath, NULL);
+        if(TryInject(argv[1], dll_fullpath)) { break; }
+        printf("%s not found. retrying...\n", argv[1]);
         fflush(stdout);
         ::Sleep(2000);
     }
