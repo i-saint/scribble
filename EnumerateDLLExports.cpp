@@ -70,6 +70,8 @@ int main(int argc, char *argv[])
 {
     HMODULE kernel32 = ::GetModuleHandleA("kernel32.dll");
 
+    printf("%s\n", __argv[0]);
+
     printf("exports:\n");
     EnumerateDLLExports(kernel32, [](const char *funcname, void *funcptr){
         printf("%s: 0x%p\n", funcname, funcptr);
