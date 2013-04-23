@@ -1,5 +1,5 @@
-﻿#include <cstdio>
-#include <windows.h>
+﻿#include <windows.h>
+#include <cstdio>
 
 
 // 4 byte の整数を返す関数の return 1 の箇所を任意の関数への call に書き換える。(WinAPI によくある return TRUE などが該当)
@@ -8,12 +8,10 @@
 // 1 以外にも適用可能だが残念ながら 0 だけは不可能。(xor eax, eax になってしまい、5 byte より小さくなるため)
 // ちなみに組み込み型の bool は 1 byte なため、return true は対応不可能。
 // また、x64 でも基本的には動くものの、相対アドレスが DWORD に収まらない場合はクラッシュするので注意が必要。
-// 
-// addr: return 1 が含まれる関数へのポインタ
-// scan_len: addr から何 byte 先まで return 1 を探すか
-// jmp_dst: call 先
 void OverrideReturnTRUE(void *addr, size_t scan_len, void *jmp_dst)
 {
+    // /link /opt:ref を付けなかった場合、関数呼び出しは関数の実体への jmp を挟む。
+    // 書き換えたいのは jmp 先なのでそれを辿る。
     {
         BYTE *data = (BYTE*)addr;
         if(data[0]==0xE9) { // jmp
@@ -33,12 +31,11 @@ void OverrideReturnTRUE(void *addr, size_t scan_len, void *jmp_dst)
         BYTE *data = (BYTE*)addr + i;
          // return TRUE; (mov eax, 1 == B8 01 00 00 00) を探して
          // call jmp_dst (E8 [4byte RVA]) に書き換える
-        if( data[0]==0xB8 && // mov
-            *((int*)(data+1))==1 )
+        if( data[0]==0xB8 && *(int*)(data+1)==1 )
         {
             data = (BYTE*)addr + i;
             data[0] = 0xE8; // call
-            *((DWORD*)(data+1)) = (ptrdiff_t)jmp_dst-(ptrdiff_t)data - 5;
+            *(DWORD*)(data+1) = (ptrdiff_t)jmp_dst-(ptrdiff_t)data - 5;
             break;
         }
     }
