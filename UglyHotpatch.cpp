@@ -78,7 +78,6 @@ void* UglyHotpatch( void *target, const void *replacement )
     return before;
 }
 
-void* UglyHotpatch( void *target, const void *replacement );
 
 __declspec(noinline) void Hoge(int arg) { printf("Hoge(%d)\n", arg); }
 __declspec(noinline) void Hook(int arg) { printf("Hook(%d)\n", arg); }
