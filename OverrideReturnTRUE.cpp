@@ -10,7 +10,7 @@
 // また、x64 でも基本的には動くものの、相対アドレスが DWORD に収まらない場合はクラッシュするので注意が必要。
 void OverrideReturnTRUE(void *addr, size_t scan_len, void *jmp_dst)
 {
-    // /link /opt:ref を付けなかった場合、関数呼び出しは関数の実体への jmp を挟む。
+    // /Zi ありかつ /link /opt:ref なしの場合、関数呼び出しは関数の実体への jmp を挟む。
     // 書き換えたいのは jmp 先なのでそれを辿る。
     {
         BYTE *data = (BYTE*)addr;

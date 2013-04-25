@@ -15,22 +15,22 @@ void* Hotpatch( void *target, const void *replacement )
     return orig_func;
 }
 
-void Hoge() { printf("Hoge()\n"); }
-void Hook() { printf("Hook()\n"); }
+void Hoge(int arg) { printf("Hoge(%d)\n", arg); }
+void Hook(int arg) { printf("Hook(%d)\n", arg); }
 
 int main(int argc, char *argv[])
 {
-    Hoge();
+    Hoge(1);
     Hotpatch(&Hoge, &Hook);
-    Hoge();
+    Hoge(2);
     // 2 byte 先を call すれば hotpatch 前の関数を呼べる
-    ((void (*)())((size_t)&Hoge+2)) ();
+    ((void (*)(int))((size_t)&Hoge+2)) (3);
 }
 
 /*
 $ cl Hotpatch.cpp /hotpatch && ./Hotpatch
 
-Hoge()
-Hook()
-Hoge()
+Hoge(1)
+Hook(2)
+Hoge(3)
 */
