@@ -1,8 +1,11 @@
-﻿#include <cstdio>
+﻿// "proper" hotpatch example:
+// https://github.com/i-saint/scribble/blob/master/Hotpatch.cpp
+
+#include <cstdio>
 #include <windows.h>
 
-// addr から required (byte) を含む instruction のサイズを求める
-size_t ComputeInstructionSize(void *addr, size_t required)
+// 関数ポインタ addr から required byte を含む instruction のサイズを求める
+size_t GuessInstructionSize(void *addr, size_t required)
 {
     // 不完全につき、未対応の instruction があれば適宜追加すべし
     // 関数の頭 5 byte 以内で実行されるものは多くが mov,sub,push あたりなのでこれだけでも多くに対応はできるハズ
@@ -65,7 +68,7 @@ void* UglyHotpatch( void *target, const void *replacement )
     ::VirtualProtect(f, 32, PAGE_EXECUTE_READWRITE, &old);
 
     // 元のコードをコピー & 最後にコピー本へ jmp するコードを付加 (==これを call すれば上書き前の動作をするハズ)
-    size_t slice = ComputeInstructionSize(f, 5);
+    size_t slice = GuessInstructionSize(f, 5);
     memcpy(before, f, slice);
     before[slice]=0xE9; // jmp
     *(DWORD*)(before+slice+1) = (ptrdiff_t)(f+slice)-(ptrdiff_t)(before+slice) - 5;
@@ -78,7 +81,6 @@ void* UglyHotpatch( void *target, const void *replacement )
     return before;
 }
 
-void* UglyHotpatch( void *target, const void *replacement );
 
 __declspec(noinline) void Hoge(int arg) { printf("Hoge(%d)\n", arg); }
 __declspec(noinline) void Hook(int arg) { printf("Hook(%d)\n", arg); }
