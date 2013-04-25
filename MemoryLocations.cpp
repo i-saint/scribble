@@ -1,16 +1,25 @@
-#include <windows.h>
+ï»¿#include <windows.h>
 #include <intrin.h>
 #include <psapi.h>
 #include <cstdio>
 #pragma comment(lib, "psapi.lib")
 
 
-// w’è‚ÌƒAƒhƒŒƒX‚ªŒ»İ‚Ìƒ‚ƒWƒ…[ƒ‹‚Ì static —Ìˆæ“à‚Å‚ ‚ê‚Î true
+// æŒ‡å®šã‚¢ãƒ‰ãƒ¬ã‚¹ãŒæœ‰åŠ¹ãªãƒ¡ãƒ¢ãƒªé ˜åŸŸ (VirtualQery() ãŒæˆåŠŸã™ã‚‹ && free çŠ¶æ…‹ã§ã¯ãªã„) ã§ã‚ã‚Œã° true
+// èª­ã¿è¾¼ã¿ or æ›¸ãè¾¼ã¿ä¸å¯ é ˜åŸŸã§ã‚‚ true ã‚’è¿”ã™ç‚¹ã«è‹¥å¹²æ³¨æ„ãŒå¿…è¦
+bool IsValidMemory(void *p)
+{
+    MEMORY_BASIC_INFORMATION meminfo;
+    return p!=NULL && ::VirtualQuery(p, &meminfo, sizeof(meminfo))!=0 && meminfo.State!=MEM_FREE;
+}
+
+
+// æŒ‡å®šã®ã‚¢ãƒ‰ãƒ¬ã‚¹ãŒç¾åœ¨ã®ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã® static é ˜åŸŸå†…ã§ã‚ã‚Œã° true
 bool IsStaticMemory(void *addr)
 {
-    // static —Ìˆæ‚Íƒ‚ƒWƒ…[ƒ‹ (exe,dll) ‚ª map ‚³‚ê‚Ä‚¢‚é—Ìˆæ“à‚É‚ ‚é
-    // ‚‘¬‰»‚Ì‚½‚ßŒÄ‚Ño‚µŒ³ƒ‚ƒWƒ…[ƒ‹‚Ì‚İ’²‚×‚é
-    // ‘¼ƒ‚ƒWƒ…[ƒ‹‚à’²‚×‚éê‡ ::EnumProcessModules() ‚Æ‚©‚ğg‚¤
+    // static é ˜åŸŸã¯ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ« (exe,dll) ãŒ map ã•ã‚Œã¦ã„ã‚‹é ˜åŸŸå†…ã«ã‚ã‚‹
+    // é«˜é€ŸåŒ–ã®ãŸã‚å‘¼ã³å‡ºã—å…ƒãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã®ã¿èª¿ã¹ã‚‹
+    // ä»–ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã‚‚èª¿ã¹ã‚‹å ´åˆ ::EnumProcessModules() ã¨ã‹ã‚’ä½¿ã†
     MODULEINFO modinfo;
     {
         HMODULE mod = 0;
@@ -21,25 +30,24 @@ bool IsStaticMemory(void *addr)
     return addr>=modinfo.lpBaseOfDll && addr<reinterpret_cast<char*>(modinfo.lpBaseOfDll)+modinfo.SizeOfImage;
 }
 
-// w’èƒAƒhƒŒƒX‚ªŒ»İ‚ÌƒXƒŒƒbƒh‚Ì stack —Ìˆæ“à‚Å‚ ‚ê‚Î true
+// æŒ‡å®šã‚¢ãƒ‰ãƒ¬ã‚¹ãŒç¾åœ¨ã®ã‚¹ãƒ¬ãƒƒãƒ‰ã® stack é ˜åŸŸå†…ã§ã‚ã‚Œã° true
 bool IsStackMemory(void *addr)
 {
-    // Thread Information Block ‚ÉãŒÀ‰ºŒÀî•ñ‚ª“ü‚Á‚Ä‚¢‚é
-    // (‚±‚ê‚¾‚ÆŒ»İ‚ÌƒXƒŒƒbƒh‚Ì stack —Ìˆæ‚µ‚©”»•Ê‚Å‚«‚È‚¢B
-    //  •ÊƒXƒŒƒbƒh‚Ì stack ‚©‚à’²‚×‚½‚¢ê‡‚Ì‚¢‚¢•û–@‚ª‚æ‚­‚í‚©‚ç‚¸B
-    //  ::Thread32First(), ::Thread32Next() ‚Å‘SƒvƒƒZƒX‚Ì‘SƒXƒŒƒbƒh‚ğ„‰ñ‚·‚é‚µ‚©‚È‚¢cH)
+    // Thread Information Block ã«ä¸Šé™ä¸‹é™æƒ…å ±ãŒå…¥ã£ã¦ã„ã‚‹
+    // (ã“ã‚Œã ã¨ç¾åœ¨ã®ã‚¹ãƒ¬ãƒƒãƒ‰ã® stack é ˜åŸŸã—ã‹åˆ¤åˆ¥ã§ããªã„ã€‚
+    //  åˆ¥ã‚¹ãƒ¬ãƒƒãƒ‰ã® stack ã‹ã‚‚èª¿ã¹ãŸã„å ´åˆã®ã„ã„æ–¹æ³•ãŒã‚ˆãã‚ã‹ã‚‰ãšã€‚
+    //  ::Thread32First(), ::Thread32Next() ã§å…¨ãƒ—ãƒ­ã‚»ã‚¹ã®å…¨ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’å·¡å›ã™ã‚‹ã—ã‹ãªã„ï¼Ÿ)
     NT_TIB *tib = reinterpret_cast<NT_TIB*>(::NtCurrentTeb());
     return addr>=tib->StackLimit && addr<tib->StackBase;
 }
 
-// w’è‚ÌƒAƒhƒŒƒX‚ª heap —Ìˆæ“à‚Å‚ ‚ê‚Î true
+// æŒ‡å®šã®ã‚¢ãƒ‰ãƒ¬ã‚¹ãŒ heap é ˜åŸŸå†…ã§ã‚ã‚Œã° true
 bool IsHeapMemory(void *addr)
 {
-    // static —Ìˆæ‚Å‚Í‚È‚¢ && stack —Ìˆæ‚Å‚à‚È‚¢ && —LŒø‚Èƒƒ‚ƒŠ (::VirtualQuery() ‚ª¬Œ÷‚·‚é) ‚È‚ç true
-    // ::HeapWalk() ‚ÅÆ‡‚·‚é‚Ì‚ª—ç‹V³‚µ‚¢ƒAƒvƒ[ƒ`‚¾‚ªA
-    // ‚±‚Á‚¿‚Ì•û‚ª‘¬‚¢‚µA•ÊƒXƒŒƒbƒh‚â•Êƒ‚ƒWƒ…[ƒ‹‚©‚çŒÄ‚Ño‚³‚ê‚é‚Ì‚Å‚È‚¯‚ê‚ÎŒ‹‰Ê‚à³‚µ‚¢‚Í‚¸
-    MEMORY_BASIC_INFORMATION meminfo;
-    return !IsStackMemory(addr) && !IsStaticMemory(addr) && ::VirtualQuery(addr, &meminfo, sizeof(meminfo));
+    // static é ˜åŸŸã§ã¯ãªã„ && stack é ˜åŸŸã§ã‚‚ãªã„ && æœ‰åŠ¹ãªãƒ¡ãƒ¢ãƒªãªã‚‰ true
+    // ::HeapWalk() ã§ç…§åˆã™ã‚‹ã®ãŒç¤¼å„€æ­£ã—ã„ã‚¢ãƒ—ãƒ­ãƒ¼ãƒã ãŒã€ã“ã£ã¡ã®æ–¹ãŒåœ§å€’çš„ã«é€Ÿã„ã€‚
+    // ä»£å„Ÿã¨ã—ã¦ã€åˆ¥ã‚¹ãƒ¬ãƒƒãƒ‰ã® stack é ˜åŸŸã‚„åˆ¥ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã® static é ˜åŸŸã¸ã®å•ã„åˆã‚ã›ã¯æ­£ã—ããªã„çµæœã‚’è¿”ã™ã€‚
+    return !IsStackMemory(addr) && !IsStaticMemory(addr) && IsValidMemory(addr);
 }
 
 
@@ -64,7 +72,7 @@ int main()
     free(heap_memory);
 }
 /*
-result:
+$ cl MemoryLocations.cpp && ./MemoryLocations
 
 IsStaticMemory(static_memory): 1
 IsStaticMemory(stack_memory): 0
