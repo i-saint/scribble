@@ -1,10 +1,10 @@
-﻿// "proper" hotpatch example:
-// https://github.com/i-saint/scribble/blob/master/Hotpatch.cpp
-
-#include <cstdio>
+﻿#pragma comment(lib, "psapi.lib")
+#pragma comment(lib, "dbghelp.lib")
 #include <windows.h>
+#include <dbghelp.h>
+#include <psapi.h>
+#include <cstdio>
 
-// 
 size_t CopyInstructions(void *dst_, const void *src_, size_t required)
 {
     // 不完全につき、未対応の instruction があれば適宜追加すべし
@@ -18,7 +18,7 @@ size_t CopyInstructions(void *dst_, const void *src_, size_t required)
         bool can_memcpy = true;
 
         switch(src[ret]) {
-        // push
+            // push
         case 0x55: size=1; break;
         case 0x68:
         case 0x6A: size=5; break;
@@ -28,7 +28,7 @@ size_t CopyInstructions(void *dst_, const void *src_, size_t required)
             default:   size=3; break;
             }
 
-        // mov
+            // mov
         case 0x8B:
             switch(src[ret+1]) {
             case 0x44: size=4; break;
@@ -38,7 +38,7 @@ size_t CopyInstructions(void *dst_, const void *src_, size_t required)
             break;
         case 0xB8: size=5; break;
 
-        // sub
+            // sub
         case 0x81: 
             switch(src[ret+1]) {
             case 0xEC: size=6; break;
@@ -52,7 +52,7 @@ size_t CopyInstructions(void *dst_, const void *src_, size_t required)
             }
             break;
 
-        // call & jmp
+            // call & jmp
         case 0xE8:
         case 0xE9:
             {
@@ -99,23 +99,38 @@ void* UglyHotpatch( void *target, const void *replacement )
     return preserved;
 }
 
-
-__declspec(noinline) void Hoge(int arg) { printf("Hoge(%d)\n", arg); }
-__declspec(noinline) void Hook(int arg) { printf("Hook(%d)\n", arg); }
-
-int main(int argc, char *argv[])
+HANDLE g_console_out;
+void my_puts(const char *text)
 {
-    typedef void (*F)(int);
-    Hoge(1);
-    F before = (F)UglyHotpatch(&Hoge, &Hook);
-    Hoge(2);
-    before(3);
+    DWORD written;
+    ::WriteConsoleA(g_console_out, text, strlen(text), &written, NULL);
 }
 
-/*
-$ cl UglyHotpatch.cpp && ./UglyHotpatch
+void (*OrigTest)(int i);
+void TestHook(int i)
+{
+    my_puts("TestHook ");
+    OrigTest(i);
+}
 
-Hoge(1)
-Hook(2)
-Hoge(3)
-*/
+extern "C" void __declspec(dllexport) TestInjection()
+{
+    g_console_out = ::GetStdHandle(STD_OUTPUT_HANDLE);
+    ::SymInitialize(::GetCurrentProcess(), NULL, TRUE);
+    ::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
+
+    SYMBOL_INFO sym;
+    ::ZeroMemory(&sym, sizeof(sym));
+    sym.SizeOfStruct = sizeof(sym);
+    if(::SymFromName(::GetCurrentProcess(), "?Test@@YAXH@Z", &sym)) {
+        (void*&)OrigTest = UglyHotpatch((void*)sym.Address, &TestHook);
+    }
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+{
+    if(fdwReason==DLL_PROCESS_ATTACH) {
+        TestInjection();
+    }
+    return TRUE;
+}
