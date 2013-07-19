@@ -77,21 +77,24 @@ LPVOID WINAPI fake_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
 
 int main(int argc, char *argv[])
 {
+    printf("HeapAlloc: 0x%p, fake_HeapAlloc: 0x%p\n", &HeapAlloc, &fake_HeapAlloc);
+
     HMODULE kernel32 = ::GetModuleHandleA("kernel32.dll");
     HeapAllocT pHeapAlloc;
 
     pHeapAlloc = (HeapAllocT)::GetProcAddress(kernel32, "HeapAlloc");
-    printf("HeapAlloc: 0x%p, fake_HeapAlloc: 0x%p, pHeapAlloc: 0x%p\n", &HeapAlloc, &fake_HeapAlloc, pHeapAlloc);
+    printf("pHeapAlloc: 0x%p\n", pHeapAlloc);
 
     OverrideDLLExportByName(kernel32, "HeapAlloc", fake_HeapAlloc);
 
     pHeapAlloc = (HeapAllocT)::GetProcAddress(kernel32, "HeapAlloc");
-    printf("HeapAlloc: 0x%p, fake_HeapAlloc: 0x%p, pHeapAlloc: 0x%p\n", &HeapAlloc, &fake_HeapAlloc, pHeapAlloc);
+    printf("pHeapAlloc: 0x%p\n", pHeapAlloc);
 
     pHeapAlloc(::GetProcessHeap(), 0, 10);
 }
 
 // $ cl OverrideDLLExport.cpp && ./OverrideDLLExport
-// HeapAlloc: 0x7779E046, fake_HeapAlloc: 0x01101000, pHeapAlloc: 0x7779E046
-// HeapAlloc: 0x7779E046, fake_HeapAlloc: 0x01101000, pHeapAlloc: 0x01101000
+// HeapAlloc: 0x7782E046, fake_HeapAlloc: 0x00981000
+// pHeapAlloc: 0x7782E046
+// pHeapAlloc: 0x00981000
 // fake_HeapAlloc

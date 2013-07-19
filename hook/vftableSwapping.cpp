@@ -10,15 +10,15 @@ public:
 class Hoge : public IHoge
 {
 public:
-    void __stdcall doSomething()
+    virtual void __stdcall doSomething()
     {
-        printf("doSomething\n");
+        printf("%p: doSomething\n", this);
     }
 };
 
-void __stdcall doSomething_Hooked(Hoge *h)
+void __stdcall doSomething_Hooked(Hoge *_this)
 {
-    printf("doSomething_Hooked\n");
+    printf("%p: doSomething_Hooked\n", _this);
 }
 
 
@@ -42,16 +42,15 @@ int main()
 }
 
 /*
-$ cl vtable.cpp /nologo && ./vtable
-vtable.cpp
-doSomething
-doSomething_Hooked
+$ cl vftableSwapping.cpp && ./vftableSwapping
+00508FC0: doSomething
+00508FC0: doSomething_Hooked
 
-$ g++ vtable.cpp && ./a
-doSomething
-doSomething_Hooked
+$ g++ vftableSwapping.cpp && ./a
+0x80010358: doSomething
+0x80010358: doSomething_Hooked
 
-$ clang -S vtable.cpp && g++ vtable.s && ./a
-doSomething
-doSomething_Hooked
+$ clang -S vftableSwapping.cpp && g++ vftableSwapping.s && ./a
+0x80010358: doSomething
+0x80010358: doSomething_Hooked
 */
