@@ -18,6 +18,6 @@ int main()
     printf("is_complete<Hage>: %d\n", is_complete<Hage>::value);
 }
 
-// $ cl incomplete_type.cpp && ./incomplete_type
+// $ cl is_complete.cpp && ./is_complete
 // is_complete<Hoge>: 0
 // is_complete<Hage>: 1
