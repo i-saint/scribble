@@ -1,20 +1,20 @@
 ﻿#include <windows.h>
 #include <cstdio>
 
+struct CV_INFO_PDB70
+{
+    DWORD  CvSignature;
+    GUID Signature;
+    DWORD Age;
+    BYTE PdbFileName[1];
+};
+
 // fill_gap: .dll ファイルをそのままメモリに移した場合はこれを true にする必要があります。
 // LoadLibrary() で正しくロードしたものは section の再配置が行われ、元ファイルとはデータの配置にズレが生じます。
 // fill_gap==true の場合このズレを補正します。
-char* GetPDBPathFromModule(void *pModule, bool fill_gap=false)
+CV_INFO_PDB70* GetPDBInfoFromModule(void *pModule, bool fill_gap=false)
 {
     if(!pModule) { return nullptr; }
-
-    struct CV_INFO_PDB70
-    {
-        DWORD  CvSignature;
-        GUID Signature;
-        DWORD Age;
-        BYTE PdbFileName[1];
-    };
 
     PBYTE pData = (PUCHAR)pModule;
     PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)pData;
@@ -41,7 +41,7 @@ char* GetPDBPathFromModule(void *pModule, bool fill_gap=false)
         if(DebugRVA!=0 && DebugRVA < pNtHeaders->OptionalHeader.SizeOfImage && pDebug->Type==IMAGE_DEBUG_TYPE_CODEVIEW) {
             CV_INFO_PDB70 *pCVI = (CV_INFO_PDB70*)(pData + pDebug->AddressOfRawData);
             if(pCVI->CvSignature=='SDSR') {
-                return (char*)pCVI->PdbFileName;
+                return pCVI;
             }
         }
     }
@@ -70,32 +70,29 @@ inline bool MapFile(const char *path, void *&o_data, size_t &o_size, const F &al
 
 int main(int argc, char *argv[])
 {
-    if(argc<2) {
-        printf("arg1 must be a path to .dll or .exe.\n");
-        return 0;
-    }
-
+    // dll ファイルをそのままメモリにマップして pdb パス抽出
     {
-        char *pdb = nullptr;
+        CV_INFO_PDB70 *pdb = nullptr;
         void *module = nullptr;
         size_t module_size = 0;
-        if(MapFile(argv[1], module, module_size, malloc)) {
-            pdb = GetPDBPathFromModule(module, true);
+        if(MapFile("GetPDBInfoFromDLL.exe", module, module_size, malloc)) {
+            pdb = GetPDBInfoFromModule(module, true);
         }
-        printf("%s\n", pdb);
+        printf("%s\n", pdb->PdbFileName);
         free(module);
     }
+
+    // LoadLibrary() でちゃんとロードしたモジュールから pdb パス抽出
     {
-        HMODULE module = ::LoadLibraryA(argv[1]);
-        char *pdb = GetPDBPathFromModule(module);
-        printf("%s\n", pdb);
+        HMODULE module = ::LoadLibraryA("GetPDBInfoFromDLL.exe");
+        CV_INFO_PDB70 *pdb = GetPDBInfoFromModule(module);
+        printf("%s\n", pdb->PdbFileName);
         ::FreeLibrary(module);
     }
 }
 
 /*
-$ cl /Zi GetPDBPath.cpp
-$ ./GetPDBPath GetPDBPath.exe
-D:\src\scribble\GetPDBPath.pdb
-D:\src\scribble\GetPDBPath.pdb
+$ cl /Zi GetPDBInfoFromDLL.cpp && ./GetPDBInfoFromDLL
+D:\src\scribble\GetPDBInfoFromDLL.pdb
+D:\src\scribble\GetPDBInfoFromDLL.pdb
 */

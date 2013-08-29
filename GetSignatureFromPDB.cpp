@@ -40,7 +40,7 @@ PDBStream70* GetPDBSignature(void *mapped_pdb_file)
 
     std::string RootPointersRaw;
     RootPointersRaw.resize(RootPointersPages * pHeader->dwPageSize);
-    for(int i=0; i<RootPointersPages; i++) {
+    for(DWORD i=0; i<RootPointersPages; i++) {
         PVOID Page = PAGE(pHeader->dwRootPointers[i]);
         SIZE_T Offset = pHeader->dwPageSize * i;
         memcpy(&RootPointersRaw[0]+Offset, Page, pHeader->dwPageSize);
@@ -49,7 +49,7 @@ PDBStream70* GetPDBSignature(void *mapped_pdb_file)
 
     std::string StreamInfoRaw;
     StreamInfoRaw.resize(RootPages * pHeader->dwPageSize);
-    for(int i=0; i<RootPages; i++) {
+    for(DWORD i=0; i<RootPages; i++) {
         PVOID Page = PAGE(RootPointers[i]);
         SIZE_T Offset = pHeader->dwPageSize * i;
         memcpy(&StreamInfoRaw[0]+Offset, Page, pHeader->dwPageSize);
@@ -58,8 +58,6 @@ PDBStream70* GetPDBSignature(void *mapped_pdb_file)
     DWORD *dwStreamSizes = (DWORD*)&StreamInfoRaw[4];
 
     {
-        DWORD StreamSize = dwStreamSizes[PDB_STREAM_PDB];
-        DWORD StreamPages = STREAM_SPAN_PAGES(StreamSize);
         DWORD *StreamPointers = &dwStreamSizes[StreamCount];
         DWORD page = 0;
         for(DWORD i=0; i<PDB_STREAM_PDB; i++) {
@@ -115,8 +113,9 @@ int main(int argc, char *argv[])
     free(pdbData);
 }
 
-// $ cl GetPDBSignature.cpp /Zi /EHsc && ./GetPDBSignature
+// $ cl GetSignatureFromPDB.cpp /Zi /EHsc && ./GetSignatureFromPDB
 // {7AD8596A-B1C6-42D3-9002-869FE824B9F2}
 // 
-// $ dumpbin GetPDBSignature.exe /headers | grep pdb
-// 521F2723 cv           3C 000374C0    360C0    Format: RSDS, {7AD8596A-B1C6-42D3-9002-869FE824B9F2}, 1, D:\src\scribble\GetPDBSignature.pdb
+// $  dumpbin GetPDBSignature.exe /headers | grep pdb
+// 521F2723 cv           3C 000374C0    360C0    Format: RSDS, {7AD8596A-B1C6-42D3-9002-869FE824B9F2}, 6, D:\src\scribble\GetPDBSignature.pdb
+
