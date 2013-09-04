@@ -94,21 +94,6 @@ bool EnumMemberVariables(const char *classname, const Func &f)
 
 
 
-#define USG_Serializable(ClassName)\
-    void serialize();\
-    void deserialize();
-
-#define USG_ImplementSerializer(ClassName)\
-    void ClassName::Serialize()\
-    {\
-        EnumMemberVariables(#ClassName, [](std::string &name){\
-            printf("%s\n", name.c_str());\
-        });\
-    }\
-    void ClassName::Deserialize()\
-    {\
-    }
-
 
 class Hoge
 {
@@ -122,16 +107,7 @@ class Hage : public Hoge
 public:
     int c;
     int d;
-
-    USG_Serializable(Hage)
 };
-
-USG_ImplementSerialize(Hage)
-
-void Hage::Serialize()
-{
-}
-
 
 int main(int argc, char* argv[])
 {
