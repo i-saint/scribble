@@ -23,6 +23,7 @@ struct MemberInfo
 typedef std::function<void (const MemberInfo&)> MemberInfoCallback;
 
 bool EnumMemberVariablesByTypeName(const char *classname, const MemberInfoCallback &f);
+bool EnumMemberVariablesByTypeName(const char *classname, void *_this, const MemberInfoCallback &f);
 bool EnumMemberVariablesByPointer(void *_this, const MemberInfoCallback &f);
 
 
@@ -31,8 +32,8 @@ bool EnumMemberVariablesByPointer(void *_this, const MemberInfoCallback &f);
 class Parent1
 {
 public:
-    Parent1() : i1(1), i2(2), i3(3), i4(4)
-    {}
+    Parent1() : i1(1), i2(2), i3(3), i4(4) {}
+    virtual ~Parent1() {}
     virtual int test()=0;
 
     int8_t      i1;
@@ -46,8 +47,8 @@ public:
 class Parent2
 {
 public:
-    Parent2() : f1(1.0f), f2(2.0)
-    {}
+    Parent2() : f1(1.0f), f2(2.0) {}
+    virtual ~Parent2() {}
     virtual int test2()=0;
 
     float       f1;
@@ -57,8 +58,7 @@ public:
 class Child : public Parent1, public Parent2
 {
 public:
-    Child() : b(true), c(_mm_set1_ps(10.0f)), str("hoge") {
-    }
+    Child() : b(true), c(_mm_set1_ps(10.0f)), str("hoge") {}
     int test()  override { return 1; }
     int test2() override { return 2; }
 
@@ -73,15 +73,7 @@ int main(int argc, char* argv[])
     ::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_DEBUG);
     ::SymInitialize(::GetCurrentProcess(), NULL, TRUE);
 
-    printf("EnumMemberVariablesByTypeName(\"Child\"):\n");
-    EnumMemberVariablesByTypeName("Child", [](const MemberInfo &mi){
-        printf("%s %s::%s\n", mi.type_name, mi.class_name, mi.value_name);
-    });
-    printf("\n");
-
-    Parent1 *h = new Child();
-    printf("EnumMemberVariablesByPointer(Child*):\n");
-    EnumMemberVariablesByPointer(h, [](const MemberInfo &mi){
+    auto callback = [](const MemberInfo &mi){
         printf("%s %s::%s", mi.type_name, mi.class_name, mi.value_name);
         if(strcmp(mi.type_name, "int8")==0) {
             printf(" : %d", (int32_t)*(int8_t*)mi.value);
@@ -111,7 +103,18 @@ int main(int argc, char* argv[])
             printf(" : %s", ((std::string*)mi.value)->c_str());
         }
         printf("\n");
-    });
+    };
+
+
+    Parent1 *h = new Child();
+
+    printf("EnumMemberVariablesByTypeName(\"Child\"):\n");
+    EnumMemberVariablesByTypeName("Child", h, callback);
+    printf("\n");
+
+    printf("EnumMemberVariablesByPointer(Child*):\n");
+    EnumMemberVariablesByPointer(h, callback);
+    delete h;
 
     return 0;
 }
@@ -121,17 +124,17 @@ int main(int argc, char* argv[])
 > EnumMemberVariables
 
 EnumMemberVariablesByTypeName("Child"):
-int8 Parent1::i1
-uint8 Parent1::i2
-int32 Parent1::i3
-uint32 Parent1::i4
+int8 Parent1::i1 : 1
+uint8 Parent1::i2 : 2
+int32 Parent1::i3 : 3
+uint32 Parent1::i4 : 4
 uint32[4] Parent1::i5
 uint32*[4][8] Parent1::i6
-float32 Parent2::f1
-float64 Parent2::f2
-bool Child::b
-__m128 Child::c
-std::basic_string<char,std::char_traits<char>,std::allocator<char> > Child::str
+float32 Parent2::f1 : 1.000000
+float64 Parent2::f2 : 2.000000
+bool Child::b : 1
+__m128 Child::c : 10.000000
+std::basic_string<char,std::char_traits<char>,std::allocator<char> > Child::str : hoge
 
 EnumMemberVariablesByPointer(Child*):
 int8 Parent1::i1 : 1
@@ -146,6 +149,8 @@ bool Child::b : 1
 __m128 Child::c : 10.000000
 std::basic_string<char,std::char_traits<char>,std::allocator<char> > Child::str : hoge
 */
+
+
 
 
 
@@ -218,20 +223,14 @@ bool GetSymbolName(EMVContext &ctx, DWORD t)
     return false;
 }
 
-DWORD GetSymbolTypeID(EMVContext &ctx, DWORD t)
-{
-    DWORD tid = 0;
-    if(::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_TYPEID, &tid)) {
-        return tid;
-    }
-    return 0;
-}
-
 bool GetSymbolTypeNameImpl(EMVContext &ctx, DWORD t, std::string &ret)
 {
-    DWORD tag;
+    DWORD tag = 0;
     DWORD basetype = 0;
-    ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_SYMTAG, &tag);
+    if(!::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_SYMTAG, &tag)) {
+        return false;
+    }
+
     if(tag==SymTagArrayType) {
         DWORD count = 0;
         ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_COUNT, &count);
@@ -239,13 +238,15 @@ bool GetSymbolTypeNameImpl(EMVContext &ctx, DWORD t, std::string &ret)
         sprintf(a, "[%d]", count);
         ret += a;
 
-        DWORD tid = GetSymbolTypeID(ctx, t);
+        DWORD tid = 0;
+        ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_TYPEID, &tid);
         return GetSymbolTypeNameImpl(ctx, tid, ret);
     }
     else if(tag==SymTagPointerType) {
         ret = "*"+ret;
 
-        DWORD tid = GetSymbolTypeID(ctx, t);
+        DWORD tid = 0;
+        ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_TYPEID, &tid);
         return GetSymbolTypeNameImpl(ctx, tid, ret);
     }
     else if(tag==SymTagBaseType) {
@@ -272,7 +273,7 @@ bool GetSymbolTypeNameImpl(EMVContext &ctx, DWORD t, std::string &ret)
         }
         ret = type+ret;
     }
-    else {
+    else { // user defined type
         WCHAR *wname = nullptr;
         if(::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_SYMNAME, &wname )) {
             char name[MAX_SYM_NAME];
@@ -292,32 +293,39 @@ bool GetSymbolTypeName(EMVContext &ctx, DWORD t)
 
 void EnumMemberVariables(EMVContext &ctx, DWORD t, const MemberInfoCallback &f)
 {
-    DWORD tag;
-    ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_SYMTAG, &tag );
+    DWORD tag = 0;
+    if(!::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_SYMTAG, &tag)) {
+        return;
+    }
 
     if(tag==SymTagData) {
         DWORD offset = 0;
-        ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_OFFSET, &offset);
-        ctx.mi.value = (void*)((size_t)ctx.mi.base_pointer+offset);
-
-        DWORD tid = GetSymbolTypeID(ctx, t);
-        GetSymbolTypeName(ctx, tid);
-        ctx.current_type = ctx.tmp_name;
-        GetSymbolName(ctx, t);
-        ctx.current_value = ctx.tmp_name;
-        ctx.updateMemberInfo();
-        f(ctx.mi);
+        DWORD tid = 0;
+        char type_name[MAX_SYM_NAME];
+        char value_name[MAX_SYM_NAME];
+        if( ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_OFFSET, &offset) &&
+            ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_TYPEID, &tid) )
+        {
+            ctx.mi.value = (void*)((size_t)ctx.mi.base_pointer+offset);
+            GetSymbolTypeName(ctx, tid);
+            ctx.current_type = ctx.tmp_name;
+            GetSymbolName(ctx, t);
+            ctx.current_value = ctx.tmp_name;
+            ctx.updateMemberInfo();
+            f(ctx.mi);
+        }
     }
     else if(tag==SymTagBaseClass) {
+        void *base_prev = ctx.mi.base_pointer;
         DWORD offset = 0;
-        ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_OFFSET, &offset);
-        ctx.mi.base_pointer = (void*)((size_t)ctx.mi.this_pointer+offset);
-
-        DWORD type;
-        if(::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_TYPE, &type)) {
+        DWORD type = 0;
+        if( ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_OFFSET, &offset) &&
+            ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_TYPE, &type) )
+        {
+            ctx.mi.base_pointer = (void*)((size_t)base_prev+offset);
             EnumMemberVariables(ctx, type, f);
+            ctx.mi.base_pointer = base_prev;
         }
-        ctx.mi.base_pointer = ctx.mi.this_pointer;
     }
     else if(tag==SymTagUDT) {
         std::string prev = ctx.current_class;
@@ -369,6 +377,13 @@ bool EnumMemberVariablesByTypeName(const char *classname, const MemberInfoCallba
     return EnumMemberVariablesImpl(ctx, f);
 }
 
+bool EnumMemberVariablesByTypeName(const char *classname, void *_this, const MemberInfoCallback &f)
+{
+    EMVContext ctx;
+    ctx.mi.this_pointer = ctx.mi.base_pointer = _this;
+    ctx.this_type = classname;
+    return EnumMemberVariablesImpl(ctx, f);
+}
 
 bool EnumMemberVariablesByPointer(void *_this, const MemberInfoCallback &f)
 {
