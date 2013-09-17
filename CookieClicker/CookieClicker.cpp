@@ -177,14 +177,10 @@ bool Bitmap::writeToFile( const char *path )
     head.bfType = 'MB';
     head.bfOffBits = 54;
 
-    std::vector<BGRA> data;
-    data.resize(getHeight()*getWidth());
-    memcpy(&data[0], &(*this)[0][0], data.size()*4);
-
     if(FILE *f=fopen(path,"wb")) {
         fwrite(&head, sizeof(head), 1, f);
         fwrite(&m_info.bmiHeader, sizeof(m_info.bmiHeader), 1, f);
-        fwrite(&data[0], data.size()*4, 1, f);
+        fwrite(m_data, getHeight()*getWidth()*4, 1, f);
         fclose(f);
         return true;
     }
@@ -281,7 +277,7 @@ bool Application::searchAndClickGoldenCookie()
     bool ret = false;
     Bitmap current;
     current.copyFromHWND(m_hwnd);
-    for(int y=150; y<m_basebmp.getHeight()-20 && y<current.getHeight()-20; y+=10) {
+    for(int y=20; y<m_basebmp.getHeight()-20 && y<current.getHeight()-20; y+=10) {
     for(int x=20; x<m_basebmp.getWidth()-20 && x<current.getWidth()-20; x+=10) {
         BGRA color = current[y][x];
         if(color==m_basebmp[y][x]) { continue; } // 開始直後から変化がなければ飛ばす
