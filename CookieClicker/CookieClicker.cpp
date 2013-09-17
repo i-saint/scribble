@@ -291,7 +291,7 @@ bool Application::searchAndClickGoldenCookie()
                 if(color>low && color<high) { ++score; }
             }
             }
-            if(score>20) {
+            if(score>35) {
                 POINT click_target = {m_window_pos.x+x, m_window_pos.y+(m_basebmp.getHeight()-y)};
                 SetMousePosition(click_target);
                 LeftClick();
