@@ -243,7 +243,7 @@ void Application::exec()
         if(m_state==St_Running) {
             SetMousePosition(m_click_pos);
             LeftClick();
-            ::Sleep(5);
+            ::Sleep(10);
 
             // 2.5 秒毎に golden cookie を探す
             if(::timeGetTime()-last_search_golden_cookie > 2500) {
@@ -274,11 +274,10 @@ bool Application::searchAndClickGoldenCookie()
     const BGRA low  = {{70, 160, 190, 0}};  // 
     const BGRA high = {{150, 230, 240, 0}}; // golden cookie の主要部分の色の範囲
 
-    bool ret = false;
     Bitmap current;
     current.copyFromHWND(m_hwnd);
-    for(int y=20; y<m_basebmp.getHeight()-20 && y<current.getHeight()-20; y+=10) {
-    for(int x=20; x<m_basebmp.getWidth()-20 && x<current.getWidth()-20; x+=10) {
+    for(int y=30; y<m_basebmp.getHeight()-30 && y<current.getHeight()-30; y+=10) {
+    for(int x=30; x<m_basebmp.getWidth()-30 && x<current.getWidth()-30; x+=10) {
         BGRA color = current[y][x];
         if(color==m_basebmp[y][x]) { continue; } // 開始直後から変化がなければ飛ばす
 
@@ -286,22 +285,22 @@ bool Application::searchAndClickGoldenCookie()
         // 周囲の色もそれっぽければクリック。
         if(color>low && color<high) {
             int score = 0;
-            for(int ty=-20; ty<=20; ty+=4) {
-            for(int tx=-20; tx<=20; tx+=4) {
+            for(int ty=-30; ty<=30; ty+=5) {
+            for(int tx=-30; tx<=30; tx+=5) {
                 color = current[y+ty][x+tx];
                 if(color>low && color<high) { ++score; }
             }
             }
-            if(score>10) {
+            if(score>20) {
                 POINT click_target = {m_window_pos.x+x, m_window_pos.y+(m_basebmp.getHeight()-y)};
                 SetMousePosition(click_target);
                 LeftClick();
-                ret = true;
+                return true;
             }
         }
     }
     }
-    return true;
+    return false;
 }
 
 
