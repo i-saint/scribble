@@ -78,6 +78,15 @@ public:
     template<class A> void serialize(A &ar, const uint32_t version);
 };
 
+GenSerializerBegin(Parent)
+GenSerializerEnd()
+
+GenSerializerBegin(Child)
+GenSerializerEnd()
+
+/*
+ª‚ª©“®¶¬‚Å‚±‚¤‚È‚éB
+boost::serialization ‚ğ‘z’è‚µ‚½—áB
 
 GenSerializerBegin(Parent)
 template<class A>
@@ -97,7 +106,7 @@ void Child::serialize(A &ar, const uint32_t version) {
     ar & str;
 }
 GenSerializerEnd()
-
+*/
 
 GenSerializerProcess(
     [](const char *class_name, const MemberInfo *members, size_t num){
@@ -122,7 +131,6 @@ GenSerializerProcess(
         return ret;
     }
 );
-
 
 int main(int argc, char* argv[])
 {
