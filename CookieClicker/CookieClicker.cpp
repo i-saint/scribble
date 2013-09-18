@@ -76,6 +76,12 @@ union BGRA
 
           BYTE& operator[](size_t i)       { return v[i]; }
     const BYTE& operator[](size_t i) const { return v[i]; }
+    BGRA diff(BGRA o)
+    {
+        BGRA t = {{abs(b-o.b), abs(g-o.g), abs(r-o.r), abs(a-o.a)}};
+        return t;
+    }
+    int hsum() const { return b+g+r; }
 };
 inline bool operator==(const BGRA &a, const BGRA &b) { return memcmp(a.v, b.v, 4)==0; }
 inline bool operator!=(const BGRA &a, const BGRA &b) { return memcmp(a.v, b.v, 4)!=0; }
@@ -94,6 +100,7 @@ public:
     int getHeight() const { return m_info.bmiHeader.biHeight; }
     BGRA* operator[](size_t yindex) { return &m_data[yindex*getWidth()]; }
     void clear();
+    void swap(Bitmap &other);
     bool copyFromHWND(HWND wnd);
     bool writeToFile(const char *path);
 
@@ -141,7 +148,16 @@ void Bitmap::clear()
 {
     if(m_hbmp){ ::DeleteObject(m_hbmp); m_hbmp=nullptr; }
     if(m_hdc) { ::DeleteDC(m_hdc); m_hdc=nullptr; }
+    m_data = nullptr;
 
+}
+
+void Bitmap::swap(Bitmap &other)
+{
+    std::swap(m_info, other.m_info);
+    std::swap(m_hbmp, other.m_hbmp);
+    std::swap(m_hdc, other.m_hdc);
+    std::swap(m_data, other.m_data);
 }
 
 bool Bitmap::copyFromHWND(HWND wnd)
@@ -246,8 +262,8 @@ void Application::exec()
             LeftClick();
             ::Sleep(10);
 
-            // 2.5 秒毎に golden cookie を探す
-            if(::timeGetTime()-last_search_golden_cookie > 2500) {
+            // 2 秒毎に golden cookie を探す
+            if(::timeGetTime()-last_search_golden_cookie > 2000) {
                 searchAndClickGoldenCookie();
                 last_search_golden_cookie = ::timeGetTime();
             }
@@ -277,36 +293,53 @@ void Application::exec()
 
 bool Application::searchAndClickGoldenCookie()
 {
-    const BGRA low  = {{70, 160, 190, 0}};  // 
-    const BGRA high = {{150, 230, 240, 0}}; // golden cookie の主要部分の色の範囲
+    const BGRA gold  = {{100, 200, 220, 0}};  // golden cookie の主要な色
+    const BGRA goldp2  = {{50, 100, 110, 0}};
+    const BGRA goldp5  = {{20, 40, 45, 0}};
+    const BGRA goldp10  = {{10, 20, 22, 0}};
+    const BGRA five  = {{5, 5, 5, 0}};
 
     Bitmap current;
     current.copyFromHWND(m_hwnd);
+
+    int highscore = 0;
+    POINT click_target;
+    bool result = false;
     for(int y=30; y<m_basebmp.getHeight()-30 && y<current.getHeight()-30; y+=10) {
     for(int x=30; x<m_basebmp.getWidth()-30 && x<current.getWidth()-30; x+=10) {
-        BGRA color = current[y][x];
-        if(color==m_basebmp[y][x]) { continue; } // 開始直後から変化がなければ飛ばす
+        BGRA ccol = current[y][x];
+        BGRA pcol = m_basebmp[y][x];
+        if(ccol.diff(pcol)<five) { continue; } // 開始直後から変化がなければ飛ばす
 
-        // golden cookie の色に近い場合、周囲の色もそうか判定。
-        // 周囲の色もそれっぽければクリック。
-        if(color>low && color<high) {
-            int score = 0;
-            for(int ty=-30; ty<=30; ty+=5) {
-            for(int tx=-30; tx<=30; tx+=5) {
-                color = current[y+ty][x+tx];
-                if(color>low && color<high) { ++score; }
+        int score = 0;
+        for(int ty=-30; ty<=30; ty+=3) {
+        for(int tx=-30; tx<=30; tx+=3) {
+            ccol = current[y+ty][x+tx];
+            pcol = m_basebmp[y+ty][x+tx];
+            BGRA d1 = pcol.diff(gold);
+            BGRA d2 = ccol.diff(gold);
+            BGRA d3 = ccol.diff(pcol);
+            if(d2.hsum()<=d1.hsum() && d3.hsum()>20) {
+                ++score;
             }
-            }
-            if(score>35) {
-                POINT click_target = {m_window_pos.x+x, m_window_pos.y+(m_basebmp.getHeight()-y)};
-                SetMousePosition(click_target);
-                LeftClick();
-                return true;
-            }
+            if(d2.hsum()<30) { score+=2; }
+            if(d2.hsum()<70) { score++; }
+        }}
+        if(score>highscore) {
+            highscore = score;
+            POINT t = {m_window_pos.x+x, m_window_pos.y+(m_basebmp.getHeight()-y)};
+            click_target = t;
         }
+    }}
+    if(highscore>60) {
+        SetMousePosition(click_target);
+        LeftClick();
+        result = true;
     }
-    }
-    return false;
+
+    m_basebmp.clear();
+    m_basebmp.swap(current);
+    return result;
 }
 
 
