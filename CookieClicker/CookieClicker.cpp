@@ -9,6 +9,7 @@
 
 // Cookie Clicker ( http://orteil.dashnet.org/cookieclicker/ ) 連打ツール
 // golden cookie 自動クリック機能搭載。
+// ポーズ状態の時 Ctrl+Click で 10 連打。
 
 
 // thanks: http://www.cplusplus.com/forum/lounge/17053/
@@ -253,6 +254,11 @@ void Application::exec()
         }
         else {
             ::Sleep(100);
+            if((::GetKeyState(VK_LBUTTON) & 0x80) && (::GetKeyState(VK_CONTROL) & 0x80)) {
+                for(int i=0; i<10; ++i) {
+                    LeftClick();
+                }
+            }
         }
 
         if(GetAsyncKeyState('B')) {
