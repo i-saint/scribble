@@ -168,16 +168,17 @@ namespace VSAddin
                     info.bstrArg = "";
                     info.bstrCurDir = workdir;
                     info.bstrEnv = environment;
-                    info.dlo = DEBUG_LAUNCH_OPERATION.DLO_CreateProcess;
+                    info.dlo = DEBUG_LAUNCH_OPERATION.DLO_Custom;
                     info.grfLaunch = (uint)__VSDBGLAUNCHFLAGS.DBGLAUNCH_StopDebuggingOnEnd;
-                    info.clsidCustom = VSConstants.CLSID_ComPlusOnlyDebugEngine; 
+                    info.clsidCustom = VSConstants.DebugEnginesGuids.ManagedAndNative_guid;
                     IntPtr ptr = Marshal.AllocCoTaskMem((int)info.cbSize);
                     Marshal.StructureToPtr(info, ptr, false);
 
-                    IVsDebugger Debugger = (IVsDebugger)Package.GetGlobalService(typeof(SVsShellDebugger));
-                    int ret = Debugger.LaunchDebugTargets(1, ptr);
-                    if (ret == VSConstants.S_OK)
+                    IVsDebugger idbg = (IVsDebugger)Package.GetGlobalService(typeof(SVsShellDebugger));
+                    if (idbg.LaunchDebugTargets(1, ptr) == VSConstants.S_OK)
                     {
+                        Debugger dbg = _applicationObject.Debugger;
+                        Process proc = dbg.DebuggedProcesses.Item(1);
                         Output.OutputString("\nok\n");
                     }
 
