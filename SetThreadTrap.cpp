@@ -10,12 +10,12 @@
 #pragma comment(lib, "psapi.lib")
 
 // 指定の関数の先頭に現在のスレッドを suspend するコードをねじ込む
-bool SetThradTrap(HANDLE process, void *target); // target: hotpatch 可能な関数のアドレス
-bool SetThradTrap(HANDLE process, const char *sym_name); // sym_name: hotpatch 可能な関数のシンボル名
+bool SetThreadTrap(HANDLE process, void *target); // target: hotpatch 可能な関数のアドレス
+bool SetThreadTrap(HANDLE process, const char *sym_name); // sym_name: hotpatch 可能な関数のシンボル名
 
 // SetThreadTrap() でねじ込んだ suspend コードを解除
-bool UnsetThradTrap(HANDLE process, void *target);
-bool UnsetThradTrap(HANDLE process, const char *sym_name);
+bool UnsetThreadTrap(HANDLE process, void *target);
+bool UnsetThreadTrap(HANDLE process, const char *sym_name);
 
 
 void resumer(DWORD tid)
@@ -34,7 +34,7 @@ void resumer(DWORD tid)
 
 int main(int argc, char* argv[])
 {
-    SetThradTrap(::GetCurrentProcess(), "LoadLibraryA"); // LoadLibraryA に suspend を仕込む
+    SetThreadTrap(::GetCurrentProcess(), "LoadLibraryA"); // LoadLibraryA に suspend を仕込む
 
     {
         // メインスレッドを起こすスレッドを実行開始
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
         resume_thread.join();
     }
 
-    UnsetThradTrap(::GetCurrentProcess(), "LoadLibraryA"); // suspend コード除去
+    UnsetThreadTrap(::GetCurrentProcess(), "LoadLibraryA"); // suspend コード除去
 
     {
         HANDLE kernel32 = LoadLibraryA("kernel32.dll"); // 今度は止まらない
@@ -256,7 +256,7 @@ static inline void SuspendThreadBlock(HANDLE process, const F &f)
     });
 }
 
-bool SetThradTrap(HANDLE process, void *target)
+bool SetThreadTrap(HANDLE process, void *target)
 {
     bool ret = false;
     SuspendThreadBlock(process, [&](){
@@ -265,7 +265,7 @@ bool SetThradTrap(HANDLE process, void *target)
     return ret;
 }
 
-bool SetThradTrap(HANDLE process, const char *sym_name)
+bool SetThreadTrap(HANDLE process, const char *sym_name)
 {
     bool ret = false;
     ::SymInitialize(process, nullptr, TRUE);
@@ -282,7 +282,7 @@ bool SetThradTrap(HANDLE process, const char *sym_name)
 }
 
 
-bool UnsetThradTrap(HANDLE process, void *target)
+bool UnsetThreadTrap(HANDLE process, void *target)
 {
     bool ret = false;
     SuspendThreadBlock(process, [&](){
@@ -291,7 +291,7 @@ bool UnsetThradTrap(HANDLE process, void *target)
     return ret;
 }
 
-bool UnsetThradTrap(HANDLE process, const char *sym_name)
+bool UnsetThreadTrap(HANDLE process, const char *sym_name)
 {
     bool ret = false;
     SuspendThreadBlock(process, [&](){
