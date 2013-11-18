@@ -10,7 +10,7 @@ struct soavec24
     simdvec4 sv[2];
 
     soavec24() { sv[0]=sv[1]=_mm_set1_ps(0.0f); }
-    soavec24(const simdvec4 *_v) { sv[0]=_sv[0]; sv[1]=_sv[1]; sv[2]=_sv[2]; }
+    soavec24(const simdvec4 *_v) { sv[0]=_sv[0]; sv[1]=_sv[1]; }
     soavec24(const simdvec4 &_x, const simdvec4 &_y) { sv[0]=_x; sv[1]=_y; }
     simdvec4& operator[](int i) { return sv[i]; }
     const simdvec4& operator[](int i) const { return sv[i]; }
