@@ -34,6 +34,10 @@ typedef unsigned char Elf64_Byte;
 
 #define EI_NIDENT (16)
 
+#define EI_CLASS        4               /* File class byte index */
+#define ELFCLASSNONE    0               /* Invalid class */
+#define ELFCLASS32      1               /* 32-bit objects */
+#define ELFCLASS64      2               /* 64-bit objects */
 
 /* Special section indices.  */
 #define SHN_UNDEF       0               /* Undefined section */
@@ -73,6 +77,95 @@ typedef unsigned char Elf64_Byte;
 #define SHF_ALLOC       (1 << 1)        /* Occupies memory during execution */
 #define SHF_EXECINSTR   (1 << 2)        /* Executable */
 #define SHF_MASKPROC    0xf0000000      /* Processor-specific */
+
+
+
+// X86_64 relocations.
+enum {
+    R_X86_64_NONE       = 0,
+    R_X86_64_64         = 1,
+    R_X86_64_PC32       = 2,
+    R_X86_64_GOT32      = 3,
+    R_X86_64_PLT32      = 4,
+    R_X86_64_COPY       = 5,
+    R_X86_64_GLOB_DAT   = 6,
+    R_X86_64_JUMP_SLOT  = 7,
+    R_X86_64_RELATIVE   = 8,
+    R_X86_64_GOTPCREL   = 9,
+    R_X86_64_32         = 10,
+    R_X86_64_32S        = 11,
+    R_X86_64_16         = 12,
+    R_X86_64_PC16       = 13,
+    R_X86_64_8          = 14,
+    R_X86_64_PC8        = 15,
+    R_X86_64_DTPMOD64   = 16,
+    R_X86_64_DTPOFF64   = 17,
+    R_X86_64_TPOFF64    = 18,
+    R_X86_64_TLSGD      = 19,
+    R_X86_64_TLSLD      = 20,
+    R_X86_64_DTPOFF32   = 21,
+    R_X86_64_GOTTPOFF   = 22,
+    R_X86_64_TPOFF32    = 23,
+    R_X86_64_PC64       = 24,
+    R_X86_64_GOTOFF64   = 25,
+    R_X86_64_GOTPC32    = 26,
+    R_X86_64_GOT64      = 27,
+    R_X86_64_GOTPCREL64 = 28,
+    R_X86_64_GOTPC64    = 29,
+    R_X86_64_GOTPLT64   = 30,
+    R_X86_64_PLTOFF64   = 31,
+    R_X86_64_SIZE32     = 32,
+    R_X86_64_SIZE64     = 33,
+    R_X86_64_GOTPC32_TLSDESC = 34,
+    R_X86_64_TLSDESC_CALL    = 35,
+    R_X86_64_TLSDESC    = 36,
+    R_X86_64_IRELATIVE  = 37
+};
+
+// i386 relocations.
+enum {
+    R_386_NONE          = 0,
+    R_386_32            = 1,
+    R_386_PC32          = 2,
+    R_386_GOT32         = 3,
+    R_386_PLT32         = 4,
+    R_386_COPY          = 5,
+    R_386_GLOB_DAT      = 6,
+    R_386_JUMP_SLOT     = 7,
+    R_386_RELATIVE      = 8,
+    R_386_GOTOFF        = 9,
+    R_386_GOTPC         = 10,
+    R_386_32PLT         = 11,
+    R_386_TLS_TPOFF     = 14,
+    R_386_TLS_IE        = 15,
+    R_386_TLS_GOTIE     = 16,
+    R_386_TLS_LE        = 17,
+    R_386_TLS_GD        = 18,
+    R_386_TLS_LDM       = 19,
+    R_386_16            = 20,
+    R_386_PC16          = 21,
+    R_386_8             = 22,
+    R_386_PC8           = 23,
+    R_386_TLS_GD_32     = 24,
+    R_386_TLS_GD_PUSH   = 25,
+    R_386_TLS_GD_CALL   = 26,
+    R_386_TLS_GD_POP    = 27,
+    R_386_TLS_LDM_32    = 28,
+    R_386_TLS_LDM_PUSH  = 29,
+    R_386_TLS_LDM_CALL  = 30,
+    R_386_TLS_LDM_POP   = 31,
+    R_386_TLS_LDO_32    = 32,
+    R_386_TLS_IE_32     = 33,
+    R_386_TLS_LE_32     = 34,
+    R_386_TLS_DTPMOD32  = 35,
+    R_386_TLS_DTPOFF32  = 36,
+    R_386_TLS_TPOFF32   = 37,
+    R_386_TLS_GOTDESC   = 39,
+    R_386_TLS_DESC_CALL = 40,
+    R_386_TLS_DESC      = 41,
+    R_386_IRELATIVE     = 42,
+    R_386_NUM           = 43
+};
 
 
 typedef enum {
@@ -207,16 +300,55 @@ typedef struct
     Elf64_Xword   st_size;                /* Symbol size */
 } Elf64_Sym;
 
+
+typedef struct
+{
+    Elf32_Addr    r_offset;               /* Address */
+    Elf32_Word    r_info;                 /* Relocation type and symbol index */
+} Elf32_Rel;
+
+typedef struct
+{
+    Elf32_Addr    r_offset;               /* Address */
+    Elf32_Word    r_info;                 /* Relocation type and symbol index */
+    Elf32_Sword   r_addend;               /* Addend */
+} Elf32_Rela;
+
+
+typedef struct
+{
+    Elf64_Addr    r_offset;
+    Elf64_Byte    r_type;                 /* 1st relocation op type */
+    Elf64_Byte    r_type2;                /* 2nd relocation op type */
+    Elf64_Byte    r_type3;                /* 3rd relocation op type */
+    Elf64_Byte    r_ssym;                 /* Special symbol */
+    Elf64_Word    r_sym;                  /* Symbol index */
+} Elf64_Rel;
+
+typedef struct {
+    Elf64_Addr    r_offset;
+    Elf64_Byte    r_type;                 /* 1st relocation op type */
+    Elf64_Byte    r_type2;                /* 2nd relocation op type */
+    Elf64_Byte    r_type3;                /* 3rd relocation op type */
+    Elf64_Byte    r_ssym;                 /* Special symbol */
+    Elf64_Word    r_sym;                  /* Symbol index */
+    Elf64_Sxword  r_addend;
+} Elf64_Rela;
+
+
 #ifdef _M_X64
     typedef Elf64_Ehdr Elf_Ehdr;
     typedef Elf64_Phdr Elf_Phdr;
     typedef Elf64_Shdr Elf_Shdr;
     typedef Elf64_Sym  Elf_Sym;
+    typedef Elf64_Rel  Elf_Rel;
+    typedef Elf64_Rela Elf_Rela;
 #else  // _M_X64
     typedef Elf32_Ehdr Elf_Ehdr;
     typedef Elf32_Phdr Elf_Phdr;
     typedef Elf32_Shdr Elf_Shdr;
     typedef Elf32_Sym  Elf_Sym;
+    typedef Elf32_Rel  Elf_Rel;
 #endif // _M_X64
 
 
@@ -260,10 +392,19 @@ void dpDeallocate(void *ptr)
 }
 
 
-struct ElfSymbol
+enum SymAttr {
+    SAttr_Local,
+    SAttr_Weak,
+    SAttr_Function,
+    SAttr_Data,
+    SAttr_Undef,
+};
+
+struct Symbol
 {
-    const char *name;
-    void *addr;
+    const char  *name;
+    void        *addr;
+    uint32_t    attributes;
 };
 
 class ElfFile
@@ -273,10 +414,11 @@ public:
     ~ElfFile();
     bool load(const char *path_to_elf);
     bool unload();
-    const ElfSymbol* findSymbol(const char *name);
+    bool link();
+    const Symbol* findSymbol(const char *name);
 
 private:
-    std::vector<ElfSymbol> m_symbols;
+    std::vector<Symbol> m_symbols;
     void *m_elf_file;
     size_t m_elf_size;
 };
@@ -308,7 +450,21 @@ bool ElfFile::load( const char *path_to_elf )
         unload();
         return false;
     }
+#ifdef _M_X64
+    if(elf_header->e_ident[EI_CLASS]!=ELFCLASS64) {
+        printf("ElfFile::load(): %s is not 64 bit elf file.\n", path_to_elf);
+        unload();
+        return false;
+    }
+#else  // _M_X64
+    if(elf_header->e_ident[EI_CLASS]!=ELFCLASS32) {
+        printf("ElfFile::load(): %s is not 32 bit elf file.\n", path_to_elf);
+        unload();
+        return false;
+    }
+#endif // _M_X64
 
+    // executable 対応
     Elf_Phdr *elf_pheader = nullptr;
     if(elf_header->e_phoff!=0) {
         elf_pheader = (Elf_Phdr*)(elf_data + elf_header->e_phoff);
@@ -320,6 +476,8 @@ bool ElfFile::load( const char *path_to_elf )
     for(int isec=0; isec<elf_header->e_shnum; ++isec) {
         Elf_Shdr *section = sections + isec;
         const char *section_name = section_str + section->sh_name;
+
+        // symbol table 巡回
         if(section->sh_type==SHT_SYMTAB) {
             const char *sym_str = (const char*)(elf_data + sections[section->sh_link].sh_offset);
             for(int isym=0; isym<section->sh_size; isym+=section->sh_entsize) {
@@ -328,17 +486,20 @@ bool ElfFile::load( const char *path_to_elf )
                 if(symbol->st_name==0 || symbol->st_shndx>=elf_header->e_shnum) { continue; }
 
                 Elf_Shdr *sym_section = sections + symbol->st_shndx;
-                char *sym_addr = elf_data + sym_section->sh_offset + symbol->st_value;
-                if(elf_pheader) {
-                    sym_addr -= elf_pheader->p_vaddr;
+                char *sym_addr = nullptr;
+                if(symbol->st_shndx!=SHN_UNDEF) {
+                    sym_addr = elf_data + sym_section->sh_offset + symbol->st_value;
+                    if(elf_pheader) {
+                        sym_addr -= elf_pheader->p_vaddr;
+                    }
                 }
-                ElfSymbol sym = {sym_name, sym_addr};
+                Symbol sym = {sym_name, sym_addr};
                 m_symbols.push_back(sym);
             }
         }
     }
     std::sort(m_symbols.begin(), m_symbols.end(),
-        [&](ElfSymbol &a, ElfSymbol &b){ return strcmp(a.name, b.name)<0; });
+        [&](Symbol &a, Symbol &b){ return strcmp(a.name, b.name)<0; });
 
     return true;
 }
@@ -355,10 +516,62 @@ bool ElfFile::unload()
     return false;
 }
 
-const ElfSymbol* ElfFile::findSymbol(const char *name)
+bool ElfFile::link()
+{
+    if(!m_elf_file) { return false; }
+
+    char *elf_data = (char*)m_elf_file;
+    Elf_Ehdr *elf_header = (Elf_Ehdr*)elf_data;
+
+    Elf_Shdr *sections = (Elf_Shdr*)(elf_data + elf_header->e_shoff);
+    const char *section_str = (const char*)(elf_data + sections[elf_header->e_shstrndx].sh_offset);
+
+    for(int isec=0; isec<elf_header->e_shnum; ++isec) {
+        Elf_Shdr *section = sections + isec;
+        const char *section_name = section_str + section->sh_name;
+
+        if(section->sh_type==SHT_REL) {
+            for(int irel=0; irel<section->sh_size; irel+=section->sh_entsize) {
+                Elf_Rel *rela = (Elf_Rel*)(elf_data + section->sh_offset + irel);
+            }
+        }
+        else if(section->sh_type==SHT_RELA) {
+            Elf_Shdr *sym_section = sections + section->sh_link;
+            const char *sym_str = (const char*)(elf_data + sections[sym_section->sh_link].sh_offset);
+            for(int irel=0; irel<section->sh_size; irel+=section->sh_entsize) {
+                Elf_Rela *rela = (Elf_Rela*)(elf_data + section->sh_offset + irel);
+                uint32_t *target = (uint32_t*)(elf_data+sym_section->sh_addr + rela->r_offset);
+                Elf_Sym *rel_symbol = (Elf_Sym*)(elf_data + sym_section->sh_offset + sym_section->sh_entsize*rela->r_sym);
+                const char *rel_name = sym_str + rel_symbol->st_name;
+                void *rel_addr = nullptr;
+                if(rel_symbol->st_shndx!=SHN_UNDEF) {
+                    rel_addr = (void*)(elf_data + sections[rel_symbol->st_shndx].sh_offset + rel_symbol->st_value);
+                }
+                else {
+                    // todo: resolve symbol
+                }
+
+                switch(rela->r_type) {
+#ifdef _M_X64
+                case R_X86_64_PC32:
+                    break;
+
+                case R_X86_64_PLT32:
+                    break;
+#else  // _M_X64
+#endif // _M_X64
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+const Symbol* ElfFile::findSymbol(const char *name)
 {
     auto iter = std::lower_bound(m_symbols.begin(), m_symbols.end(), name,
-        [&](ElfSymbol &sym, const char *n){ return strcmp(sym.name, n)<0; });
+        [&](Symbol &sym, const char *n){ return strcmp(sym.name, n)<0; });
     if(iter!=m_symbols.end() && strcmp(iter->name, name)==0) {
         return &(*iter);
     }
@@ -376,8 +589,9 @@ int main(int argc, char *argv[])
 
     ElfFile elf;
     if(elf.load(argv[1])) {
+        elf.link();
         typedef int (*add_t)(int, int);
-        if(const ElfSymbol *sym = elf.findSymbol("add")) {
+        if(const Symbol *sym = elf.findSymbol("add")) {
             add_t add = (add_t)sym->addr;
             printf("add(1,2): %d\n", add(1,2));
         }
