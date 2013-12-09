@@ -1,4 +1,5 @@
-﻿#include <functional>
+﻿#define _CRT_SECURE_NO_WARNINGS
+#include <functional>
 #include <string>
 #include <cstdint>
 
