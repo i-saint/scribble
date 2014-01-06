@@ -80,6 +80,46 @@ typedef unsigned char Elf64_Byte;
 
 
 
+// Segment types.
+enum {
+    PT_NULL    = 0, // Unused segment.
+    PT_LOAD    = 1, // Loadable segment.
+    PT_DYNAMIC = 2, // Dynamic linking information.
+    PT_INTERP  = 3, // Interpreter pathname.
+    PT_NOTE    = 4, // Auxiliary information.
+    PT_SHLIB   = 5, // Reserved.
+    PT_PHDR    = 6, // The program header table itself.
+    PT_TLS     = 7, // The thread-local storage template.
+    PT_LOOS    = 0x60000000, // Lowest operating system-specific pt entry type.
+    PT_HIOS    = 0x6fffffff, // Highest operating system-specific pt entry type.
+    PT_LOPROC  = 0x70000000, // Lowest processor-specific program hdr entry type.
+    PT_HIPROC  = 0x7fffffff, // Highest processor-specific program hdr entry type.
+
+    // x86-64 program header types.
+    // These all contain stack unwind tables.
+    PT_GNU_EH_FRAME  = 0x6474e550,
+    PT_SUNW_EH_FRAME = 0x6474e550,
+    PT_SUNW_UNWIND   = 0x6464e550,
+
+    PT_GNU_STACK  = 0x6474e551, // Indicates stack executability.
+    PT_GNU_RELRO  = 0x6474e552, // Read-only after relocation.
+
+    // ARM program header types.
+    PT_ARM_ARCHEXT = 0x70000000, // Platform architecture compatibility info
+    // These all contain stack unwind tables.
+    PT_ARM_EXIDX   = 0x70000001,
+    PT_ARM_UNWIND  = 0x70000001
+};
+
+// Segment flag bits.
+enum {
+    PF_X        = 1,         // Execute
+    PF_W        = 2,         // Write
+    PF_R        = 4,         // Read
+    PF_MASKOS   = 0x0ff00000,// Bits for operating system-specific semantics.
+    PF_MASKPROC = 0xf0000000 // Bits for processor-specific semantics.
+};
+
 // X86_64 relocations.
 enum {
     R_X86_64_NONE       = 0,
@@ -412,21 +452,22 @@ class ElfFile
 public:
     ElfFile();
     ~ElfFile();
-    bool load(const char *path_to_elf);
-    bool unload();
+    bool loadFromFile(const char *path_to_elf);
+    bool loadFromMemory(void *data);
+    void unload();
     bool link();
     const Symbol* findSymbol(const char *name);
 
 private:
     std::vector<Symbol> m_symbols;
     void *m_elf_file;
-    size_t m_elf_size;
+    bool m_needs_deallocate;
 };
 
 
 ElfFile::ElfFile()
     : m_elf_file(nullptr)
-    , m_elf_size(0)
+    , m_needs_deallocate(false)
 {
 }
 
@@ -435,30 +476,47 @@ ElfFile::~ElfFile()
     unload();
 }
 
-bool ElfFile::load( const char *path_to_elf )
+bool ElfFile::loadFromFile( const char *path_to_elf )
 {
     unload();
 
-    if(!dpMapFile(path_to_elf, m_elf_file, m_elf_size, dpAllocateRWX)) {
+    size_t size = 0;
+    void *data = nullptr;
+    if(!dpMapFile(path_to_elf, data, size, dpAllocateRWX)) {
         return false;
     }
 
-    char *elf_data = (char*)m_elf_file;
+    printf("ElfFile::loadFromFile(): loading %s...\n", path_to_elf);
+    if(loadFromMemory(data)) {
+        m_needs_deallocate = true;
+        printf("ElfFile::loadFromFile(): loading %s succeeded.\n", path_to_elf);
+        return true;
+    }
+    else {
+        dpDeallocate(data);
+        printf("ElfFile::loadFromFile(): loading %s failed.\n", path_to_elf);
+        return false;
+    }
+}
+
+bool ElfFile::loadFromMemory(void *data)
+{
+    char *elf_data = (char*)data;
     Elf_Ehdr *elf_header = (Elf_Ehdr*)elf_data;
-    if(elf_header->e_ident[0]!=0x7F || elf_header->e_ident[1]!='E' || elf_header->e_ident[2]!='L' || elf_header->e_ident[3]!='F') {
-        printf("ElfFile::load(): %s is not elf file.\n", path_to_elf);
+    if(memcmp(elf_header->e_ident, "\x7F" "ELF", 4)!=0) {
+        printf("ElfFile::loadFromMemory(): invalid elf file.\n");
         unload();
         return false;
     }
 #ifdef _M_X64
     if(elf_header->e_ident[EI_CLASS]!=ELFCLASS64) {
-        printf("ElfFile::load(): %s is not 64 bit elf file.\n", path_to_elf);
+        printf("ElfFile::load(): not 64 bit elf file.\n");
         unload();
         return false;
     }
 #else  // _M_X64
     if(elf_header->e_ident[EI_CLASS]!=ELFCLASS32) {
-        printf("ElfFile::load(): %s is not 32 bit elf file.\n", path_to_elf);
+        printf("ElfFile::load(): %s not 32 bit elf file.\n");
         unload();
         return false;
     }
@@ -466,8 +524,12 @@ bool ElfFile::load( const char *path_to_elf )
 
     // executable 対応
     Elf_Phdr *elf_pheader = nullptr;
-    if(elf_header->e_phoff!=0) {
-        elf_pheader = (Elf_Phdr*)(elf_data + elf_header->e_phoff);
+    for(int i=0; i<elf_header->e_phnum; ++i) {
+        Elf_Phdr *ph = (Elf_Phdr*)(elf_data + elf_header->e_phoff)[i];
+        if(elf_pheader->p_type == PT_LOAD) {
+            elf_pheader = (Elf_Phdr*)(elf_data + elf_header->e_phoff);
+            break;
+        }
     }
 
     Elf_Shdr *sections = (Elf_Shdr*)(elf_data + elf_header->e_shoff);
@@ -501,19 +563,19 @@ bool ElfFile::load( const char *path_to_elf )
     std::sort(m_symbols.begin(), m_symbols.end(),
         [&](Symbol &a, Symbol &b){ return strcmp(a.name, b.name)<0; });
 
+    m_elf_file = data;
     return true;
 }
 
-bool ElfFile::unload()
+
+void ElfFile::unload()
 {
-    if(m_elf_file) {
+    if(m_needs_deallocate && m_elf_file) {
         dpDeallocate(m_elf_file);
-        m_elf_file = nullptr;
-        m_elf_size = 0;
-        m_symbols.clear();
-        return true;
     }
-    return false;
+    m_elf_file = nullptr;
+    m_needs_deallocate = false;
+    m_symbols.clear();
 }
 
 bool ElfFile::link()
@@ -588,7 +650,7 @@ int main(int argc, char *argv[])
     }
 
     ElfFile elf;
-    if(elf.load(argv[1])) {
+    if(elf.loadFromFile(argv[1])) {
         elf.link();
         typedef int (*add_t)(int, int);
         if(const Symbol *sym = elf.findSymbol("add")) {
