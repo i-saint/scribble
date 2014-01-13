@@ -1,15 +1,29 @@
 ﻿#include <cstdio>
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <algorithm>
 #include <vector>
+#include <map>
 
 #ifdef _WIN32
 #   include <windows.h>
 #else  // _WIN32
 #   include <sys/mman.h>
+#   include <dlfcn.h>
+#   include <link.h>
 #endif // _WIN32
 
+#if defined(_M_X64) || defined(_LP64)
+#   define dpX64
+#endif
+#if defined(_WIN32)
+#   define dpWindows
+#else
+#   define dpPOSIX
+#endif
+
+#ifdef dpWindows
 typedef uint16_t Elf32_Half;
 typedef uint32_t Elf32_Word;
 typedef int32_t  Elf32_Sword;
@@ -366,73 +380,41 @@ typedef struct
 } Elf64_Rel;
 
 typedef struct {
-    Elf64_Addr    r_offset;
-    Elf64_Byte    r_type;                 /* 1st relocation op type */
-    Elf64_Byte    r_type2;                /* 2nd relocation op type */
-    Elf64_Byte    r_type3;                /* 3rd relocation op type */
-    Elf64_Byte    r_ssym;                 /* Special symbol */
-    Elf64_Word    r_sym;                  /* Symbol index */
-    Elf64_Sxword  r_addend;
+    Elf64_Addr    r_offset; // Location (file byte offset, or program virtual addr).
+    Elf64_Xword   r_info;   // Symbol table index and type of relocation to apply.
+    Elf64_Sxword  r_addend; // Compute value for relocatable field by adding this.
 } Elf64_Rela;
+#endif // dpWindows
 
+inline Elf32_Word ElfRela_GetSymbol(const Elf32_Rela &v) { return (v.r_info >> 8); }
+inline unsigned char ElfRela_GetType(const Elf32_Rela &v) { return (unsigned char) (v.r_info & 0x0ff); }
+inline Elf64_Word ElfRela_GetSymbol(const Elf64_Rela &v) { return (v.r_info >> 32); }
+inline Elf64_Word ElfRela_GetType(const Elf64_Rela &v) { return (Elf64_Word) (v.r_info & 0xffffffffL); }
 
-#ifdef _M_X64
+#ifdef dpX64
     typedef Elf64_Ehdr Elf_Ehdr;
     typedef Elf64_Phdr Elf_Phdr;
     typedef Elf64_Shdr Elf_Shdr;
     typedef Elf64_Sym  Elf_Sym;
     typedef Elf64_Rel  Elf_Rel;
     typedef Elf64_Rela Elf_Rela;
-#else  // _M_X64
+#else  // dpX64
     typedef Elf32_Ehdr Elf_Ehdr;
     typedef Elf32_Phdr Elf_Phdr;
     typedef Elf32_Shdr Elf_Shdr;
     typedef Elf32_Sym  Elf_Sym;
     typedef Elf32_Rel  Elf_Rel;
-#endif // _M_X64
+    typedef Elf32_Rela Elf_Rela;
+#endif // dpX64
 
-
-
-// F: [](size_t size) -> void* : alloc func
-template<class F>
-inline bool dpMapFile(const char *path, void *&o_data, size_t &o_size, const F &alloc)
+struct dpModuleInfo
 {
-    o_data = nullptr;
-    o_size = 0;
-    if(FILE *f=fopen(path, "rb")) {
-        fseek(f, 0, SEEK_END);
-        o_size = ftell(f);
-        if(o_size > 0) {
-            o_data = alloc(o_size);
-            fseek(f, 0, SEEK_SET);
-            fread(o_data, 1, o_size, f);
-        }
-        fclose(f);
-        return true;
-    }
-    return false;
-}
+    void *addr;
+    const char *name;
+};
 
-void* dpAllocateRWX(size_t size)
+enum dpSymbolAttr
 {
-#ifdef _WIN32
-    return ::VirtualAlloc(nullptr, size, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-#else  // _WIN32
-    return ::mmap(nullptr, size, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-#endif // _WIN32
-}
-
-void dpDeallocate(void *ptr)
-{
-#ifdef _WIN32
-    ::VirtualFree(ptr, 0, MEM_RELEASE);
-#else  // _WIN32
-    ::munmap(ptr, 0);
-#endif // _WIN32
-}
-
-
-enum SymAttr {
     SAttr_Local,
     SAttr_Weak,
     SAttr_Function,
@@ -440,43 +422,71 @@ enum SymAttr {
     SAttr_Undef,
 };
 
-struct Symbol
+struct dpSymbol
 {
     const char  *name;
     void        *addr;
-    uint32_t    attributes;
+    uint32_t    attributes; // combination of dpSymbolAttr
 };
+inline bool operator <(const dpSymbol &a, const dpSymbol &b) { return std::strcmp(a.name, b.name)<0; }
+inline bool operator >(const dpSymbol &a, const dpSymbol &b) { return std::strcmp(a.name, b.name)>0; }
+inline bool operator==(const dpSymbol &a, const dpSymbol &b) { return std::strcmp(a.name, b.name)==0; }
 
-class ElfFile
+
+bool  dpMapFile(const char *path, void *&o_data, size_t &o_size, const std::function<void* (size_t)> &alloc);
+void* dpAllocateRWX(size_t size);
+void  dpDeallocate(void *ptr);
+
+void dpEachModules(const std::function<void (const dpModuleInfo&)> &f);
+bool dpElfEachSymbols(void *_elf_data, const std::function<void (const dpSymbol &)> &f);
+
+
+
+class dpElfFile
 {
 public:
-    ElfFile();
-    ~ElfFile();
+    dpElfFile();
+    ~dpElfFile();
     bool loadFromFile(const char *path_to_elf);
     bool loadFromMemory(void *data);
     void unload();
     bool link();
-    const Symbol* findSymbol(const char *name);
+    const dpSymbol* findSymbol(const char *name);
 
 private:
-    std::vector<Symbol> m_symbols;
+    std::map<const char*, dpSymbol> m_symbols;
     void *m_elf_file;
     bool m_needs_deallocate;
 };
 
+class dpSymbolManager
+{
+public:
+    static dpSymbolManager& getInstance();
+    const dpSymbol* findSymbol(const char *name);
 
-ElfFile::ElfFile()
+private:
+    typedef std::map<const char*, dpSymbol> SymbolCont;
+    dpSymbolManager();
+    ~dpSymbolManager();
+    void gatherSymbols();
+
+    SymbolCont m_syms;
+};
+
+
+dpElfFile::dpElfFile()
     : m_elf_file(nullptr)
     , m_needs_deallocate(false)
 {
 }
 
-ElfFile::~ElfFile()
+dpElfFile::~dpElfFile()
 {
     unload();
 }
 
-bool ElfFile::loadFromFile( const char *path_to_elf )
+bool dpElfFile::loadFromFile( const char *path_to_elf )
 {
     unload();
 
@@ -499,7 +509,7 @@ bool ElfFile::loadFromFile( const char *path_to_elf )
     }
 }
 
-bool ElfFile::loadFromMemory(void *data)
+bool dpElfFile::loadFromMemory(void *data)
 {
     char *elf_data = (char*)data;
     Elf_Ehdr *elf_header = (Elf_Ehdr*)elf_data;
@@ -508,67 +518,27 @@ bool ElfFile::loadFromMemory(void *data)
         unload();
         return false;
     }
-#ifdef _M_X64
+#ifdef dpX64
     if(elf_header->e_ident[EI_CLASS]!=ELFCLASS64) {
         printf("ElfFile::load(): not 64 bit elf file.\n");
         unload();
         return false;
     }
-#else  // _M_X64
+#else  // dpX64
     if(elf_header->e_ident[EI_CLASS]!=ELFCLASS32) {
         printf("ElfFile::load(): %s not 32 bit elf file.\n");
         unload();
         return false;
     }
-#endif // _M_X64
+#endif // dpX64
 
-    // executable 対応
-    Elf_Phdr *elf_pheader = nullptr;
-    for(int i=0; i<elf_header->e_phnum; ++i) {
-        Elf_Phdr *ph = (Elf_Phdr*)(elf_data + elf_header->e_phoff)[i];
-        if(elf_pheader->p_type == PT_LOAD) {
-            elf_pheader = (Elf_Phdr*)(elf_data + elf_header->e_phoff);
-            break;
-        }
-    }
-
-    Elf_Shdr *sections = (Elf_Shdr*)(elf_data + elf_header->e_shoff);
-    const char *section_str = (const char*)(elf_data + sections[elf_header->e_shstrndx].sh_offset);
-
-    for(int isec=0; isec<elf_header->e_shnum; ++isec) {
-        Elf_Shdr *section = sections + isec;
-        const char *section_name = section_str + section->sh_name;
-
-        // symbol table 巡回
-        if(section->sh_type==SHT_SYMTAB) {
-            const char *sym_str = (const char*)(elf_data + sections[section->sh_link].sh_offset);
-            for(int isym=0; isym<section->sh_size; isym+=section->sh_entsize) {
-                Elf_Sym *symbol = (Elf_Sym*)(elf_data + section->sh_offset + isym);
-                const char *sym_name = sym_str + symbol->st_name;
-                if(symbol->st_name==0 || symbol->st_shndx>=elf_header->e_shnum) { continue; }
-
-                Elf_Shdr *sym_section = sections + symbol->st_shndx;
-                char *sym_addr = nullptr;
-                if(symbol->st_shndx!=SHN_UNDEF) {
-                    sym_addr = elf_data + sym_section->sh_offset + symbol->st_value;
-                    if(elf_pheader) {
-                        sym_addr -= elf_pheader->p_vaddr;
-                    }
-                }
-                Symbol sym = {sym_name, sym_addr};
-                m_symbols.push_back(sym);
-            }
-        }
-    }
-    std::sort(m_symbols.begin(), m_symbols.end(),
-        [&](Symbol &a, Symbol &b){ return strcmp(a.name, b.name)<0; });
-
+    dpElfEachSymbols(elf_data, [&](const dpSymbol &sym){ m_symbols[sym.name]=sym; });
     m_elf_file = data;
     return true;
 }
 
 
-void ElfFile::unload()
+void dpElfFile::unload()
 {
     if(m_needs_deallocate && m_elf_file) {
         dpDeallocate(m_elf_file);
@@ -578,7 +548,7 @@ void ElfFile::unload()
     m_symbols.clear();
 }
 
-bool ElfFile::link()
+bool dpElfFile::link()
 {
     if(!m_elf_file) { return false; }
 
@@ -603,7 +573,7 @@ bool ElfFile::link()
             for(int irel=0; irel<section->sh_size; irel+=section->sh_entsize) {
                 Elf_Rela *rela = (Elf_Rela*)(elf_data + section->sh_offset + irel);
                 uint32_t *target = (uint32_t*)(elf_data+sym_section->sh_addr + rela->r_offset);
-                Elf_Sym *rel_symbol = (Elf_Sym*)(elf_data + sym_section->sh_offset + sym_section->sh_entsize*rela->r_sym);
+                Elf_Sym *rel_symbol = (Elf_Sym*)(elf_data + sym_section->sh_offset + sym_section->sh_entsize*ElfRela_GetSymbol(*rela));
                 const char *rel_name = sym_str + rel_symbol->st_name;
                 void *rel_addr = nullptr;
                 if(rel_symbol->st_shndx!=SHN_UNDEF) {
@@ -613,15 +583,15 @@ bool ElfFile::link()
                     // todo: resolve symbol
                 }
 
-                switch(rela->r_type) {
-#ifdef _M_X64
+                switch(ElfRela_GetType(*rela)) {
+#ifdef dpX64
                 case R_X86_64_PC32:
                     break;
 
                 case R_X86_64_PLT32:
                     break;
-#else  // _M_X64
-#endif // _M_X64
+#else  // dpX64
+#endif // dpX64
                 }
             }
         }
@@ -630,30 +600,173 @@ bool ElfFile::link()
     return true;
 }
 
-const Symbol* ElfFile::findSymbol(const char *name)
+const dpSymbol* dpElfFile::findSymbol(const char *name)
 {
-    auto iter = std::lower_bound(m_symbols.begin(), m_symbols.end(), name,
-        [&](Symbol &sym, const char *n){ return strcmp(sym.name, n)<0; });
-    if(iter!=m_symbols.end() && strcmp(iter->name, name)==0) {
-        return &(*iter);
+    auto it = m_symbols.find(name);
+    if(it!=m_symbols.end()) {
+        return &it->second;
     }
     return nullptr;
+}
+
+
+dpSymbolManager& dpSymbolManager::getInstance()
+{
+    static dpSymbolManager s_inst;
+    return s_inst;
+}
+
+dpSymbolManager::dpSymbolManager()
+{
+    gatherSymbols();
+}
+
+dpSymbolManager::~dpSymbolManager()
+{
+}
+
+void dpSymbolManager::gatherSymbols()
+{
+#ifdef dpWindows
+#else  // dpWindows
+
+    dpEachModules([&](const dpModuleInfo &mod){
+    });
+
+#endif // dpWindows
+}
+
+const dpSymbol* dpSymbolManager::findSymbol(const char *name)
+{
+    auto it = m_syms.find(name);
+    if(it!=m_syms.end()) {
+        return &it->second;
+    }
+    return nullptr;
+}
+
+
+bool dpMapFile(const char *path, void *&o_data, size_t &o_size, const std::function<void* (size_t)> &alloc)
+{
+    o_data = nullptr;
+    o_size = 0;
+    if(FILE *f=fopen(path, "rb")) {
+        fseek(f, 0, SEEK_END);
+        o_size = ftell(f);
+        if(o_size > 0) {
+            o_data = alloc(o_size);
+            fseek(f, 0, SEEK_SET);
+            fread(o_data, 1, o_size, f);
+        }
+        fclose(f);
+        return true;
+    }
+    return false;
+}
+
+void* dpAllocateRWX(size_t size)
+{
+#ifdef dpWindows
+    return ::VirtualAlloc(nullptr, size, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+#else  // dpWindows
+    return ::mmap(nullptr, size, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+#endif // dpWindows
+}
+
+void dpDeallocate(void *ptr)
+{
+#ifdef dpWindows
+    ::VirtualFree(ptr, 0, MEM_RELEASE);
+#else  // dpWindows
+    ::munmap(ptr, 0);
+#endif // dpWindows
+}
+
+void dpEachModules(const std::function<void (const dpModuleInfo&)> &f)
+{
+#ifdef dpWindows
+#else  // dpWindows
+    link_map *modules = (link_map*)dlopen(nullptr, RTLD_NOW);
+    while(modules) {
+        if(modules->l_name && *modules->l_name) {
+            dpModuleInfo mod = {(void*)modules->l_addr, (const char*)modules->l_name};
+            f(mod);
+        }
+        modules = (link_map*)modules->l_next;
+    }
+#endif // dpWindows
+}
+
+bool dpElfEachSymbols(void *_elf_data, const std::function<void (const dpSymbol &)> &f)
+{
+    if(!_elf_data) { return false; }
+    char *elf_data = (char*)_elf_data;
+    Elf_Ehdr *elf_header = (Elf_Ehdr*)elf_data;
+
+    size_t size = 1024*64;
+    while(size < elf_header->e_shoff) { size*=2; }
+    if(mprotect((void*)elf_data, size, PROT_READ|PROT_WRITE|PROT_EXEC)==-1) {
+        printf("dpElfEachSymbols() failed\n");
+        return false;
+    }
+
+    Elf_Phdr *elf_pheader = nullptr;
+    for(int i=0; i<elf_header->e_phnum; ++i) {
+        Elf_Phdr *ph = (Elf_Phdr*)(elf_data + elf_header->e_phoff) + i;
+        if(ph->p_type==PT_LOAD && (ph->p_flags&PF_X)!=0) {
+            elf_pheader = ph;
+            break;
+        }
+    }
+
+    Elf_Shdr *sections = (Elf_Shdr*)(elf_data + elf_header->e_shoff);
+    for(int isec=0; isec<elf_header->e_shnum; ++isec) {
+        Elf_Shdr *section = sections + isec;
+
+        if(section->sh_type==SHT_SYMTAB || section->sh_type==SHT_DYNSYM) {
+            const char *sym_str = (const char*)(elf_data + sections[section->sh_link].sh_offset);
+            for(int isym=0; isym<section->sh_size; isym+=section->sh_entsize) {
+                Elf_Sym *symbol = (Elf_Sym*)(elf_data + section->sh_offset + isym);
+                const char *sym_name = sym_str + symbol->st_name;
+                if(symbol->st_name==0 || symbol->st_shndx>=elf_header->e_shnum) { continue; }
+
+                Elf_Shdr *sym_section = sections + symbol->st_shndx;
+                char *sym_addr = nullptr;
+                if(symbol->st_shndx!=SHN_UNDEF) {
+                    sym_addr = elf_data + sym_section->sh_offset + symbol->st_value;
+                    if(elf_pheader) {
+                        sym_addr -= elf_pheader->p_vaddr;
+                    }
+                    dpSymbol sym = {sym_name, sym_addr};
+                    f(sym);
+                }
+            }
+        }
+    }
+    return true;
 }
 
 
 
 int main(int argc, char *argv[])
 {
+    dpEachModules([](const dpModuleInfo &mod){
+        printf("module [%p] %s\n", mod.addr, mod.name);
+        dpElfEachSymbols(mod.addr, [](const dpSymbol &sym){
+            //printf("  [%p] %s\n", sym.addr, sym.name);
+        });
+    });
+
     if(argc<2) {
         printf("usage: %s [path to .o]\n", argv[0]);
         return 0;
     }
 
-    ElfFile elf;
+    dpElfFile elf;
     if(elf.loadFromFile(argv[1])) {
         elf.link();
         typedef int (*add_t)(int, int);
-        if(const Symbol *sym = elf.findSymbol("add")) {
+        if(const dpSymbol *sym = elf.findSymbol("add")) {
             add_t add = (add_t)sym->addr;
             printf("add(1,2): %d\n", add(1,2));
         }
