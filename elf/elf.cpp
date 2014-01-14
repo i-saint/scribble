@@ -483,23 +483,9 @@ bool dpElfEachSymbols(void *_elf_data, const std::function<void (const dpSymbol 
 
 
 
-void test_call(int a)
-{
-    printf("test_call(%d)\n", a);
-}
 
 int main(int argc, char *argv[])
 {
-    //if(const dpSymbol *sym = dpSymbolManager::getInstance()->findSymbol("malloc")) {
-    //    typedef void* (*malloc_t)(size_t);
-    //    malloc_t mf = (malloc_t)sym->addr;
-    //    printf("malloc: %p %p\n", mf, &malloc);
-    //    fflush(stdout);
-    //    printf("mf(): %p\n", mf(16));
-    //}
-
-    test_call(42);
-
     dpElfFile elf;
     if(elf.loadFromFile("testobj.o") && elf.link()) {
         typedef int (*test_add_t)(int, int);
