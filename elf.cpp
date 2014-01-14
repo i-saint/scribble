@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 #include <map>
+#include <set>
 
 #ifdef _WIN32
 #   include <windows.h>
@@ -132,6 +133,165 @@ enum {
     PF_R        = 4,         // Read
     PF_MASKOS   = 0x0ff00000,// Bits for operating system-specific semantics.
     PF_MASKPROC = 0xf0000000 // Bits for processor-specific semantics.
+};
+
+// Dynamic table entry for ELF32.
+struct Elf32_Dyn
+{
+	Elf32_Sword d_tag;            // Type of dynamic table entry.
+	union
+	{
+		Elf32_Word d_val;         // Integer value of entry.
+		Elf32_Addr d_ptr;         // Pointer value of entry.
+	} d_un;
+};
+
+// Dynamic table entry for ELF64.
+struct Elf64_Dyn
+{
+	Elf64_Sxword d_tag;           // Type of dynamic table entry.
+	union
+	{
+		Elf64_Xword d_val;        // Integer value of entry.
+		Elf64_Addr  d_ptr;        // Pointer value of entry.
+	} d_un;
+};
+
+// Dynamic table entry tags.
+enum {
+	DT_NULL         = 0,        // Marks end of dynamic array.
+	DT_NEEDED       = 1,        // String table offset of needed library.
+	DT_PLTRELSZ     = 2,        // Size of relocation entries in PLT.
+	DT_PLTGOT       = 3,        // Address associated with linkage table.
+	DT_HASH         = 4,        // Address of symbolic hash table.
+	DT_STRTAB       = 5,        // Address of dynamic string table.
+	DT_SYMTAB       = 6,        // Address of dynamic symbol table.
+	DT_RELA         = 7,        // Address of relocation table (Rela entries).
+	DT_RELASZ       = 8,        // Size of Rela relocation table.
+	DT_RELAENT      = 9,        // Size of a Rela relocation entry.
+	DT_STRSZ        = 10,       // Total size of the string table.
+	DT_SYMENT       = 11,       // Size of a symbol table entry.
+	DT_INIT         = 12,       // Address of initialization function.
+	DT_FINI         = 13,       // Address of termination function.
+	DT_SONAME       = 14,       // String table offset of a shared objects name.
+	DT_RPATH        = 15,       // String table offset of library search path.
+	DT_SYMBOLIC     = 16,       // Changes symbol resolution algorithm.
+	DT_REL          = 17,       // Address of relocation table (Rel entries).
+	DT_RELSZ        = 18,       // Size of Rel relocation table.
+	DT_RELENT       = 19,       // Size of a Rel relocation entry.
+	DT_PLTREL       = 20,       // Type of relocation entry used for linking.
+	DT_DEBUG        = 21,       // Reserved for debugger.
+	DT_TEXTREL      = 22,       // Relocations exist for non-writable segments.
+	DT_JMPREL       = 23,       // Address of relocations associated with PLT.
+	DT_BIND_NOW     = 24,       // Process all relocations before execution.
+	DT_INIT_ARRAY   = 25,       // Pointer to array of initialization functions.
+	DT_FINI_ARRAY   = 26,       // Pointer to array of termination functions.
+	DT_INIT_ARRAYSZ = 27,       // Size of DT_INIT_ARRAY.
+	DT_FINI_ARRAYSZ = 28,       // Size of DT_FINI_ARRAY.
+	DT_RUNPATH      = 29,       // String table offset of lib search path.
+	DT_FLAGS        = 30,       // Flags.
+	DT_ENCODING     = 32,       // Values from here to DT_LOOS follow the rules
+	// for the interpretation of the d_un union.
+
+	DT_PREINIT_ARRAY = 32,      // Pointer to array of preinit functions.
+	DT_PREINIT_ARRAYSZ = 33,    // Size of the DT_PREINIT_ARRAY array.
+
+	DT_LOOS         = 0x60000000, // Start of environment specific tags.
+	DT_HIOS         = 0x6FFFFFFF, // End of environment specific tags.
+	DT_LOPROC       = 0x70000000, // Start of processor specific tags.
+	DT_HIPROC       = 0x7FFFFFFF, // End of processor specific tags.
+
+	DT_RELACOUNT    = 0x6FFFFFF9, // ELF32_Rela count.
+	DT_RELCOUNT     = 0x6FFFFFFA, // ELF32_Rel count.
+
+	DT_FLAGS_1      = 0X6FFFFFFB, // Flags_1.
+	DT_VERDEF       = 0X6FFFFFFC, // The address of the version definition table.
+	DT_VERDEFNUM    = 0X6FFFFFFD, // The number of entries in DT_VERDEF.
+	DT_VERNEED      = 0X6FFFFFFE, // The address of the version Dependency table.
+	DT_VERNEEDNUM   = 0X6FFFFFFF, // The number of entries in DT_VERNEED.
+
+	// Mips specific dynamic table entry tags.
+	DT_MIPS_RLD_VERSION   = 0x70000001, // 32 bit version number for runtime
+	// linker interface.
+	DT_MIPS_TIME_STAMP    = 0x70000002, // Time stamp.
+	DT_MIPS_ICHECKSUM     = 0x70000003, // Checksum of external strings
+	// and common sizes.
+	DT_MIPS_IVERSION      = 0x70000004, // Index of version string
+	// in string table.
+	DT_MIPS_FLAGS         = 0x70000005, // 32 bits of flags.
+	DT_MIPS_BASE_ADDRESS  = 0x70000006, // Base address of the segment.
+	DT_MIPS_MSYM          = 0x70000007, // Address of .msym section.
+	DT_MIPS_CONFLICT      = 0x70000008, // Address of .conflict section.
+	DT_MIPS_LIBLIST       = 0x70000009, // Address of .liblist section.
+	DT_MIPS_LOCAL_GOTNO   = 0x7000000a, // Number of local global offset
+	// table entries.
+	DT_MIPS_CONFLICTNO    = 0x7000000b, // Number of entries
+	// in the .conflict section.
+	DT_MIPS_LIBLISTNO     = 0x70000010, // Number of entries
+	// in the .liblist section.
+	DT_MIPS_SYMTABNO      = 0x70000011, // Number of entries
+	// in the .dynsym section.
+	DT_MIPS_UNREFEXTNO    = 0x70000012, // Index of first external dynamic symbol
+	// not referenced locally.
+	DT_MIPS_GOTSYM        = 0x70000013, // Index of first dynamic symbol
+	// in global offset table.
+	DT_MIPS_HIPAGENO      = 0x70000014, // Number of page table entries
+	// in global offset table.
+	DT_MIPS_RLD_MAP       = 0x70000016, // Address of run time loader map,
+	// used for debugging.
+	DT_MIPS_DELTA_CLASS       = 0x70000017, // Delta C++ class definition.
+	DT_MIPS_DELTA_CLASS_NO    = 0x70000018, // Number of entries
+	// in DT_MIPS_DELTA_CLASS.
+	DT_MIPS_DELTA_INSTANCE    = 0x70000019, // Delta C++ class instances.
+	DT_MIPS_DELTA_INSTANCE_NO = 0x7000001A, // Number of entries
+	// in DT_MIPS_DELTA_INSTANCE.
+	DT_MIPS_DELTA_RELOC       = 0x7000001B, // Delta relocations.
+	DT_MIPS_DELTA_RELOC_NO    = 0x7000001C, // Number of entries
+	// in DT_MIPS_DELTA_RELOC.
+	DT_MIPS_DELTA_SYM         = 0x7000001D, // Delta symbols that Delta
+	// relocations refer to.
+	DT_MIPS_DELTA_SYM_NO      = 0x7000001E, // Number of entries
+	// in DT_MIPS_DELTA_SYM.
+	DT_MIPS_DELTA_CLASSSYM    = 0x70000020, // Delta symbols that hold
+	// class declarations.
+	DT_MIPS_DELTA_CLASSSYM_NO = 0x70000021, // Number of entries
+	// in DT_MIPS_DELTA_CLASSSYM.
+	DT_MIPS_CXX_FLAGS         = 0x70000022, // Flags indicating information
+	// about C++ flavor.
+	DT_MIPS_PIXIE_INIT        = 0x70000023, // Pixie information.
+	DT_MIPS_SYMBOL_LIB        = 0x70000024, // Address of .MIPS.symlib
+	DT_MIPS_LOCALPAGE_GOTIDX  = 0x70000025, // The GOT index of the first PTE
+	// for a segment
+	DT_MIPS_LOCAL_GOTIDX      = 0x70000026, // The GOT index of the first PTE
+	// for a local symbol
+	DT_MIPS_HIDDEN_GOTIDX     = 0x70000027, // The GOT index of the first PTE
+	// for a hidden symbol
+	DT_MIPS_PROTECTED_GOTIDX  = 0x70000028, // The GOT index of the first PTE
+	// for a protected symbol
+	DT_MIPS_OPTIONS           = 0x70000029, // Address of `.MIPS.options'.
+	DT_MIPS_INTERFACE         = 0x7000002A, // Address of `.interface'.
+	DT_MIPS_DYNSTR_ALIGN      = 0x7000002B, // Unknown.
+	DT_MIPS_INTERFACE_SIZE    = 0x7000002C, // Size of the .interface section.
+	DT_MIPS_RLD_TEXT_RESOLVE_ADDR = 0x7000002D, // Size of rld_text_resolve
+	// function stored in the GOT.
+	DT_MIPS_PERF_SUFFIX       = 0x7000002E, // Default suffix of DSO to be added
+	// by rld on dlopen() calls.
+	DT_MIPS_COMPACT_SIZE      = 0x7000002F, // Size of compact relocation
+	// section (O32).
+	DT_MIPS_GP_VALUE          = 0x70000030, // GP value for auxiliary GOTs.
+	DT_MIPS_AUX_DYNAMIC       = 0x70000031, // Address of auxiliary .dynamic.
+	DT_MIPS_PLTGOT            = 0x70000032, // Address of the base of the PLTGOT.
+	DT_MIPS_RWPLT             = 0x70000034  // Points to the base
+	// of a writable PLT.
+};
+
+// DT_FLAGS values.
+enum {
+	DF_ORIGIN     = 0x01, // The object may reference $ORIGIN.
+	DF_SYMBOLIC   = 0x02, // Search the shared lib before searching the exe.
+	DF_TEXTREL    = 0x04, // Relocations may modify a non-writable segment.
+	DF_BIND_NOW   = 0x08, // Process all relocations on load.
+	DF_STATIC_TLS = 0x10  // Reject attempts to load dynamically.
 };
 
 // X86_64 relocations.
@@ -398,6 +558,7 @@ inline Elf64_Word ElfRela_GetType(const Elf64_Rela &v) { return (Elf64_Word) (v.
     typedef Elf64_Sym  Elf_Sym;
     typedef Elf64_Rel  Elf_Rel;
     typedef Elf64_Rela Elf_Rela;
+	typedef Elf64_Dyn  Elf_Dyn;
 #else  // dpX64
     typedef Elf32_Ehdr Elf_Ehdr;
     typedef Elf32_Phdr Elf_Phdr;
@@ -405,6 +566,7 @@ inline Elf64_Word ElfRela_GetType(const Elf64_Rela &v) { return (Elf64_Word) (v.
     typedef Elf32_Sym  Elf_Sym;
     typedef Elf32_Rel  Elf_Rel;
     typedef Elf32_Rela Elf_Rela;
+	typedef Elf32_Dyn  Elf_Dyn;
 #endif // dpX64
 
 struct dpModuleInfo
@@ -462,11 +624,11 @@ private:
 class dpSymbolManager
 {
 public:
-    static dpSymbolManager& getInstance();
+    static dpSymbolManager* getInstance();
     const dpSymbol* findSymbol(const char *name);
 
 private:
-    typedef std::map<const char*, dpSymbol> SymbolCont;
+    typedef std::set<dpSymbol> SymbolCont;
     dpSymbolManager();
     ~dpSymbolManager();
     void gatherSymbols();
@@ -610,10 +772,10 @@ const dpSymbol* dpElfFile::findSymbol(const char *name)
 }
 
 
-dpSymbolManager& dpSymbolManager::getInstance()
+dpSymbolManager* dpSymbolManager::getInstance()
 {
     static dpSymbolManager s_inst;
-    return s_inst;
+    return &s_inst;
 }
 
 dpSymbolManager::dpSymbolManager()
@@ -630,17 +792,24 @@ void dpSymbolManager::gatherSymbols()
 #ifdef dpWindows
 #else  // dpWindows
 
-    dpEachModules([&](const dpModuleInfo &mod){
-    });
+	dpEachModules([&](const dpModuleInfo &mod){
+		printf("module [%p] %s\n", mod.addr, mod.name);
+		dpElfEachSymbols(mod.addr, [&](const dpSymbol &sym){
+			printf("  [%p] %s\n", sym.addr, sym.name);
+			m_syms.insert(sym);
+		});
+	});
+	printf("%u symbols\n", (uint32_t)m_syms.size());
 
 #endif // dpWindows
 }
 
 const dpSymbol* dpSymbolManager::findSymbol(const char *name)
 {
-    auto it = m_syms.find(name);
+	dpSymbol sym = {name, nullptr, 0};
+    auto it = m_syms.find(sym);
     if(it!=m_syms.end()) {
-        return &it->second;
+        return &(*it);
     }
     return nullptr;
 }
@@ -688,10 +857,8 @@ void dpEachModules(const std::function<void (const dpModuleInfo&)> &f)
 #else  // dpWindows
     link_map *modules = (link_map*)dlopen(nullptr, RTLD_NOW);
     while(modules) {
-        if(modules->l_name && *modules->l_name) {
-            dpModuleInfo mod = {(void*)modules->l_addr, (const char*)modules->l_name};
-            f(mod);
-        }
+		dpModuleInfo mod = {(void*)modules->l_addr, (const char*)modules->l_name};
+		f(mod);
         modules = (link_map*)modules->l_next;
     }
 #endif // dpWindows
@@ -703,46 +870,79 @@ bool dpElfEachSymbols(void *_elf_data, const std::function<void (const dpSymbol 
     char *elf_data = (char*)_elf_data;
     Elf_Ehdr *elf_header = (Elf_Ehdr*)elf_data;
 
-    size_t size = 1024*64;
-    while(size < elf_header->e_shoff) { size*=2; }
-    if(mprotect((void*)elf_data, size, PROT_READ|PROT_WRITE|PROT_EXEC)==-1) {
-        printf("dpElfEachSymbols() failed\n");
-        return false;
+	const size_t page_size = 4096;
+	if(mprotect((void*)elf_data, page_size, PROT_READ|PROT_WRITE|PROT_EXEC)==-1) {
+		printf("dpElfEachSymbols(): mprotect() failed\n");
+		return false;
+	}
+
+	bool have_section_headers = true;
+    size_t size = (elf_header->e_shoff + sizeof(Elf_Shdr)*elf_header->e_shnum);
+    if(mprotect((void*)elf_data, (size+page_size-1) & ~page_size, PROT_READ|PROT_WRITE|PROT_EXEC)==-1) {
+        have_section_headers = false;
     }
 
-    Elf_Phdr *elf_pheader = nullptr;
+	Elf_Phdr *elf_pheader_dyn = nullptr;
     for(int i=0; i<elf_header->e_phnum; ++i) {
         Elf_Phdr *ph = (Elf_Phdr*)(elf_data + elf_header->e_phoff) + i;
-        if(ph->p_type==PT_LOAD && (ph->p_flags&PF_X)!=0) {
-            elf_pheader = ph;
-            break;
-        }
+		if(ph->p_type==PT_DYNAMIC) {
+			elf_pheader_dyn = ph;
+		}
     }
 
-    Elf_Shdr *sections = (Elf_Shdr*)(elf_data + elf_header->e_shoff);
-    for(int isec=0; isec<elf_header->e_shnum; ++isec) {
-        Elf_Shdr *section = sections + isec;
+	if(have_section_headers) {
+		// use section headers
+		Elf_Shdr *sections = (Elf_Shdr*)(elf_data + elf_header->e_shoff);
+		for(int isec=0; isec<elf_header->e_shnum; ++isec) {
+			Elf_Shdr *section = sections + isec;
 
-        if(section->sh_type==SHT_SYMTAB || section->sh_type==SHT_DYNSYM) {
-            const char *sym_str = (const char*)(elf_data + sections[section->sh_link].sh_offset);
-            for(int isym=0; isym<section->sh_size; isym+=section->sh_entsize) {
-                Elf_Sym *symbol = (Elf_Sym*)(elf_data + section->sh_offset + isym);
-                const char *sym_name = sym_str + symbol->st_name;
-                if(symbol->st_name==0 || symbol->st_shndx>=elf_header->e_shnum) { continue; }
+			if(section->sh_type==SHT_SYMTAB || section->sh_type==SHT_DYNSYM) {
+				const char *sym_str = (const char*)(elf_data + sections[section->sh_link].sh_offset);
+				for(int isym=0; isym<section->sh_size; isym+=section->sh_entsize) {
+					Elf_Sym *symbol = (Elf_Sym*)(elf_data + section->sh_offset + isym);
+					const char *sym_name = sym_str + symbol->st_name;
+					if(symbol->st_name==0 || symbol->st_value==0 || symbol->st_shndx>=elf_header->e_shnum) { continue; }
 
-                Elf_Shdr *sym_section = sections + symbol->st_shndx;
-                char *sym_addr = nullptr;
-                if(symbol->st_shndx!=SHN_UNDEF) {
-                    sym_addr = elf_data + sym_section->sh_offset + symbol->st_value;
-                    if(elf_pheader) {
-                        sym_addr -= elf_pheader->p_vaddr;
-                    }
-                    dpSymbol sym = {sym_name, sym_addr};
-                    f(sym);
-                }
-            }
-        }
-    }
+					Elf_Shdr *sym_section = sections + symbol->st_shndx;
+					char *sym_addr = nullptr;
+					if(symbol->st_shndx!=SHN_UNDEF) {
+						sym_addr = elf_data + symbol->st_value;
+						dpSymbol sym = {sym_name, sym_addr};
+						f(sym);
+					}
+				}
+			}
+		}
+	}
+	else if(elf_pheader_dyn) {
+		// use program headers
+		Elf_Dyn *dyn = (Elf_Dyn*)(elf_data + elf_pheader_dyn->p_vaddr);
+		char *symtab = nullptr;
+		char *strtab = nullptr;
+		size_t syment = 0;
+		for(; dyn->d_tag!=DT_NULL; ++dyn) {
+			if(dyn->d_tag==DT_SYMTAB) {
+				symtab = (char*)dyn->d_un.d_ptr;
+			}
+			else if(dyn->d_tag==DT_SYMENT) {
+				syment = dyn->d_un.d_val;
+			}
+			else if(dyn->d_tag==DT_STRTAB) {
+				strtab = (char*)dyn->d_un.d_ptr;
+			}
+		}
+		if(symtab && strtab && syment) {
+			for(int isym=0; symtab+isym<strtab; isym+=syment) {
+				Elf_Sym *symbol = (Elf_Sym*)(symtab+isym);
+				const char *sym_name = strtab + symbol->st_name;
+				char *sym_addr = elf_data + symbol->st_value;
+				if(symbol->st_name==0 || symbol->st_value==0 || symbol->st_shndx>=elf_header->e_shnum) { continue; }
+
+				dpSymbol sym = {sym_name, sym_addr};
+				f(sym);
+			}
+		}
+	}
     return true;
 }
 
@@ -750,12 +950,15 @@ bool dpElfEachSymbols(void *_elf_data, const std::function<void (const dpSymbol 
 
 int main(int argc, char *argv[])
 {
-    dpEachModules([](const dpModuleInfo &mod){
-        printf("module [%p] %s\n", mod.addr, mod.name);
-        dpElfEachSymbols(mod.addr, [](const dpSymbol &sym){
-            //printf("  [%p] %s\n", sym.addr, sym.name);
-        });
-    });
+	printf("main: %p\n", &main);
+
+	typedef void* (*malloc_t)(size_t);
+	const dpSymbol *sym = dpSymbolManager::getInstance()->findSymbol("malloc");
+	if(!sym) { printf("malloc() not found\n"); return 0; }
+	malloc_t mf = (malloc_t)sym->addr;
+	printf("malloc: %p %p\n", mf, &malloc);
+	fflush(stdout);
+	printf("mf(): %p\n", mf(16));
 
     if(argc<2) {
         printf("usage: %s [path to .o]\n", argv[0]);
