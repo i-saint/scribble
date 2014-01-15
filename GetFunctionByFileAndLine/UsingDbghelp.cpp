@@ -2,17 +2,17 @@
 #include <dbghelp.h>
 #include <cstdio>
 #include <string>
-#include <cmath>
+#include <cstdint>
 #pragma comment(lib, "dbghelp.lib")
 
 
-bool GetFunctionFromFileAndLine(
+bool GetFunctionByFileAndLine(
     HMODULE module,
-    const char *objfilepath, // optional. must be fullpath
-    const char *cppfilepath, // optional. must be fullpath
+    const char *fullpath_to_obj, // optional, but recommended. must be full path
+    const char *fullpath_to_cpp, // optional, but recommended. must be full path
     int line,
     char *out_funcname, // optional
-    int bufsize_funcname,
+    int len_funcname,
     void **out_funcaddr // optional
 );
 
@@ -28,15 +28,15 @@ int main(int argc, char *argv[])
     ::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_DEBUG);
     ::SymInitialize(::GetCurrentProcess(), NULL, TRUE);
 
-    HMODULE mail_module = ::GetModuleHandleA(nullptr);
+    HMODULE main_module = ::GetModuleHandleA(nullptr);
     char obj_fullpath[MAX_PATH+1];
     char cpp_fullpath[MAX_PATH+1];
-    ::GetFullPathNameA("GetFunctionFromFileAndLine.obj", sizeof(obj_fullpath), obj_fullpath, nullptr);
-    ::GetFullPathNameA("GetFunctionFromFileAndLine.cpp", sizeof(cpp_fullpath), cpp_fullpath, nullptr);
+    ::GetFullPathNameA("UsingDbghelp.obj", sizeof(obj_fullpath), obj_fullpath, nullptr);
+    ::GetFullPathNameA("UsingDbghelp.cpp", sizeof(cpp_fullpath), cpp_fullpath, nullptr);
 
     char funcname[MAX_SYM_NAME+1];
     void *funcaddr = nullptr;
-    GetFunctionFromFileAndLine(mail_module, obj_fullpath, cpp_fullpath, 22, funcname, sizeof(funcname), &funcaddr);
+    GetFunctionByFileAndLine(main_module, obj_fullpath, cpp_fullpath, 22, funcname, sizeof(funcname), &funcaddr);
 
     printf("%s [0x%p]\n", funcname, funcaddr);
 }
@@ -79,21 +79,21 @@ BOOL CALLBACK LineCallback(PSRCCODEINFO LineInfo, PVOID UserContext)
     return TRUE;
 }
 
-bool GetFunctionFromFileAndLine(
+bool GetFunctionByFileAndLine(
     HMODULE module,
-    const char *objfilepath,
-    const char *cppfilepath,
+    const char *fullpath_to_obj,
+    const char *fullpath_to_cpp,
     int line,
     char *o_funcname,
-    int bufsize_funcname,
+    int len_funcname,
     void **o_funcaddr)
 {
     LineCallbackContext ctx = {line, INT_MAX, nullptr};
-    ::SymEnumLines(::GetCurrentProcess(), (ULONG64)module, objfilepath, cppfilepath, &LineCallback, &ctx);
+    ::SymEnumLines(::GetCurrentProcess(), (ULONG64)module, fullpath_to_obj, fullpath_to_cpp, &LineCallback, &ctx);
 
     if(ctx.addr_closest!=nullptr) {
         if(o_funcname!=nullptr) {
-            AddressToSymbolName(ctx.addr_closest, o_funcname, bufsize_funcname);
+            AddressToSymbolName(ctx.addr_closest, o_funcname, len_funcname);
         }
         if(o_funcaddr!=nullptr) {
             *o_funcaddr = ctx.addr_closest;
