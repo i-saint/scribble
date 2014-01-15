@@ -309,7 +309,7 @@ bool GetFunctionByFileAndLineImpl(void *data, const char *fullpath_to_cpp, int l
         {
             DWORD NumRelocations = sect.NumberOfRelocations;
             DWORD FirstRelocation = 0;
-            // NumberOfRelocations==0xffff ÇÃèÍçáÅAç≈èâÇÃ IMAGE_RELOCATION Ç…é¿ç€ÇÃílÇ™ì¸Ç¡ÇƒÇ¢ÇÈÅB(NumberOfRelocations ÇÕ 16bit ÇÃÇΩÇﬂ)
+            // if NumberOfRelocations==0xffff, first IMAGE_RELOCATION has actual data (due to NumberOfRelocations is 16-bit)
             if(sect.NumberOfRelocations==0xffff && (sect.Characteristics&IMAGE_SCN_LNK_NRELOC_OVFL)!=0) {
                 NumRelocations = ((PIMAGE_RELOCATION)(ImageBase + (int)sect.PointerToRelocations))[0].RelocCount;
                 FirstRelocation = 1;
