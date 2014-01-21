@@ -51,14 +51,22 @@ typedef Elf32_Dyn  Elf_Dyn;
 
 struct dpModuleInfo
 {
+	const char *name;
     void *addr;
-    const char *name;
+#ifdef dpPOSIX
+	void *addr2; // symbol table のために元ファイルを再度メモリにマップしたモジュール
+#endif // dpPOSIX
 };
 
+enum dpSymbolFlags {
+	dpSF_None	= 0x0000,
+	dpSF_PIC	= 0x0001,
+};
 struct dpSymbol
 {
     const char  *name;
     void        *addr;
+	int			flags;
 };
 inline bool operator <(const dpSymbol &a, const dpSymbol &b) { return std::strcmp(a.name, b.name)<0; }
 inline bool operator==(const dpSymbol &a, const dpSymbol &b) { return std::strcmp(a.name, b.name)==0; }
@@ -72,7 +80,10 @@ size_t  dpGetPageSize();
 
 void*   dpGetMainModule();
 void    dpEachModules(const std::function<void (const dpModuleInfo&)> &f);
-bool    dpElfEachSymbols(void *_elf_data, const std::function<void (const dpSymbol &)> &f);
+bool    dpElfEachSymbols(void *elf_base, const std::function<void (const dpSymbol &)> &f);
+#ifdef dpPOSIX
+bool	dpReloadModuleAndEnumerateSymbols(dpModuleInfo &mod, const std::function<void (const dpSymbol &)> &f);
+#endif // dpPOSIX
 
 
 class dpElfFile
@@ -87,8 +98,9 @@ public:
     const dpSymbol* findSymbol(const char *name);
 
 private:
-    typedef std::set<dpSymbol> SymbolCont;
-    SymbolCont m_symbols;
+    typedef std::set<dpSymbol> Symbols;
+
+    Symbols m_symbols;
     void *m_elf_file;
     bool m_needs_deallocate;
 };
@@ -100,12 +112,16 @@ public:
     const dpSymbol* findSymbol(const char *name);
 
 private:
-    typedef std::set<dpSymbol> SymbolCont;
+    typedef std::set<dpSymbol> Symbols;
+	typedef std::vector<dpModuleInfo> Modules;
+
     dpSymbolManager();
     ~dpSymbolManager();
+	void clear();
     void gatherSymbols();
 
-    SymbolCont m_syms;
+    Symbols m_syms;
+	Modules m_mods;
 };
 
 
@@ -283,29 +299,45 @@ dpSymbolManager::dpSymbolManager()
 
 dpSymbolManager::~dpSymbolManager()
 {
+	clear();
+}
+
+void dpSymbolManager::clear()
+{
+#ifdef dpPOSIX
+	std::for_each(m_mods.begin(), m_mods.end(), [](dpModuleInfo &mod){
+		free(mod.addr2);
+	});
+#endif // dpPOSIX
+	m_mods.clear();
+	m_syms.clear();
 }
 
 void dpSymbolManager::gatherSymbols()
 {
-#ifdef dpWindows
-#else  // dpWindows
+	clear();
 
+#if defined(dpWindows)
+#elif defined(dpPOSIX)
     dpEachModules([&](const dpModuleInfo &mod){
         printf("module [%p] %s\n", mod.addr, mod.name);
-        dpElfEachSymbols(mod.addr, [&](const dpSymbol &sym){
-            printf("  [%p] %s\n", sym.addr, sym.name);
-            m_syms.insert(sym);
-        });
+		dpModuleInfo tmp = mod;
+		dpReloadModuleAndEnumerateSymbols(tmp, [&](const dpSymbol &sym){
+			printf("  [%p] %s\n", sym.addr, sym.name);
+			m_syms.insert(sym);
+		});
+		if(tmp.addr2) {
+			m_mods.push_back(tmp);
+		}
     });
     printf("%u symbols\n", (uint32_t)m_syms.size());
-
 #endif // dpWindows
 }
 
 const dpSymbol* dpSymbolManager::findSymbol(const char *name)
 {
-    dpSymbol sym = {name, nullptr};
-    auto it = m_syms.find(sym);
+    dpSymbol tmp = {name, nullptr, 0};
+    auto it = m_syms.find(tmp);
     if(it!=m_syms.end()) {
         return &(*it);
     }
@@ -333,9 +365,9 @@ bool dpMapFile(const char *path, void *&o_data, size_t &o_size, const std::funct
 
 void* dpAllocateRWX(size_t size)
 {
-#ifdef dpWindows
-    return ::VirtualAlloc(nullptr, size, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-#else  // dpWindows
+#if defined(dpWindows)
+	return ::VirtualAlloc(nullptr, size, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+#elif defined(dpPOSIX)
     size_t pos = (size_t)dpGetMainModule();
     size_t page_size = dpGetPageSize();
     for(int i=0; ; ++i) {
@@ -343,55 +375,69 @@ void* dpAllocateRWX(size_t size)
         printf("dpAllocateRWX(%u): %p\n", (uint32_t)size, r);
         if(r) { return r; }
     }
-#endif // dpWindows
+#endif
 }
 
 void dpDeallocate(void *ptr)
 {
-#ifdef dpWindows
-    ::VirtualFree(ptr, 0, MEM_RELEASE);
-#else  // dpWindows
-    ::munmap(ptr, 0);
-#endif // dpWindows
+#if defined(dpWindows)
+	::VirtualFree(ptr, 0, MEM_RELEASE);
+#elif defined(dpPOSIX)
+	::munmap(ptr, 0);
+#endif
 }
+
+#ifdef dpPOSIX
+extern Elf_Ehdr __executable_start;
+#endif // dpPOSIX
 
 void* dpGetMainModule()
 {
-#ifdef dpWindows
+#if defined(dpWindows)
     return ::GetModuleHandleA(nullptr);
-#else  // dpWindows
-    link_map *modules = (link_map*)dlopen(nullptr, RTLD_NOW);
-    return (void*)modules->l_addr;
-#endif // dpWindows
+#elif defined(dpPOSIX)
+	Dl_info info;
+	dladdr(&__executable_start, &info);
+	return (void*)info.dli_fbase;
+#endif
 }
 
 void dpEachModules(const std::function<void (const dpModuleInfo&)> &f)
 {
-#ifdef dpWindows
-#else  // dpWindows
-    link_map *modules = (link_map*)dlopen(nullptr, RTLD_NOW);
-    while(modules) {
-        dpModuleInfo mod = {(void*)modules->l_addr, (const char*)modules->l_name};
-        f(mod);
-        modules = (link_map*)modules->l_next;
-    }
-#endif // dpWindows
+#if defined(dpWindows)
+#elif defined(dpPOSIX)
+	// main module
+	Dl_info info;
+	if(dladdr(&__executable_start, &info)) {
+		dpModuleInfo mod = {(const char*)info.dli_fname, (void*)info.dli_fbase, nullptr};
+		f(mod);
+	}
+	// other modules
+	link_map *modules = (link_map*)dlopen(nullptr, RTLD_NOW);
+	while(modules) {
+		if(modules->l_name) {
+			dpModuleInfo mod = {(const char*)modules->l_name, (void*)modules->l_addr, nullptr};
+			f(mod);
+		}
+		modules = (link_map*)modules->l_next;
+	}
+#endif
 }
 
 bool dpMakeRWX(void *addr, size_t size)
 {
-#ifdef dpWindows
-#else  // dpWindows
+#if defined(dpWindows)
+#elif defined(dpPOSIX)
     return mprotect(addr, size, PROT_READ|PROT_WRITE|PROT_EXEC)==0;
-#endif // dpWindows
+#endif
 }
 
 size_t dpGetPageSize()
 {
-#ifdef dpWindows
-#else  // dpWindows
+#if defined(dpWindows)
+#elif defined(dpPOSIX)
     return getpagesize();
-#endif // dpWindows
+#endif
 }
 
 bool dpElfEachSymbols(void *_elf_data, const std::function<void (const dpSymbol &)> &f)
@@ -400,105 +446,91 @@ bool dpElfEachSymbols(void *_elf_data, const std::function<void (const dpSymbol 
     char *elf_data = (char*)_elf_data;
     Elf_Ehdr *elf_header = (Elf_Ehdr*)elf_data;
 
-    // 有効なモジュールかチェック & section header が読める状態かチェック
-    // もうちょっとまともな判別方法ないもんか
-    const size_t page_size = dpGetPageSize();
-    if(!dpMakeRWX(elf_data, page_size)) {
-        return false;
-    }
-    bool has_section_headers = true;
-    size_t size = (elf_header->e_shoff + sizeof(Elf_Shdr)*elf_header->e_shnum);
-    if(!dpMakeRWX(elf_data, (size+page_size-1) & ~page_size)) {
-        has_section_headers = false;
-    }
+	bool is_pic = elf_header->e_type==ET_DYN || elf_header->e_type==ET_REL;
 
-    Elf_Phdr *elf_pheader_dyn = nullptr;
-    for(int i=0; i<elf_header->e_phnum; ++i) {
-        Elf_Phdr *ph = (Elf_Phdr*)(elf_data + elf_header->e_phoff) + i;
-        if(ph->p_type==PT_DYNAMIC) {
-            elf_pheader_dyn = ph;
-        }
-    }
+	Elf_Shdr *sections = (Elf_Shdr*)(elf_data + elf_header->e_shoff);
+	for(int isec=0; isec<elf_header->e_shnum; ++isec) {
+		Elf_Shdr *section = sections + isec;
 
-    if(has_section_headers) { // use section headers
-        Elf_Shdr *sections = (Elf_Shdr*)(elf_data + elf_header->e_shoff);
-        for(int isec=0; isec<elf_header->e_shnum; ++isec) {
-            Elf_Shdr *section = sections + isec;
+		if(section->sh_type==SHT_SYMTAB || section->sh_type==SHT_DYNSYM) {
+			const char *sym_str = (const char*)(elf_data + sections[section->sh_link].sh_offset);
+			for(int isym=0; isym<section->sh_size; isym+=section->sh_entsize) {
+				Elf_Sym *symbol = (Elf_Sym*)(elf_data + section->sh_offset + isym);
+				const char *sym_name = sym_str + symbol->st_name;
+				if(symbol->st_name==0 || symbol->st_shndx>=elf_header->e_shnum) { continue; }
 
-            if(section->sh_type==SHT_SYMTAB || section->sh_type==SHT_DYNSYM) {
-                const char *sym_str = (const char*)(elf_data + sections[section->sh_link].sh_offset);
-                for(int isym=0; isym<section->sh_size; isym+=section->sh_entsize) {
-                    Elf_Sym *symbol = (Elf_Sym*)(elf_data + section->sh_offset + isym);
-                    const char *sym_name = sym_str + symbol->st_name;
-                    if(symbol->st_name==0 || symbol->st_shndx>=elf_header->e_shnum) { continue; }
+				Elf_Shdr *sym_section = sections + symbol->st_shndx;
+				char *sym_addr = nullptr;
+				if(symbol->st_shndx!=SHN_UNDEF) {
+					if(elf_header->e_phnum==0) {
+						sym_addr = (char*)sym_section->sh_offset + symbol->st_value;
+					}
+					else {
+						sym_addr = (char*)symbol->st_value;
+					}
+					if(is_pic) {
+						sym_addr += (size_t)elf_data;
+					}
 
-                    Elf_Shdr *sym_section = sections + symbol->st_shndx;
-                    char *sym_addr = nullptr;
-                    if(symbol->st_shndx!=SHN_UNDEF) {
-                        if(elf_header->e_phnum==0) {
-                            sym_addr = elf_data + sym_section->sh_offset + symbol->st_value;
-                        }
-                        else {
-                            sym_addr = elf_data + symbol->st_value;
-                        }
-
-                        dpSymbol sym = {sym_name, sym_addr};
-                        f(sym);
-                    }
-                }
-            }
-        }
-    }
-    else if(elf_pheader_dyn) { // use program headers
-        Elf_Dyn *dyn = (Elf_Dyn*)(elf_data + elf_pheader_dyn->p_vaddr);
-        char *symtab = nullptr;
-        char *strtab = nullptr;
-        size_t syment = 0;
-        for(; dyn->d_tag!=DT_NULL; ++dyn) {
-            if(dyn->d_tag==DT_SYMTAB) {
-                symtab = (char*)dyn->d_un.d_ptr;
-            }
-            else if(dyn->d_tag==DT_SYMENT) {
-                syment = dyn->d_un.d_val;
-            }
-            else if(dyn->d_tag==DT_STRTAB) {
-                strtab = (char*)dyn->d_un.d_ptr;
-            }
-        }
-        if(symtab && strtab && syment) {
-            // ↓この終了条件すっごく不安…。しかし symbol table の範囲の情報は section header にしか見当たらず
-            for(int isym=0; symtab+isym<strtab; isym+=syment) {
-                Elf_Sym *symbol = (Elf_Sym*)(symtab+isym);
-                const char *sym_name = strtab + symbol->st_name;
-                char *sym_addr = elf_data + symbol->st_value;
-                if(symbol->st_name==0 || symbol->st_value==0 || symbol->st_shndx>=elf_header->e_shnum) { continue; }
-
-                dpSymbol sym = {sym_name, sym_addr};
-                f(sym);
-            }
-        }
-    }
+					dpSymbol sym = {sym_name, sym_addr, 0};
+					if(is_pic) { sym.flags|= dpSF_PIC; }
+					f(sym);
+				}
+			}
+		}
+	}
     return true;
 }
+
+#ifdef dpPOSIX
+bool dpReloadModuleAndEnumerateSymbols(dpModuleInfo &mod, const std::function<void (const dpSymbol &)> &f)
+{
+	void *data;
+	size_t size;
+	if(!dpMapFile(mod.name, data, size, malloc)) {
+		printf("dpLoadElfAndEnumerateSymbols(): loading %s failed\n", mod.name);
+		return false;
+	}
+	mod.addr2 = data;
+	dpElfEachSymbols(data, [&](const dpSymbol &sym){
+		dpSymbol tmp = { sym.name, sym.addr, sym.flags };
+		if(sym.flags & dpSF_PIC) {
+			tmp.addr = (void*)((size_t)tmp.addr - (size_t)data + (size_t)mod.addr);
+		};
+		f(tmp);
+	});
+	return true;
+}
+#endif // dpPOSIX
+
 
 
 
 
 int main(int argc, char *argv[])
 {
+	printf("main: %p\n", &main);
+	printf("printf: %p\n", &printf);
+
     dpElfFile elf;
     if(elf.loadFromFile("testobj.o") && elf.link()) {
         typedef int (*test_add_t)(int, int);
         typedef void (*test_call_t)(int);
 
-        if(const dpSymbol *sym = elf.findSymbol("test_add")) {
-            test_add_t test_add = (test_add_t)sym->addr;
-            printf("add(1,2): %d\n", test_add(1,2));
-        }
-        if(const dpSymbol *sym = elf.findSymbol("test_call")) {
-            test_call_t test_call = (test_call_t)sym->addr;
-            test_call(42);
-        }
+		if(const dpSymbol *sym = elf.findSymbol("test_add")) {
+			test_add_t test_add = (test_add_t)sym->addr;
+			printf("add(1,2): %d\n", test_add(1,2));
+		}
+		else {
+			printf("test_add() not found\n");
+		}
+		if(const dpSymbol *sym = elf.findSymbol("test_call")) {
+			test_call_t test_call = (test_call_t)sym->addr;
+			//test_call(42);
+		}
+		else {
+			printf("test_call() not found\n");
+		}
     }
 }
 
