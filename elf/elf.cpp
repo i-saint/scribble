@@ -73,7 +73,10 @@ inline bool operator==(const dpSymbol &a, const dpSymbol &b) { return std::strcm
 
 
 bool    dpMapFile(const char *path, void *&o_data, size_t &o_size, const std::function<void* (size_t)> &alloc);
-void*   dpAllocateRWX(size_t size);
+void*   dpAllocate(size_t size, void *addr=nullptr);
+void*   dpAllocateForward(size_t size, void *addr);
+void*   dpAllocateBackward(size_t size, void *addr);
+void*   dpAllocateModule(size_t size);
 void    dpDeallocate(void *ptr);
 bool    dpMakeRWX(void *addr, size_t size);
 size_t  dpGetPageSize();
@@ -99,10 +102,16 @@ public:
 
 private:
     typedef std::set<dpSymbol> Symbols;
+    typedef std::vector<char*> Pages;
+    const dpSymbol* findOrCreateTrampoline(const char *name);
 
     Symbols m_symbols;
     void *m_elf_file;
     bool m_needs_deallocate;
+#ifdef dpX64
+    Symbols m_plt_syms;
+    Pages m_plt_pages;
+#endif // dpX64
 };
 
 class dpSymbolManager
@@ -144,7 +153,9 @@ bool dpElfFile::loadFromFile( const char *path_to_elf )
 
     size_t size = 0;
     void *data = nullptr;
-    if(!dpMapFile(path_to_elf, data, size, dpAllocateRWX)) {
+    if(!dpMapFile(path_to_elf, data, size,
+        [](size_t s){ return dpAllocate(s,nullptr); } ))
+    {
         return false;
     }
 
@@ -201,6 +212,12 @@ void dpElfFile::unload()
     m_elf_file = nullptr;
     m_needs_deallocate = false;
     m_symbols.clear();
+
+#ifdef dpX64
+    std::for_each(m_plt_pages.begin(), m_plt_pages.end(), [](void *p){ dpDeallocate(p); });
+    m_plt_pages.clear();
+    m_plt_syms.clear();
+#endif // dpX64
 }
 
 bool dpElfFile::link()
@@ -249,16 +266,24 @@ bool dpElfFile::link()
 
                 switch(ElfRela_GetType(*rela)) {
 #ifdef dpX64
-                case R_X86_64_PC32:  // 
-                case R_X86_64_PLT32: // fall through
+                case R_X86_64_32:
+                    {
+                        *(uint32_t*)(addr) = (uint32_t)(base + r_data);
+                        break;
+                    }
+                case R_X86_64_PC32:
                     {
                         uint32_t rel = (uint32_t)(r_data - (size_t)addr - 0x04);
                         *(uint32_t*)(addr) = (uint32_t)(base + rel);
                         break;
                     }
-                case R_X86_64_32:
+                case R_X86_64_PLT32:
                     {
-                        *(uint32_t*)(addr) = (uint32_t)(base + r_data);
+                        if(r_data-(size_t)m_elf_file > 0x7fff0000) {
+                            r_data = (size_t)findOrCreateTrampoline(r_name)->addr;
+                        }
+                        uint32_t rel = (uint32_t)(r_data - (size_t)addr - 0x04);
+                        *(uint32_t*)(addr) = (uint32_t)(base + rel);
                         break;
                     }
                 // todo
@@ -277,13 +302,52 @@ bool dpElfFile::link()
 
 const dpSymbol* dpElfFile::findSymbol(const char *name)
 {
-    dpSymbol s = {name, nullptr};
+    dpSymbol s = {name, nullptr, 0};
     auto it = m_symbols.find(s);
     if(it!=m_symbols.end()) {
         return &(*it);
     }
     return nullptr;
 }
+
+#ifdef dpX64
+const dpSymbol* dpElfFile::findOrCreateTrampoline( const char *name )
+{
+    dpSymbol psym = {name, nullptr, 0};
+    auto it = m_plt_syms.find(psym);
+    if(it!=m_plt_syms.end()) {
+        return &(*it);
+    }
+    else {
+        const dpSymbol *target = dpSymbolManager::getInstance()->findSymbol(name);
+        if(target) {
+            // トランポリン生成
+            // ff 25 00 00 00 00 [8 byte target address]
+            size_t page_size = dpGetPageSize();
+            size_t page_index = (m_plt_syms.size() * 0x10) / page_size;
+            size_t page_offset = (m_plt_syms.size() * 0x10) % page_size;
+            while(m_plt_pages.size()<=page_index) {
+                m_plt_pages.push_back((char*)dpAllocateBackward(page_size, m_elf_file));
+            }
+
+            char *trampoline = m_plt_pages[page_index] + page_offset;
+            char *tp = trampoline;
+            tp[0] = 0xff;
+            tp[1] = 0x25;
+            tp += 2;
+            *((uint32_t*)tp) = (uint32_t)0;
+            tp += 4;
+            *((size_t*)tp) = (size_t)(target->addr);
+
+            psym.addr = trampoline;
+            m_plt_syms.insert(psym);
+            it = m_plt_syms.find(psym);
+            return &(*it);
+        }
+    }
+    return nullptr;
+}
+#endif // dpX64
 
 
 dpSymbolManager* dpSymbolManager::getInstance()
@@ -318,6 +382,7 @@ void dpSymbolManager::gatherSymbols()
     clear();
 
 #if defined(dpWindows)
+
 #elif defined(dpPOSIX)
     dpEachModules([&](const dpModuleInfo &mod){
         printf("module [%p] %s\n", mod.addr, mod.name);
@@ -363,20 +428,37 @@ bool dpMapFile(const char *path, void *&o_data, size_t &o_size, const std::funct
     return false;
 }
 
-void* dpAllocateRWX(size_t size)
+void* dpAllocate(size_t size, void *addr)
 {
 #if defined(dpWindows)
-    return ::VirtualAlloc(nullptr, size, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    return ::VirtualAlloc(addr, size, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 #elif defined(dpPOSIX)
-    size_t pos = (size_t)dpGetMainModule();
-    size_t page_size = dpGetPageSize();
-    for(int i=0; ; ++i) {
-        void *r = ::mmap((void*)(pos-page_size*i), size, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-        printf("dpAllocateRWX(%u): %p\n", (uint32_t)size, r);
-        if(r) { return r; }
-    }
+    return ::mmap(addr, size, PROT_EXEC|PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 #endif
 }
+
+void* dpAllocateForward(size_t size, void *addr)
+{
+    size_t pos = (size_t)addr;
+    size_t page_size = dpGetPageSize();
+    for(int i=0; ; ++i) {
+        void *r = dpAllocate(size, (void*)(pos + page_size*i));
+        if(r) { return r; }
+    }
+    return nullptr;
+}
+
+void* dpAllocateBackward(size_t size, void *addr)
+{
+    size_t pos = (size_t)addr;
+    size_t page_size = dpGetPageSize();
+    for(int i=0; ; ++i) {
+        void *r = dpAllocate(size, (void*)(pos - page_size*i));
+        if(r) { return r; }
+    }
+    return nullptr;
+}
+
 
 void dpDeallocate(void *ptr)
 {
@@ -509,9 +591,6 @@ bool dpReloadModuleAndEnumerateSymbols(dpModuleInfo &mod, const std::function<vo
 
 int main(int argc, char *argv[])
 {
-    printf("main: %p\n", &main);
-    printf("printf: %p\n", &printf);
-
     dpElfFile elf;
     if(elf.loadFromFile("testobj.o") && elf.link()) {
         typedef int (*test_add_t)(int, int);
@@ -524,9 +603,10 @@ int main(int argc, char *argv[])
         else {
             printf("test_add() not found\n");
         }
+
         if(const dpSymbol *sym = elf.findSymbol("test_call")) {
             test_call_t test_call = (test_call_t)sym->addr;
-            //test_call(42);
+            test_call(42);
         }
         else {
             printf("test_call() not found\n");
@@ -535,8 +615,8 @@ int main(int argc, char *argv[])
 }
 
 /*
-g++ -c testobj.cpp
-g++ elf.cpp -std=c++11 -fPIC -pie -ldl -Wl,--export-dynamic
+g++ -g -c -fPIC testobj.cpp
+g++ -g -std=c++11 elf.cpp -ldl
 ./a.out
 
 ...
