@@ -44,7 +44,7 @@ LPVOID WINAPI rpsCreateThread(
 }
 
 static rpsHookInfo g_rps_hooks[] = {
-	{"kernel32.dll", "CreateThread",   0, rpsCreateThread, &(void*&)origCreateThread},
+	rpsHookInfo("kernel32.dll", "CreateThread",   0, rpsCreateThread, &(void*&)origCreateThread),
 };
 
 

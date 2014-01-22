@@ -38,5 +38,8 @@
     <ClInclude Include="rpsInlines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="rpsMalloc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

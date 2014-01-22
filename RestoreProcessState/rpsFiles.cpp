@@ -46,7 +46,7 @@ HANDLE WINAPI rpsCreateFile(
 }
 
 static rpsHookInfo g_rps_hooks[] = {
-	{"kernel32.dll", "CreateFile", 0, rpsCreateFile, &(void*&)origCreateFile},
+	rpsHookInfo("kernel32.dll", "CreateFile", 0, rpsCreateFile, &(void*&)origCreateFile),
 };
 
 

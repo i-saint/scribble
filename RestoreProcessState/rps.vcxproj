@@ -80,6 +80,7 @@
   <ItemGroup>
     <ClInclude Include="rps.h" />
     <ClInclude Include="rpsInlines.h" />
+    <ClInclude Include="rpsMalloc.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
