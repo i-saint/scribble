@@ -81,9 +81,9 @@ static rpsHookInfo g_rps_hooks[] = {
 };
 
 
-const char*		rpsMemory::getModuleName() const	{ return "rpsMemory"; }
-size_t			rpsMemory::getNumHooks() const		{ return _countof(g_rps_hooks); }
-rpsHookInfo*	rpsMemory::getHooks() const			{ return g_rps_hooks; }
+const char*     rpsMemory::getModuleName() const    { return "rpsMemory"; }
+size_t          rpsMemory::getNumHooks() const      { return _countof(g_rps_hooks); }
+rpsHookInfo*    rpsMemory::getHooks() const         { return g_rps_hooks; }
 
 rpsMemory* rpsMemory::getInstance()
 {
@@ -97,6 +97,7 @@ rpsMemory::rpsMemory()
     , m_size(0)
     , m_pos(0)
 {
+    // 適当
     m_size = 0x10000000;
     void *addr = 
 #if defined(_M_IX86)
@@ -115,7 +116,7 @@ rpsMemory::~rpsMemory()
 void rpsMemory::serialize(rpsArchive &ar)
 {
     ar & m_size & m_pos;
-    ar.io(m_mem, m_size);
+    ar.io(m_mem, m_pos);
 }
 
 void* rpsMemory::alloc(size_t size)

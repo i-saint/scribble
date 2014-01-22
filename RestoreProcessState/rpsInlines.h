@@ -1,6 +1,12 @@
 ﻿#ifndef rpsInlines_h
 #define rpsInlines_h
 
+bool rpsIsValidMemory(void *p);
+BYTE* rpsAddJumpInstruction(BYTE* from, const BYTE* to);
+void* rpsOverrideDLLExport(HMODULE module, const char *funcname, void *hook_, void *trampoline_space);
+
+
+// F: [](DWORD thread_id) -> void
 template<class F>
 inline void rpsEnumerateThreads(DWORD pid, const F &proc)
 {
@@ -22,7 +28,7 @@ inline void rpsEnumerateThreads(DWORD pid, const F &proc)
     }
 }
 
-// F: [](HMODULE mod)->void
+// F: [](HMODULE mod) -> void
 template<class F>
 inline void rpsEnumerateModules(const F &f)
 {
@@ -36,7 +42,9 @@ inline void rpsEnumerateModules(const F &f)
     }
 }
 
-inline void rpsEnumerateDLLImports(HMODULE module, const char *dllname, const std::function<void (const char*, void *&)> &f)
+// F: [](const char*, void *&) -> void
+template<class F>
+inline void rpsEnumerateDLLImports(HMODULE module, const char *dllname, const F &f)
 {
     if(module==nullptr) { return; }
 
@@ -71,6 +79,7 @@ inline void rpsEnumerateDLLImports(HMODULE module, const char *dllname, const st
     }
 }
 
+
 template<class T>
 inline void rpsForceWrite(T &dst, const T &src)
 {
@@ -80,11 +89,16 @@ inline void rpsForceWrite(T &dst, const T &src)
     ::VirtualProtect(&dst, sizeof(T), old_flag, &old_flag);
 }
 
-
 template<class C, class F>
 inline void rpsEach(C &cont, const F &f)
 {
     std::for_each(cont.begin(), cont.end(), f);
+}
+
+template<class C, class F>
+inline void rpsREach(C &cont, const F &f)
+{
+    std::for_each(cont.rbegin(), cont.rend(), f);
 }
 
 #endif // rpsInlines_h

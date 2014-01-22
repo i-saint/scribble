@@ -91,6 +91,7 @@ rpsProcessState::rpsProcessState()
             m_hooks[hooks[hi].dllname][hooks[hi].funcname].push_back(&hooks[hi]);
         }
     }
+
     rpsEnumerateModules([&](HMODULE mod){
         rpsEach(m_hooks, [&](DllHookTable::value_type &hp){
             rpsEnumerateDLLImports(mod, hp.first.c_str(), [&](const char *name, void *&func){
@@ -98,7 +99,7 @@ rpsProcessState::rpsProcessState()
                 auto it = htab.find(rps_string(name));
                 if(it!=htab.end()) {
                     Hooks &hooks = it->second;
-                    rpsEach(hooks, [&](rpsHookInfo *hinfo){
+                    rpsREach(hooks, [&](rpsHookInfo *hinfo){
                         void *orig = func;
                         rpsForceWrite<void*>(func, hinfo->hookfunc);
                         if(hinfo->origfunc) {
@@ -108,6 +109,15 @@ rpsProcessState::rpsProcessState()
                 }
             });
         });
+    });
+    rpsEach(m_hooks, [&](DllHookTable::value_type &hp){
+        if(HMODULE mod = ::LoadLibraryA(hp.first.c_str())) {
+            HookTable &htab = hp.second;
+            rpsEach(htab, [&](HookTable::value_type &hp2){
+                rpsHookInfo *hinfo = hp2.second[0];
+                rpsOverrideDLLExport(mod, hinfo->funcname, hinfo->hookfunc, nullptr);
+            });
+        }
     });
 }
 
