@@ -1,6 +1,10 @@
 ﻿#ifndef rpsInternal_h
 #define rpsInternal_h
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif // WIN32_LEAN_AND_MEAN
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstdint>
@@ -19,39 +23,13 @@
 #endif // max
 
 #include "rps.h"
-#include "rpsMalloc.h"
+#include "rpsFoundation.h"
 #pragma comment(lib, "dbghelp.lib")
 #pragma comment(lib, "psapi.lib")
 
 
 #define rpsDLLExport     __declspec(dllexport)
 #define rpsDLLImport     __declspec(dllimport)
-
-
-class rpsArchive
-{
-public:
-	enum Mode
-	{
-		Unknown,
-		Reader,
-		Writer,
-	};
-
-	rpsArchive();
-	~rpsArchive();
-	void read(void *dst, size_t size);
-	void write(const void *data, size_t size);
-	void io(void *dst, size_t size);
-	bool open(const char *path_to_file, Mode mode);
-	void close();
-	bool isReader() const { return m_mode==Reader; }
-	bool isWriter() const { return m_mode==Writer; }
-
-private:
-	FILE *m_file;
-	Mode m_mode;
-};
 
 
 struct rpsHookInfo
@@ -92,7 +70,7 @@ typedef rpsIModule* (*rpsModuleCreator)();
 
 typedef std::basic_string<char, std::char_traits<char>, rps_allocator<char> > rps_string;
 
-class rpsProcessState
+class rpsMainModule
 {
 public:
 	static void initialize();
@@ -116,12 +94,13 @@ private:
 	typedef std::map<rps_string, FuncHookTable, std::less<rps_string>, rps_allocator<std::pair<rps_string, FuncHookTable> > > DLLHookTable;
 	typedef std::vector<SerializeRequest, rps_allocator<SerializeRequest> > Requests;
 
-	static rpsProcessState* getInstance();
-	rpsProcessState();
-	~rpsProcessState();
-	void mainloop();
+	static rpsMainModule* getInstance();
+	rpsMainModule();
+	~rpsMainModule();
+	void processRequest(SerializeRequest &req);
 	void serializeImpl(rpsArchive &ar);
 	void serializeImpl(const char *path, rpsArchive::Mode mode);
+	void mainloop();
 
 	// F: [](rpsIModule*) -> void
 	template<class F>
@@ -135,8 +114,10 @@ private:
 	Modules m_modules;
 	DLLHookTable m_hooks;
 	Requests m_requests;
+	rpsMutex m_mtx_requests;
 };
 
 #include "rpsInlines.h"
+#include "rpsFuncTypes.h"
 
 #endif // rpsInternal_h

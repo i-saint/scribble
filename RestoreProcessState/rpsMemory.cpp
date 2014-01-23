@@ -6,6 +6,8 @@
 //#include "malloc.h"
 //};
 
+namespace {
+
 class rpsMemory : public rpsIModule
 {
 public:
@@ -27,37 +29,11 @@ private:
     size_t m_pos;
 };
 
-typedef LPVOID (WINAPI *HeapAllocT)( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes );
-typedef LPVOID (WINAPI *HeapReAllocT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes );
-typedef BOOL (WINAPI *HeapFreeT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem );
-typedef BOOL (WINAPI *HeapValidateT)( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem );
 
-HeapAllocT      origHeapAlloc   = nullptr;
-HeapReAllocT    origHeapReAlloc = nullptr;
-HeapFreeT       origHeapFree    = nullptr;
-HeapValidateT   origHeapValidate= nullptr;
-
-void rpsInitializeMalloc()
-{
-    if(!origHeapAlloc) {
-        if(HMODULE mod = ::LoadLibraryA("kernel32.dll")) {
-            (void*&)origHeapAlloc = ::GetProcAddress(mod, "HeapAlloc");
-            (void*&)origHeapFree = ::GetProcAddress(mod, "HeapFree");
-        }
-    }
-}
-
-void* rpsMalloc(size_t s)
-{
-    return origHeapAlloc((HANDLE)_get_heap_handle(), 0, s);
-}
-
-void  rpsFree(void *p)
-{
-    origHeapFree((HANDLE)_get_heap_handle(), 0, p);
-}
-
-namespace {
+HeapAllocT      vaHeapAlloc;
+HeapReAllocT    vaHeapReAlloc;
+HeapFreeT       vaHeapFree;
+HeapValidateT   vaHeapValidate;
 
 LPVOID WINAPI rpsHeapAlloc( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes )
 {
@@ -81,13 +57,11 @@ BOOL WINAPI rpsHeapValidate( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem )
 }
 
 rpsHookInfo g_hookinfo[] = {
-    rpsHookInfo("kernel32.dll", "HeapAlloc",   0, rpsHeapAlloc,   &(void*&)origHeapAlloc),
-    rpsHookInfo("kernel32.dll", "HeapReAlloc", 0, rpsHeapReAlloc, &(void*&)origHeapReAlloc),
-    rpsHookInfo("kernel32.dll", "HeapFree",    0, rpsHeapFree,    &(void*&)origHeapFree),
-    rpsHookInfo("kernel32.dll", "HeapValidate",0, rpsHeapValidate,&(void*&)origHeapValidate),
+    rpsHookInfo("kernel32.dll", "HeapAlloc",   0, rpsHeapAlloc,   &(void*&)vaHeapAlloc),
+    rpsHookInfo("kernel32.dll", "HeapReAlloc", 0, rpsHeapReAlloc, &(void*&)vaHeapReAlloc),
+    rpsHookInfo("kernel32.dll", "HeapFree",    0, rpsHeapFree,    &(void*&)vaHeapFree),
+    rpsHookInfo("kernel32.dll", "HeapValidate",0, rpsHeapValidate,&(void*&)vaHeapValidate),
 };
-
-} // namespace
 
 
 const char*     rpsMemory::getModuleName() const    { return "rpsMemory"; }
@@ -141,4 +115,6 @@ void rpsMemory::free(void *addr)
 {
 }
 
-rpsIModule* rpsCreateMemory() { return rpsMemory::getInstance(); }
+} // namespace
+
+rpsDLLExport rpsIModule* rpsCreateMemory() { return rpsMemory::getInstance(); }

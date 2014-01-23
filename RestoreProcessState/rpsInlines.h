@@ -138,35 +138,35 @@ inline rpsArchive& operator&(rpsArchive &ar, unsigned long &v) { ar.io(&v, sizeo
 template<class CharT, template<class> class Allocator >
 inline rpsArchive& operator&(rpsArchive &ar, std::basic_string<CharT, std::char_traits<CharT>, Allocator<CharT> > &v)
 {
-	if(ar.isWriter()) {
-		size_t size = v.size();
-		ar & size;
-		if(size>0) { ar.io(&v[0], size); }
-	}
-	else if(ar.isReader()) {
-		size_t size;
-		ar & size;
-		v.resize(size);
-		if(size>0) { ar.io(&v[0], size); }
-	}
-	return ar;
+    if(ar.isWriter()) {
+        size_t size = v.size();
+        ar & size;
+        if(size>0) { ar.io(&v[0], size); }
+    }
+    else if(ar.isReader()) {
+        size_t size;
+        ar & size;
+        v.resize(size);
+        if(size>0) { ar.io(&v[0], size); }
+    }
+    return ar;
 }
 
 template<class T, template<class> class Allocator >
 inline rpsArchive& operator&(rpsArchive &ar, std::vector<T, Allocator<T> > &v)
 {
-	if(ar.isReader()) {
-		size_t size;
-		ar & size;
-		v.resize(size);
-		rpsEach(v, [&](T &e){ ar & e; });
-	}
-	else if(ar.isWriter()) {
-		size_t size = v.size();
-		ar & size;
-		rpsEach(v, [&](T &e){ ar & e; });
-	}
-	return ar;
+    if(ar.isReader()) {
+        size_t size;
+        ar & size;
+        v.resize(size);
+        rpsEach(v, [&](T &e){ ar & e; });
+    }
+    else if(ar.isWriter()) {
+        size_t size = v.size();
+        ar & size;
+        rpsEach(v, [&](T &e){ ar & e; });
+    }
+    return ar;
 }
 
 #endif // rpsInlines_h

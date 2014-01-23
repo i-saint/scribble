@@ -73,18 +73,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="rpsBase.cpp" />
     <ClCompile Include="rpsCore.cpp" />
     <ClCompile Include="rpsFiles.cpp" />
+    <ClCompile Include="rpsFoundation.cpp" />
+    <ClCompile Include="rpsMainModule.cpp" />
     <ClCompile Include="rpsMemory.cpp" />
     <ClCompile Include="rpsThreads.cpp" />
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rps.h" />
+    <ClInclude Include="rpsFoundation.h" />
+    <ClInclude Include="rpsFuncTypes.h" />
     <ClInclude Include="rpsInlines.h" />
     <ClInclude Include="rpsInternal.h" />
-    <ClInclude Include="rpsMalloc.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

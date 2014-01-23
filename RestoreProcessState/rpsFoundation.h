@@ -1,9 +1,14 @@
-﻿#ifndef rpsMalloc_h
-#define rpsMalloc_h
+﻿#ifndef rpsFoundation_h
+#define rpsFoundation_h
 
-void *rpsMalloc(size_t size);
+void rpsInitializeFoundation();
+
+// rpsMalloc() で確保されたメモリはトレースされない。(rpsLoadState() で復元されない)
+// 内部実装用。
+void* rpsMalloc(size_t size);
 void rpsFree(void *addr);
 
+// rpsMalloc() で実装されたアロケータ。
 template<typename T>
 class rps_allocator
 {
@@ -41,4 +46,59 @@ public :
 template<class T, typename Alloc> inline bool operator==(const rps_allocator<T>& l, const rps_allocator<T>& r) { return (l.equals(r)); }
 template<class T, typename Alloc> inline bool operator!=(const rps_allocator<T>& l, const rps_allocator<T>& r) { return (!(l == r)); }
 
-#endif // rpsMalloc_h
+
+template<class T>
+class rpsScopedLock
+{
+public:
+    rpsScopedLock(T &m) : m_lockobj(m) { m_lockobj.lock(); }
+    ~rpsScopedLock() { m_lockobj.unlock(); }
+private:
+    T &m_lockobj;
+};
+
+class rpsMutex
+{
+public:
+    typedef rpsScopedLock<rpsMutex> ScopedLock;
+    typedef CRITICAL_SECTION Handle;
+
+    rpsMutex();
+    ~rpsMutex();
+    void lock();
+    bool tryLock();
+    void unlock();
+
+private:
+    Handle m_lockobj;
+    rpsMutex(const rpsMutex&);
+    rpsMutex& operator=(const rpsMutex&);
+};
+
+
+class rpsArchive
+{
+public:
+    enum Mode
+    {
+        Writer,
+        Reader,
+    };
+
+    rpsArchive();
+    ~rpsArchive();
+    void read(void *dst, size_t size);
+    void write(const void *data, size_t size);
+    void io(void *dst, size_t size);
+    bool open(const char *path_to_file, Mode mode);
+    void close();
+    bool isReader() const { return m_mode==Reader; }
+    bool isWriter() const { return m_mode==Writer; }
+
+private:
+    FILE *m_file;
+    Mode m_mode;
+};
+
+
+#endif // rpsFoundation_h

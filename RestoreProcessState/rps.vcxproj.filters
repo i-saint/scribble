@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="rpsBase.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="rpsFiles.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -33,6 +30,12 @@
     <ClCompile Include="rpsCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rpsFoundation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rpsMainModule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rps.h">
@@ -41,10 +44,13 @@
     <ClInclude Include="rpsInlines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="rpsMalloc.h">
+    <ClInclude Include="rpsInternal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="rpsInternal.h">
+    <ClInclude Include="rpsFoundation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpsFuncTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

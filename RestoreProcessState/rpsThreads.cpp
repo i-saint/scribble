@@ -1,5 +1,7 @@
 ﻿#include "rpsInternal.h"
 
+namespace {
+
 class rpsThreads : public rpsIModule
 {
 public:
@@ -33,16 +35,7 @@ inline rpsArchive& operator&(rpsArchive &ar, rpsThreadInformation &v)
 
 
 
-typedef LPVOID (WINAPI *CreateThreadT)(
-    LPSECURITY_ATTRIBUTES lpThreadAttributes,
-    SIZE_T dwStackSize,
-    LPTHREAD_START_ROUTINE lpStartAddress,
-    LPVOID lpParameter,
-    DWORD dwCreationFlags,
-    LPDWORD lpThreadId
-    );
-
-CreateThreadT origCreateThread;
+CreateThreadT vaCreateThread;
 
 LPVOID WINAPI rpsCreateThread(
     LPSECURITY_ATTRIBUTES lpThreadAttributes,
@@ -53,12 +46,12 @@ LPVOID WINAPI rpsCreateThread(
     LPDWORD lpThreadId
     )
 {
-    LPVOID ret = origCreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+    LPVOID ret = vaCreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
     return ret;
 }
 
 static rpsHookInfo g_hookinfo[] = {
-    rpsHookInfo("kernel32.dll", "CreateThread",   0, rpsCreateThread, &(void*&)origCreateThread),
+    rpsHookInfo("kernel32.dll", "CreateThread",   0, rpsCreateThread, &(void*&)vaCreateThread),
 };
 
 
@@ -127,4 +120,6 @@ HANDLE rpsThreads::translate(HANDLE h)
     return h;
 }
 
-rpsIModule* rpsCreateThreads() { return rpsThreads::getInstance(); }
+} // namespace
+
+rpsDLLExport rpsIModule* rpsCreateThreads() { return rpsThreads::getInstance(); }

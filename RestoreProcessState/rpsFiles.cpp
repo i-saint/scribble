@@ -1,5 +1,8 @@
 ﻿#include "rpsInternal.h"
 
+
+namespace {
+
 class rpsFiles : public rpsIModule
 {
 public:
@@ -7,9 +10,9 @@ public:
 
     rpsFiles();
     ~rpsFiles();
-    virtual const char*		getModuleName() const;
-    virtual size_t			getNumHooks() const;
-    virtual rpsHookInfo*	getHooks() const;
+    virtual const char*     getModuleName() const;
+    virtual size_t          getNumHooks() const;
+    virtual rpsHookInfo*    getHooks() const;
     virtual void serialize(rpsArchive &ar);
 
     HANDLE translate(HANDLE h);
@@ -18,55 +21,11 @@ private:
 };
 
 
-typedef HANDLE (WINAPI *CreateFileAT)(
-    LPCSTR lpFileName,
-    DWORD dwDesiredAccess,
-    DWORD dwShareMode,
-    LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-    DWORD dwCreationDisposition,
-    DWORD dwFlagsAndAttributes,
-    HANDLE hTemplateFile
-    );
-
-typedef HANDLE (WINAPI *CreateFileWT)(
-    LPCWSTR lpFileName,
-    DWORD dwDesiredAccess,
-    DWORD dwShareMode,
-    LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-    DWORD dwCreationDisposition,
-    DWORD dwFlagsAndAttributes,
-    HANDLE hTemplateFile
-    );
-
-typedef HANDLE (WINAPI *CreateFile2T)(
-    LPCTSTR lpFileName,
-    DWORD dwDesiredAccess,
-    DWORD dwShareMode,
-    DWORD dwCreationDisposition,
-    LPCREATEFILE2_EXTENDED_PARAMETERS pCreateExParams
-    );
-
-typedef BOOL (WINAPI *WriteFileT)(
-    HANDLE hFile,
-    LPCVOID lpBuffer,
-    DWORD nNumberOfBytesToWrite,
-    LPDWORD lpNumberOfBytesWritten,
-    LPOVERLAPPED lpOverlapped
-    );
-
-typedef BOOL (WINAPI *ReadFileT)(
-    HANDLE hFile,
-    LPVOID lpBuffer,
-    DWORD nNumberOfBytesToRead,
-    LPDWORD lpNumberOfBytesRead,
-    LPOVERLAPPED lpOverlapped
-    );
-
-CreateFileAT origCreateFileA;
-CreateFileWT origCreateFileW;
-CreateFile2T origCreateFile2;
-WriteFileT origWriteFile;
-ReadFileT origReadFile;
+CreateFileAT vaCreateFileA;
+CreateFileWT vaCreateFileW;
+CreateFile2T vaCreateFile2;
+WriteFileT vaWriteFile;
+ReadFileT vaReadFile;
 
 
 HANDLE WINAPI rpsCreateFileA(
@@ -79,8 +38,7 @@ HANDLE WINAPI rpsCreateFileA(
     HANDLE hTemplateFile
     )
 {
-    CreateFileA;
-    HANDLE ret = origCreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    HANDLE ret = vaCreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
     return ret;
 }
 
@@ -94,7 +52,7 @@ HANDLE WINAPI rpsCreateFileW(
     HANDLE hTemplateFile
     )
 {
-    HANDLE ret = origCreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    HANDLE ret = vaCreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
     return ret;
 }
 
@@ -106,7 +64,7 @@ HANDLE WINAPI rpsCreateFile2(
     LPCREATEFILE2_EXTENDED_PARAMETERS pCreateExParams
     )
 {
-    HANDLE ret = origCreateFile2(lpFileName, dwDesiredAccess, dwShareMode, dwCreationDisposition, pCreateExParams);
+    HANDLE ret = vaCreateFile2(lpFileName, dwDesiredAccess, dwShareMode, dwCreationDisposition, pCreateExParams);
     return ret;
 }
 
@@ -118,7 +76,7 @@ BOOL WINAPI rpsWriteFile(
     LPOVERLAPPED lpOverlapped
     )
 {
-    BOOL ret = origWriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
+    BOOL ret = vaWriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
     return ret;
 }
 
@@ -130,18 +88,17 @@ BOOL WINAPI rpsReadFile(
     LPOVERLAPPED lpOverlapped
     )
 {
-    BOOL ret = origReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+    BOOL ret = vaReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
     return ret;
 }
 
-static rpsHookInfo g_hookinfo[] = {
-    rpsHookInfo("kernel32.dll", "CreateFileA", 0, rpsCreateFileA, &(void*&)origCreateFileA),
-    rpsHookInfo("kernel32.dll", "CreateFileW", 0, rpsCreateFileW, &(void*&)origCreateFileW),
-    rpsHookInfo("kernel32.dll", "CreateFile2", 0, rpsCreateFile2, &(void*&)origCreateFile2),
-    rpsHookInfo("kernel32.dll", "WriteFile",   0, rpsWriteFile,   &(void*&)origWriteFile),
-    rpsHookInfo("kernel32.dll", "ReadFile",    0, rpsReadFile,    &(void*&)origReadFile),
+rpsHookInfo g_hookinfo[] = {
+    rpsHookInfo("kernel32.dll", "CreateFileA", 0, rpsCreateFileA, &(void*&)vaCreateFileA),
+    rpsHookInfo("kernel32.dll", "CreateFileW", 0, rpsCreateFileW, &(void*&)vaCreateFileW),
+    rpsHookInfo("kernel32.dll", "CreateFile2", 0, rpsCreateFile2, &(void*&)vaCreateFile2),
+    rpsHookInfo("kernel32.dll", "WriteFile",   0, rpsWriteFile,   &(void*&)vaWriteFile),
+    rpsHookInfo("kernel32.dll", "ReadFile",    0, rpsReadFile,    &(void*&)vaReadFile),
 };
-
 
 const char*     rpsFiles::getModuleName() const { return "rpsFiles"; }
 size_t          rpsFiles::getNumHooks() const   { return _countof(g_hookinfo); }
@@ -172,4 +129,6 @@ HANDLE rpsFiles::translate(HANDLE h)
     return h;
 }
 
-rpsIModule* rpsCreateFiles() { return rpsFiles::getInstance(); }
+} // namespace
+
+rpsDLLExport rpsIModule* rpsCreateFiles() { return rpsFiles::getInstance(); }

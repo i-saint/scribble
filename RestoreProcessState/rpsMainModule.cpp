@@ -1,7 +1,6 @@
 ﻿#include "rpsInternal.h"
 
 
-extern void rpsInitializeMalloc();
 extern rpsIModule* rpsCreateMemory();
 extern rpsIModule* rpsCreateThreads();
 extern rpsIModule* rpsCreateFiles();
@@ -17,85 +16,33 @@ rpsDLLExport rpsModuleCreator*	rpsGetModuleCreators()		{ return g_mcreators; }
 
 
 
-rpsArchive::rpsArchive()
-    : m_file(nullptr)
-    , m_mode(Unknown)
-{
-}
-
-rpsArchive::~rpsArchive()
-{
-    close();
-}
-
-void rpsArchive::read(void *dst, size_t size)
-{
-    fread(dst, size, 1, m_file);
-}
-
-void rpsArchive::write(const void *data, size_t size)
-{
-    fwrite(data, size, 1, m_file);
-}
-
-void rpsArchive::io(void *dst, size_t size)
-{
-    if(isReader()) {
-        read(dst, size);
-    }
-    else {
-        write(dst, size);
-    }
-}
-
-bool rpsArchive::open(const char *path_to_file, Mode mode)
-{
-    close();
-    m_mode = mode;
-    m_file = fopen(path_to_file, m_mode==Reader ? "rb" : "wb");
-    return m_file!=nullptr;
-}
-
-void rpsArchive::close()
-{
-    if(m_file) {
-        fclose(m_file);
-    }
-}
-
-
-LPTHREAD_START_ROUTINE;
-
 DWORD __stdcall rpsMainThread(LPVOID lpThreadParameter)
 {
-    ((rpsProcessState*)lpThreadParameter)->mainloop();
+    ((rpsMainModule*)lpThreadParameter)->mainloop();
     return 0;
 }
 
 
-void rpsProcessState::initialize()
+void rpsMainModule::initialize()
 {
-    rpsInitializeMalloc();
+    rpsInitializeFoundation();
     getInstance();
 }
 
-rpsProcessState* rpsProcessState::getInstance()
+rpsMainModule* rpsMainModule::getInstance()
 {
-    static rpsProcessState *s_inst = new rpsProcessState();
+    static rpsMainModule *s_inst = new rpsMainModule();
     return s_inst;
 }
 
-void rpsProcessState::serialize(const char *path, rpsArchive::Mode mode)
+void rpsMainModule::serialize(const char *path, rpsArchive::Mode mode)
 {
     SerializeRequest req = {rps_string(path), mode};
-    getInstance()->m_requests.push_back(req);
-    while(!getInstance()->m_requests.empty()) {
-        ::Sleep(1);
-    }
+    getInstance()->processRequest(req);
 }
 
 
-rpsProcessState::rpsProcessState()
+rpsMainModule::rpsMainModule()
 {
     DWORD tid;
     ::CreateThread(nullptr, 0, rpsMainThread, this, 0, &tid);
@@ -142,18 +89,29 @@ rpsProcessState::rpsProcessState()
     });
 }
 
-rpsProcessState::~rpsProcessState()
+rpsMainModule::~rpsMainModule()
 {
 }
 
-void rpsProcessState::serializeImpl(rpsArchive &ar)
+void rpsMainModule::processRequest(SerializeRequest &req)
+{
+    {
+        rpsMutex::ScopedLock lock(m_mtx_requests);
+        m_requests.push_back(req);
+    }
+    while(!m_requests.empty()) {
+        ::Sleep(1);
+    }
+}
+
+void rpsMainModule::serializeImpl(rpsArchive &ar)
 {
     eachModules([&](rpsIModule *mod){
         mod->serialize(ar);
     });
 }
 
-void rpsProcessState::serializeImpl(const char *path, rpsArchive::Mode mode)
+void rpsMainModule::serializeImpl(const char *path, rpsArchive::Mode mode)
 {
     rpsArchive ar;
     if(ar.open(path, mode)) {
@@ -161,10 +119,11 @@ void rpsProcessState::serializeImpl(const char *path, rpsArchive::Mode mode)
     }
 }
 
-void rpsProcessState::mainloop()
+void rpsMainModule::mainloop()
 {
     for(;;) {
         if(!m_requests.empty()) {
+            rpsMutex::ScopedLock lock(m_mtx_requests);
             rpsEach(m_requests, [&](SerializeRequest &req){
                 serializeImpl(req.path.c_str(), req.mode);
             });
@@ -177,22 +136,15 @@ void rpsProcessState::mainloop()
 
 void rpsInitialize()
 {
-    rpsProcessState::initialize();
+    rpsMainModule::initialize();
 }
 
 void rpsSaveState(const char *path_to_outfile)
 {
-    rpsProcessState::serialize(path_to_outfile, rpsArchive::Writer);
+    rpsMainModule::serialize(path_to_outfile, rpsArchive::Writer);
 }
 
 void rpsLoadState(const char *path_to_infile)
 {
-    rpsProcessState::serialize(path_to_infile, rpsArchive::Reader);
+    rpsMainModule::serialize(path_to_infile, rpsArchive::Reader);
 }
-
-//
-//void rpsRestore()
-//{
-//	CONTEXT ctx;
-//}
-
