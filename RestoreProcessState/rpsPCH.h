@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <functional>
 #include <windows.h>
+#include <ws2tcpip.h>
+#include <winsock2.h>
 #include <dbghelp.h>
 #include <psapi.h>
 #include <tlhelp32.h>

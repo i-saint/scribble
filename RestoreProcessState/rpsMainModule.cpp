@@ -1,5 +1,6 @@
 ﻿#include "rpsPCH.h"
 #include "rpsInternal.h"
+#include "rpsNetwork.h"
 
 
 extern rpsIModule* rpsCreateMemory();
@@ -11,9 +12,8 @@ static rpsModuleCreator g_mcreators[] = {
     rpsCreateThreads,
     rpsCreateFiles,
 };
-
-rpsDLLExport size_t				rpsGetNumModuleCreators()	{ return _countof(g_mcreators); }
-rpsDLLExport rpsModuleCreator*	rpsGetModuleCreators()		{ return g_mcreators; }
+rpsDLLExport size_t             rpsGetNumModuleCreators()   { return _countof(g_mcreators); }
+rpsDLLExport rpsModuleCreator*  rpsGetModuleCreators()      { return g_mcreators; }
 
 
 
@@ -27,6 +27,7 @@ DWORD __stdcall rpsMainThread(LPVOID lpThreadParameter)
 void rpsMainModule::initialize()
 {
     rpsInitializeFoundation();
+    rpsInitializeNetwork();
     getInstance();
 }
 
@@ -139,7 +140,10 @@ void rpsMainModule::mainloop()
 
 rpsAPI void rpsInitialize()
 {
-    rpsMainModule::initialize();
+    rpsInitializeFoundation();
+    rpsExecExclusive([](){
+        rpsMainModule::initialize();
+    });
 }
 
 rpsAPI void rpsSaveState(const char *path_to_outfile)
@@ -150,4 +154,15 @@ rpsAPI void rpsSaveState(const char *path_to_outfile)
 rpsAPI void rpsLoadState(const char *path_to_infile)
 {
     rpsMainModule::serialize(path_to_infile, rpsArchive::Reader);
+}
+
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+{
+    if(fdwReason==DLL_PROCESS_ATTACH) {
+        rpsInitialize();
+    }
+    else if(fdwReason==DLL_PROCESS_DETACH) {
+    }
+    return TRUE;
 }

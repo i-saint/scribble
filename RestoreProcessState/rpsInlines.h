@@ -2,6 +2,28 @@
 #define rpsInlines_h
 
 
+template<class T>
+inline void rpsForceWrite(T &dst, const T &src)
+{
+    DWORD old_flag;
+    ::VirtualProtect(&dst, sizeof(T), PAGE_EXECUTE_READWRITE, &old_flag);
+    dst = src;
+    ::VirtualProtect(&dst, sizeof(T), old_flag, &old_flag);
+}
+
+template<class C, class F>
+inline void rpsEach(C &cont, const F &f)
+{
+    std::for_each(cont.begin(), cont.end(), f);
+}
+
+template<class C, class F>
+inline void rpsREach(C &cont, const F &f)
+{
+    std::for_each(cont.rbegin(), cont.rend(), f);
+}
+
+
 // F: [](DWORD thread_id) -> void
 template<class F>
 inline void rpsEnumerateThreads(DWORD pid, const F &proc)
@@ -37,7 +59,7 @@ void rpsExecExclusive(const F &proc)
         }
     });
     proc();
-    std::for_each(threads.begin(), threads.end(), [](HANDLE thread){
+    rpsEach(threads, [](HANDLE thread){
         ::ResumeThread(thread);
         ::CloseHandle(thread);
     });
@@ -95,27 +117,6 @@ inline void rpsEnumerateDLLImports(HMODULE module, const char *dllname, const F 
     }
 }
 
-
-template<class T>
-inline void rpsForceWrite(T &dst, const T &src)
-{
-    DWORD old_flag;
-    ::VirtualProtect(&dst, sizeof(T), PAGE_EXECUTE_READWRITE, &old_flag);
-    dst = src;
-    ::VirtualProtect(&dst, sizeof(T), old_flag, &old_flag);
-}
-
-template<class C, class F>
-inline void rpsEach(C &cont, const F &f)
-{
-    std::for_each(cont.begin(), cont.end(), f);
-}
-
-template<class C, class F>
-inline void rpsREach(C &cont, const F &f)
-{
-    std::for_each(cont.rbegin(), cont.rend(), f);
-}
 
 inline rpsArchive& operator&(rpsArchive &ar,     char &v) { ar.io(&v, sizeof(v)); return ar; }
 inline rpsArchive& operator&(rpsArchive &ar,   int8_t &v) { ar.io(&v, sizeof(v)); return ar; }

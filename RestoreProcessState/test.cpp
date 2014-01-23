@@ -38,8 +38,6 @@ void func2()
 
 int main(int argc, char *argv[])
 {
-    rpsInitialize();
-
     func1((int)argv);
     func2();
 }

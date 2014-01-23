@@ -6,6 +6,7 @@ namespace {
 CloseHandleT                vaCloseHandle;
 HeapAllocT                  vaHeapAlloc;
 HeapFreeT                   vaHeapFree;
+CreateThreadT               vaCreateThread;
 InitializeCriticalSectionT  vaInitializeCriticalSection;
 DeleteCriticalSectionT      vaDeleteCriticalSection;
 EnterCriticalSectionT       vaEnterCriticalSection;
@@ -24,6 +25,7 @@ void rpsInitializeFoundation()
         (void*&)vaCloseHandle = ::GetProcAddress(mod, "CloseHandle");
         (void*&)vaHeapAlloc = ::GetProcAddress(mod, "HeapAlloc");
         (void*&)vaHeapFree = ::GetProcAddress(mod, "HeapFree");
+        (void*&)vaCreateThread = ::GetProcAddress(mod, "CreateThread");
         (void*&)vaInitializeCriticalSection = ::GetProcAddress(mod, "InitializeCriticalSection");
         (void*&)vaDeleteCriticalSection = ::GetProcAddress(mod, "DeleteCriticalSection");
         (void*&)vaEnterCriticalSection = ::GetProcAddress(mod, "EnterCriticalSection");
@@ -118,6 +120,23 @@ void* rpsOverrideDLLExport(HMODULE module, const char *funcname, void *hook_, vo
     }
     return nullptr;
 }
+
+
+DWORD __stdcall rpsRunThread_(LPVOID proc_)
+{
+    auto *proc = (std::function<void ()>*)proc_;
+    (*proc)();
+    delete proc;
+    return 0;
+}
+
+void rpsRunThread(const std::function<void ()> &proc)
+{
+    typedef std::function<void ()> functor;
+    functor *fp = new (rpsMalloc(sizeof(functor))) functor(proc);
+    vaCreateThread(nullptr, 0, &rpsRunThread_, fp, 0, nullptr);
+}
+
 
 
 rpsArchive::rpsArchive()

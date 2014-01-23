@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <functional>
 #include <windows.h>
+#include <ws2tcpip.h>
+#include <winsock2.h>
 #include <dbghelp.h>
 #include <psapi.h>
 #include <tlhelp32.h>
@@ -27,41 +29,46 @@
 #include "rpsFoundation.h"
 #pragma comment(lib, "dbghelp.lib")
 #pragma comment(lib, "psapi.lib")
+#pragma comment(lib, "ws2_32.lib")
+
+// todo
+#define rpsPrintError(...) printf(__VA_ARGS__)
+#define rpsPrintInfo(...) printf(__VA_ARGS__)
 
 
 struct rpsHookInfo
 {
-	const char *dllname;
-	const char *funcname;
-	uint32_t funcordinal;
-	void *hookfunc;
-	void **origfunc;
-	uint32_t nth;
+    const char *dllname;
+    const char *funcname;
+    uint32_t funcordinal;
+    void *hookfunc;
+    void **origfunc;
+    uint32_t nth;
 
-	rpsHookInfo(const char *dll=nullptr, const char *fname=nullptr, uint32_t ford=0, void *hook=nullptr, void **orig=nullptr)
-		: dllname(dll)
-		, funcname(fname)
-		, funcordinal(ford)
-		, hookfunc(hook)
-		, origfunc(orig)
-		, nth(0)
-	{
-	}
+    rpsHookInfo(const char *dll=nullptr, const char *fname=nullptr, uint32_t ford=0, void *hook=nullptr, void **orig=nullptr)
+        : dllname(dll)
+        , funcname(fname)
+        , funcordinal(ford)
+        , hookfunc(hook)
+        , origfunc(orig)
+        , nth(0)
+    {
+    }
 };
 
 
 class rpsIModule
 {
 public:
-	virtual ~rpsIModule() {}
-	virtual void			release() { delete this; }
-	virtual const char*		getModuleName() const=0;
-	virtual size_t			getNumHooks() const=0;
-	virtual rpsHookInfo*	getHooks() const=0;
-	virtual void			serialize(rpsArchive &ar)=0;
+    virtual ~rpsIModule() {}
+    virtual void            release() { delete this; }
+    virtual const char*     getModuleName() const=0;
+    virtual size_t          getNumHooks() const=0;
+    virtual rpsHookInfo*    getHooks() const=0;
+    virtual void            serialize(rpsArchive &ar)=0;
 
-	void* operator new(size_t s) { return rpsMalloc(s); }
-	void  operator delete(void *p) { return rpsFree(p); }
+    void* operator new(size_t s) { return rpsMalloc(s); }
+    void  operator delete(void *p) { return rpsFree(p); }
 };
 typedef rpsIModule* (*rpsModuleCreator)();
 
@@ -70,48 +77,48 @@ typedef std::basic_string<char, std::char_traits<char>, rps_allocator<char> > rp
 class rpsMainModule
 {
 public:
-	static void initialize();
-	static void serialize(const char *path, rpsArchive::Mode mode);
+    static void initialize();
+    static void serialize(const char *path, rpsArchive::Mode mode);
 
-	void* operator new(size_t s) { return rpsMalloc(s); }
-	void  operator delete(void *p) { return rpsFree(p); }
+    void* operator new(size_t s) { return rpsMalloc(s); }
+    void  operator delete(void *p) { return rpsFree(p); }
 
 private:
-	friend DWORD __stdcall rpsMainThread(LPVOID lpThreadParameter);
+    friend DWORD __stdcall rpsMainThread(LPVOID lpThreadParameter);
 
-	struct SerializeRequest
-	{
-		rps_string path;
-		rpsArchive::Mode mode;
-	};
+    struct SerializeRequest
+    {
+        rps_string path;
+        rpsArchive::Mode mode;
+    };
 
-	typedef std::map<rps_string, rpsIModule*, std::less<rps_string>, rps_allocator<std::pair<rps_string, rpsIModule*> > > Modules;
-	typedef std::vector<rpsHookInfo*, rps_allocator<rpsHookInfo*> > Hooks;
-	typedef std::map<rps_string, Hooks, std::less<rps_string>, rps_allocator<std::pair<rps_string, Hooks> > > FuncHookTable;
-	typedef std::map<rps_string, FuncHookTable, std::less<rps_string>, rps_allocator<std::pair<rps_string, FuncHookTable> > > DLLHookTable;
-	typedef std::vector<SerializeRequest, rps_allocator<SerializeRequest> > Requests;
+    typedef std::map<rps_string, rpsIModule*, std::less<rps_string>, rps_allocator<std::pair<rps_string, rpsIModule*> > > Modules;
+    typedef std::vector<rpsHookInfo*, rps_allocator<rpsHookInfo*> > Hooks;
+    typedef std::map<rps_string, Hooks, std::less<rps_string>, rps_allocator<std::pair<rps_string, Hooks> > > FuncHookTable;
+    typedef std::map<rps_string, FuncHookTable, std::less<rps_string>, rps_allocator<std::pair<rps_string, FuncHookTable> > > DLLHookTable;
+    typedef std::vector<SerializeRequest, rps_allocator<SerializeRequest> > Requests;
 
-	static rpsMainModule* getInstance();
-	rpsMainModule();
-	~rpsMainModule();
-	void processRequest(SerializeRequest &req);
-	void serializeImpl(rpsArchive &ar);
-	void serializeImpl(const char *path, rpsArchive::Mode mode);
-	void mainloop();
+    static rpsMainModule* getInstance();
+    rpsMainModule();
+    ~rpsMainModule();
+    void processRequest(SerializeRequest &req);
+    void serializeImpl(rpsArchive &ar);
+    void serializeImpl(const char *path, rpsArchive::Mode mode);
+    void mainloop();
 
-	// F: [](rpsIModule*) -> void
-	template<class F>
-	void eachModules(const F &f)
-	{
-		for(auto i=m_modules.begin(); i!=m_modules.end(); ++i) {
-			f(i->second);
-		}
-	}
+    // F: [](rpsIModule*) -> void
+    template<class F>
+    void eachModules(const F &f)
+    {
+        for(auto i=m_modules.begin(); i!=m_modules.end(); ++i) {
+            f(i->second);
+        }
+    }
 
-	Modules m_modules;
-	DLLHookTable m_hooks;
-	Requests m_requests;
-	rpsMutex m_mtx_requests;
+    Modules m_modules;
+    DLLHookTable m_hooks;
+    Requests m_requests;
+    rpsMutex m_mtx_requests;
 };
 
 #include "rpsInlines.h"
