@@ -106,8 +106,10 @@ void rpsMainModule::processRequest(SerializeRequest &req)
 
 void rpsMainModule::serializeImpl(rpsArchive &ar)
 {
-    eachModules([&](rpsIModule *mod){
-        mod->serialize(ar);
+    rpsExecExclusive([&](){
+        eachModules([&](rpsIModule *mod){
+            mod->serialize(ar);
+        });
     });
 }
 

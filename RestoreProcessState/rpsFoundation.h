@@ -96,7 +96,7 @@ public:
     bool isWriter() const { return m_mode==Writer; }
 
 private:
-    FILE *m_file;
+    HANDLE m_file;
     Mode m_mode;
 };
 

@@ -11,6 +11,10 @@ EnterCriticalSectionT       vaEnterCriticalSection;
 LeaveCriticalSectionT       vaLeaveCriticalSection;
 TryEnterCriticalSectionT    vaTryEnterCriticalSection;
 
+CreateFileAT                vaCreateFileA;
+WriteFileT                  vaWriteFile;
+ReadFileT                   vaReadFile;
+
 } // namespace
 
 void rpsInitializeFoundation()
@@ -24,6 +28,9 @@ void rpsInitializeFoundation()
         (void*&)vaEnterCriticalSection = ::GetProcAddress(mod, "EnterCriticalSection");
         (void*&)vaLeaveCriticalSection = ::GetProcAddress(mod, "LeaveCriticalSection");
         (void*&)vaTryEnterCriticalSection = ::GetProcAddress(mod, "TryEnterCriticalSection");
+        (void*&)vaCreateFileA = ::GetProcAddress(mod, "CreateFileA");
+        (void*&)vaWriteFile = ::GetProcAddress(mod, "WriteFile");
+        (void*&)vaReadFile = ::GetProcAddress(mod, "ReadFile");
     }
 }
 
@@ -51,12 +58,14 @@ rpsArchive::~rpsArchive()
 
 void rpsArchive::read(void *dst, size_t size)
 {
-    fread(dst, size, 1, m_file);
+    DWORD read;
+    vaReadFile(m_file, dst, size, &read, nullptr);
 }
 
 void rpsArchive::write(const void *data, size_t size)
 {
-    fwrite(data, size, 1, m_file);
+    DWORD written;
+    vaWriteFile(m_file, data, size, &written, nullptr);
 }
 
 void rpsArchive::io(void *dst, size_t size)
@@ -73,14 +82,17 @@ bool rpsArchive::open(const char *path_to_file, Mode mode)
 {
     close();
     m_mode = mode;
-    m_file = fopen(path_to_file, m_mode==Reader ? "rb" : "wb");
+
+    DWORD accrss = m_mode==Reader ? GENERIC_READ : GENERIC_WRITE;
+    DWORD disposition = m_mode==Reader ? OPEN_EXISTING : CREATE_ALWAYS;
+    m_file = vaCreateFileA(path_to_file, accrss, 0, nullptr, disposition, FILE_ATTRIBUTE_NORMAL, nullptr);
     return m_file!=nullptr;
 }
 
 void rpsArchive::close()
 {
     if(m_file) {
-        fclose(m_file);
+        vaCloseHandle(m_file);
     }
 }
 

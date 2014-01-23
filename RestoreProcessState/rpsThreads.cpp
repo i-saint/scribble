@@ -75,43 +75,41 @@ rpsThreads::~rpsThreads()
 
 void rpsThreads::serialize(rpsArchive &ar)
 {
-    rpsExecExclusive([&](){
-        std::vector<rpsThreadInformation, rps_allocator<rpsThreadInformation> > tinfo;
-        if(ar.isWriter()) {
-            rpsEnumerateThreads(::GetCurrentProcessId(), [&](DWORD tid){
-                if(tid==::GetCurrentThreadId()) { return; }
-                if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
-                    rpsThreadInformation tmp;
-                    tmp.contxt.ContextFlags = CONTEXT_ALL; 
-                    tmp.tid = tid;
-                    ::GetThreadContext(thread, &tmp.contxt);
+    std::vector<rpsThreadInformation, rps_allocator<rpsThreadInformation> > tinfo;
+    if(ar.isWriter()) {
+        rpsEnumerateThreads(::GetCurrentProcessId(), [&](DWORD tid){
+            if(tid==::GetCurrentThreadId()) { return; }
+            if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
+                rpsThreadInformation tmp;
+                tmp.contxt.ContextFlags = CONTEXT_ALL; 
+                tmp.tid = tid;
+                ::GetThreadContext(thread, &tmp.contxt);
 
-                    MEMORY_BASIC_INFORMATION mi;
+                MEMORY_BASIC_INFORMATION mi;
 #if defined(_M_IX86)
-                    ::VirtualQuery((void*)tmp.contxt.Esp, &mi, sizeof(mi));
+                ::VirtualQuery((void*)tmp.contxt.Esp, &mi, sizeof(mi));
 #elif defined(_M_X64)
-                    ::VirtualQuery((void*)tmp.contxt.Rsp, &mi, sizeof(mi));
+                ::VirtualQuery((void*)tmp.contxt.Rsp, &mi, sizeof(mi));
 #endif
-                    tmp.stack_base = mi.BaseAddress;
-                    tmp.stack_data = rps_string((char*)tmp.stack_base, mi.RegionSize);
+                tmp.stack_base = mi.BaseAddress;
+                tmp.stack_data = rps_string((char*)tmp.stack_base, mi.RegionSize);
 
-                    tinfo.push_back(tmp);
-                    ::CloseHandle(thread);
-                }
-            });
-            ar & tinfo;
-        }
-        else if(ar.isReader()) {
-            ar & tinfo;
-            rpsEach(tinfo, [](rpsThreadInformation &tinfo){
-                if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tinfo.tid)) {
-                    memcpy(tinfo.stack_base, &tinfo.stack_data[0], tinfo.stack_data.size());
-                    BOOL r = ::SetThreadContext(thread, &tinfo.contxt);
-                    ::CloseHandle(thread);
-                }
-            });
-        }
-    });
+                tinfo.push_back(tmp);
+                ::CloseHandle(thread);
+            }
+        });
+        ar & tinfo;
+    }
+    else if(ar.isReader()) {
+        ar & tinfo;
+        rpsEach(tinfo, [](rpsThreadInformation &tinfo){
+            if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tinfo.tid)) {
+                memcpy(tinfo.stack_base, &tinfo.stack_data[0], tinfo.stack_data.size());
+                BOOL r = ::SetThreadContext(thread, &tinfo.contxt);
+                ::CloseHandle(thread);
+            }
+        });
+    }
 }
 
 HANDLE rpsThreads::translate(HANDLE h)
