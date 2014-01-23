@@ -44,5 +44,8 @@
     <ClInclude Include="rpsMalloc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="rpsInternal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,23 +1,21 @@
-﻿#include "rps.h"
-#include "rpsInlines.h"
+﻿#include <string>
+#include <windows.h>
+#include "rps.h"
 
 int main(int argc, char *argv[])
 {
-    rpsProcessState::initialize();
+    rpsInitialize();
 
-    std::string *ptest = new std::string("abc");
-    std::string &test = *ptest;
+    std::string test = std::string("abc");
     printf("before serialize. test: %s\n", test.c_str());
 
-    rpsProcessState::getInstance()->serialize("test.stat", rpsArchive::Writer);
-after_serialization:
+    rpsSaveState("test.stat");
 
     printf("after serialize. test: %s\n", test.c_str());
     test += "def";
     printf("after test+=\"def\". test: %s\n", test.c_str());
 
     ::Sleep(2000);
-    rpsProcessState::getInstance()->serialize("test.stat", rpsArchive::Reader);
-    goto after_serialization;
+    rpsLoadState("test.stat");
 
 }

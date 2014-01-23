@@ -1,5 +1,4 @@
-﻿#include "rps.h"
-#include "rpsInlines.h"
+﻿#include "rpsInternal.h"
 
 bool rpsIsValidMemory(void *p)
 {

@@ -1,5 +1,4 @@
-﻿#include "rps.h"
-#include "rpsInlines.h"
+﻿#include "rpsInternal.h"
 
 class rpsFiles : public rpsIModule
 {
@@ -135,7 +134,7 @@ BOOL WINAPI rpsReadFile(
     return ret;
 }
 
-static rpsHookInfo g_rps_hooks[] = {
+static rpsHookInfo g_hookinfo[] = {
     rpsHookInfo("kernel32.dll", "CreateFileA", 0, rpsCreateFileA, &(void*&)origCreateFileA),
     rpsHookInfo("kernel32.dll", "CreateFileW", 0, rpsCreateFileW, &(void*&)origCreateFileW),
     rpsHookInfo("kernel32.dll", "CreateFile2", 0, rpsCreateFile2, &(void*&)origCreateFile2),
@@ -145,14 +144,13 @@ static rpsHookInfo g_rps_hooks[] = {
 
 
 const char*     rpsFiles::getModuleName() const { return "rpsFiles"; }
-size_t          rpsFiles::getNumHooks() const   { return _countof(g_rps_hooks); }
-rpsHookInfo*    rpsFiles::getHooks() const      { return g_rps_hooks; }
+size_t          rpsFiles::getNumHooks() const   { return _countof(g_hookinfo); }
+rpsHookInfo*    rpsFiles::getHooks() const      { return g_hookinfo; }
 
 
 rpsFiles* rpsFiles::getInstance()
 {
-    static rpsFiles *s_inst;
-    if(!s_inst) { s_inst = new rpsFiles(); }
+    static rpsFiles *s_inst = new rpsFiles();
     return s_inst;
 }
 
@@ -170,7 +168,8 @@ void rpsFiles::serialize(rpsArchive &ar)
 
 HANDLE rpsFiles::translate(HANDLE h)
 {
-    return nullptr;
+    // todo
+    return h;
 }
 
 rpsIModule* rpsCreateFiles() { return rpsFiles::getInstance(); }

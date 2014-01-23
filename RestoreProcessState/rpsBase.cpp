@@ -1,5 +1,5 @@
-﻿#include "rps.h"
-#include "rpsInlines.h"
+﻿#include "rpsInternal.h"
+
 
 extern void rpsInitializeMalloc();
 extern rpsIModule* rpsCreateMemory();
@@ -63,6 +63,16 @@ void rpsArchive::close()
     }
 }
 
+
+LPTHREAD_START_ROUTINE;
+
+DWORD __stdcall rpsMainThread(LPVOID lpThreadParameter)
+{
+    ((rpsProcessState*)lpThreadParameter)->mainloop();
+    return 0;
+}
+
+
 void rpsProcessState::initialize()
 {
     rpsInitializeMalloc();
@@ -71,15 +81,25 @@ void rpsProcessState::initialize()
 
 rpsProcessState* rpsProcessState::getInstance()
 {
-    static rpsProcessState *g_procstate = nullptr;
-    if(!g_procstate) {
-        g_procstate = new rpsProcessState();
-    }
-    return g_procstate;
+    static rpsProcessState *s_inst = new rpsProcessState();
+    return s_inst;
 }
+
+void rpsProcessState::serialize(const char *path, rpsArchive::Mode mode)
+{
+    SerializeRequest req = {rps_string(path), mode};
+    getInstance()->m_requests.push_back(req);
+    while(!getInstance()->m_requests.empty()) {
+        ::Sleep(1);
+    }
+}
+
 
 rpsProcessState::rpsProcessState()
 {
+    DWORD tid;
+    ::CreateThread(nullptr, 0, rpsMainThread, this, 0, &tid);
+
     rpsModuleCreator *ctab = rpsGetModuleCreators();
     size_t n = rpsGetNumModuleCreators();
     for(size_t mi=0; mi<n; ++mi) {
@@ -94,9 +114,9 @@ rpsProcessState::rpsProcessState()
     }
 
     rpsEnumerateModules([&](HMODULE mod){
-        rpsEach(m_hooks, [&](DllHookTable::value_type &hp){
+        rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
             rpsEnumerateDLLImports(mod, hp.first.c_str(), [&](const char *name, void *&func){
-                HookTable &htab = hp.second;
+                FuncHookTable &htab = hp.second;
                 auto it = htab.find(rps_string(name));
                 if(it!=htab.end()) {
                     Hooks &hooks = it->second;
@@ -111,10 +131,10 @@ rpsProcessState::rpsProcessState()
             });
         });
     });
-    rpsEach(m_hooks, [&](DllHookTable::value_type &hp){
+    rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
         if(HMODULE mod = ::LoadLibraryA(hp.first.c_str())) {
-            HookTable &htab = hp.second;
-            rpsEach(htab, [&](HookTable::value_type &hp2){
+            FuncHookTable &htab = hp.second;
+            rpsEach(htab, [&](FuncHookTable::value_type &hp2){
                 rpsHookInfo *hinfo = hp2.second[0];
                 rpsOverrideDLLExport(mod, hinfo->funcname, hinfo->hookfunc, nullptr);
             });
@@ -126,40 +146,50 @@ rpsProcessState::~rpsProcessState()
 {
 }
 
-void rpsProcessState::serialize(rpsArchive &ar)
+void rpsProcessState::serializeImpl(rpsArchive &ar)
 {
     eachModules([&](rpsIModule *mod){
         mod->serialize(ar);
     });
 }
 
-void rpsProcessState::serialize(const char *path, rpsArchive::Mode mode)
+void rpsProcessState::serializeImpl(const char *path, rpsArchive::Mode mode)
 {
     rpsArchive ar;
     if(ar.open(path, mode)) {
-        serialize(ar);
+        serializeImpl(ar);
     }
 }
 
-void rpsProcessState::setHooks()
+void rpsProcessState::mainloop()
 {
-
+    for(;;) {
+        if(!m_requests.empty()) {
+            rpsEach(m_requests, [&](SerializeRequest &req){
+                serializeImpl(req.path.c_str(), req.mode);
+            });
+            m_requests.clear();
+        }
+        ::Sleep(1);
+    }
 }
 
 
+void rpsInitialize()
+{
+    rpsProcessState::initialize();
+}
 
+void rpsSaveState(const char *path_to_outfile)
+{
+    rpsProcessState::serialize(path_to_outfile, rpsArchive::Writer);
+}
 
-//void rpsInitialize()
-//{
-//	rpsEnumerateModules([](HMODULE mod){
-//		rpsEnumerateDLLImports(mod, "kernel32.dll", [&](const char *name, void *&func){
-//			if     (strcmp(name, "HeapAlloc")	==0) { rpsForceWrite<void*>(func, rpsHeapAlloc); }
-//			else if(strcmp(name, "HeapReAlloc")	==0) { rpsForceWrite<void*>(func, rpsHeapReAlloc); }
-//			else if(strcmp(name, "HeapFree")	==0) { rpsForceWrite<void*>(func, rpsHeapFree); }
-//		});
-//	});
-//}
-//
+void rpsLoadState(const char *path_to_infile)
+{
+    rpsProcessState::serialize(path_to_infile, rpsArchive::Reader);
+}
+
 //
 //void rpsRestore()
 //{

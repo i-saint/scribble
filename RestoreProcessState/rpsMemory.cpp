@@ -1,5 +1,10 @@
-﻿#include "rps.h"
-#include "rpsInlines.h"
+﻿#include "rpsInternal.h"
+
+//// todo
+//#define USE_DL_PREFIX
+//extern "C" {
+//#include "malloc.h"
+//};
 
 class rpsMemory : public rpsIModule
 {
@@ -52,6 +57,8 @@ void  rpsFree(void *p)
     origHeapFree((HANDLE)_get_heap_handle(), 0, p);
 }
 
+namespace {
+
 LPVOID WINAPI rpsHeapAlloc( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes )
 {
     return rpsMemory::getInstance()->alloc(dwBytes);
@@ -67,27 +74,29 @@ BOOL WINAPI rpsHeapFree( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem )
     rpsMemory::getInstance()->free(lpMem);
     return TRUE;
 }
+
 BOOL WINAPI rpsHeapValidate( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem )
 {
     return TRUE;
 }
 
-static rpsHookInfo g_rps_hooks[] = {
+rpsHookInfo g_hookinfo[] = {
     rpsHookInfo("kernel32.dll", "HeapAlloc",   0, rpsHeapAlloc,   &(void*&)origHeapAlloc),
     rpsHookInfo("kernel32.dll", "HeapReAlloc", 0, rpsHeapReAlloc, &(void*&)origHeapReAlloc),
     rpsHookInfo("kernel32.dll", "HeapFree",    0, rpsHeapFree,    &(void*&)origHeapFree),
     rpsHookInfo("kernel32.dll", "HeapValidate",0, rpsHeapValidate,&(void*&)origHeapValidate),
 };
 
+} // namespace
+
 
 const char*     rpsMemory::getModuleName() const    { return "rpsMemory"; }
-size_t          rpsMemory::getNumHooks() const      { return _countof(g_rps_hooks); }
-rpsHookInfo*    rpsMemory::getHooks() const         { return g_rps_hooks; }
+size_t          rpsMemory::getNumHooks() const      { return _countof(g_hookinfo); }
+rpsHookInfo*    rpsMemory::getHooks() const         { return g_hookinfo; }
 
 rpsMemory* rpsMemory::getInstance()
 {
-    static rpsMemory *s_inst = nullptr;
-    if(!s_inst) { s_inst = new rpsMemory(); }
+    static rpsMemory *s_inst = new rpsMemory();
     return s_inst;
 }
 

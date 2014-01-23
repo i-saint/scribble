@@ -28,11 +28,31 @@ inline void rpsEnumerateThreads(DWORD pid, const F &proc)
     }
 }
 
+// F: []() -> void
+template<class F>
+void rpsExecExclusive(const F &proc)
+{
+    std::vector<HANDLE, rps_allocator<HANDLE> > threads;
+    rpsEnumerateThreads(::GetCurrentProcessId(), [&](DWORD tid){
+        if(tid==::GetCurrentThreadId()) { return; }
+        if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
+            ::SuspendThread(thread);
+            threads.push_back(thread);
+        }
+    });
+    proc();
+    std::for_each(threads.begin(), threads.end(), [](HANDLE thread){
+        ::ResumeThread(thread);
+        ::CloseHandle(thread);
+    });
+}
+
+
 // F: [](HMODULE mod) -> void
 template<class F>
 inline void rpsEnumerateModules(const F &f)
 {
-    std::vector<HMODULE> modules;
+    std::vector<HMODULE, rps_allocator<HANDLE> > modules;
     DWORD num_modules;
     ::EnumProcessModules(::GetCurrentProcess(), nullptr, 0, &num_modules);
     modules.resize(num_modules/sizeof(HMODULE));
@@ -99,6 +119,54 @@ template<class C, class F>
 inline void rpsREach(C &cont, const F &f)
 {
     std::for_each(cont.rbegin(), cont.rend(), f);
+}
+
+inline rpsArchive& operator&(rpsArchive &ar,     char &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar,   int8_t &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar,  uint8_t &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar,  int16_t &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar, uint16_t &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar,  int32_t &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar, uint32_t &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar,  int64_t &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar, uint64_t &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar,    float &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar,   double &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar,          long &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar, unsigned long &v) { ar.io(&v, sizeof(v)); return ar; }
+
+template<class CharT, template<class> class Allocator >
+inline rpsArchive& operator&(rpsArchive &ar, std::basic_string<CharT, std::char_traits<CharT>, Allocator<CharT> > &v)
+{
+	if(ar.isWriter()) {
+		size_t size = v.size();
+		ar & size;
+		if(size>0) { ar.io(&v[0], size); }
+	}
+	else if(ar.isReader()) {
+		size_t size;
+		ar & size;
+		v.resize(size);
+		if(size>0) { ar.io(&v[0], size); }
+	}
+	return ar;
+}
+
+template<class T, template<class> class Allocator >
+inline rpsArchive& operator&(rpsArchive &ar, std::vector<T, Allocator<T> > &v)
+{
+	if(ar.isReader()) {
+		size_t size;
+		ar & size;
+		v.resize(size);
+		rpsEach(v, [&](T &e){ ar & e; });
+	}
+	else if(ar.isWriter()) {
+		size_t size = v.size();
+		ar & size;
+		rpsEach(v, [&](T &e){ ar & e; });
+	}
+	return ar;
 }
 
 #endif // rpsInlines_h

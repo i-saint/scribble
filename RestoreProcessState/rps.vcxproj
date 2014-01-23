@@ -83,6 +83,7 @@
   <ItemGroup>
     <ClInclude Include="rps.h" />
     <ClInclude Include="rpsInlines.h" />
+    <ClInclude Include="rpsInternal.h" />
     <ClInclude Include="rpsMalloc.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
