@@ -59,13 +59,13 @@ rpsArchive::~rpsArchive()
 void rpsArchive::read(void *dst, size_t size)
 {
     DWORD read;
-    vaReadFile(m_file, dst, size, &read, nullptr);
+    vaReadFile(m_file, dst, (DWORD)size, &read, nullptr);
 }
 
 void rpsArchive::write(const void *data, size_t size)
 {
     DWORD written;
-    vaWriteFile(m_file, data, size, &written, nullptr);
+    vaWriteFile(m_file, data, (DWORD)size, &written, nullptr);
 }
 
 void rpsArchive::io(void *dst, size_t size)

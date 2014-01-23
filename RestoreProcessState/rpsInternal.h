@@ -29,10 +29,6 @@
 #pragma comment(lib, "psapi.lib")
 
 
-#define rpsDLLExport     __declspec(dllexport)
-#define rpsDLLImport     __declspec(dllimport)
-
-
 struct rpsHookInfo
 {
 	const char *dllname;

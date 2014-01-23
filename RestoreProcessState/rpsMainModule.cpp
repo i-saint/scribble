@@ -136,17 +136,17 @@ void rpsMainModule::mainloop()
 }
 
 
-void rpsInitialize()
+rpsAPI void rpsInitialize()
 {
     rpsMainModule::initialize();
 }
 
-void rpsSaveState(const char *path_to_outfile)
+rpsAPI void rpsSaveState(const char *path_to_outfile)
 {
     rpsMainModule::serialize(path_to_outfile, rpsArchive::Writer);
 }
 
-void rpsLoadState(const char *path_to_infile)
+rpsAPI void rpsLoadState(const char *path_to_infile)
 {
     rpsMainModule::serialize(path_to_infile, rpsArchive::Reader);
 }
