@@ -32,6 +32,7 @@ class rpsArchive
 public:
     enum Mode
     {
+        Unknown,
         Reader,
         Writer,
     };
@@ -43,11 +44,12 @@ public:
     void io(void *dst, size_t size);
     bool open(const char *path_to_file, Mode mode);
     void close();
-    bool isReader() const { return m_is_reader; }
+    bool isReader() const { return m_mode==Reader; }
+    bool isWriter() const { return m_mode==Writer; }
 
 private:
     FILE *m_file;
-    bool m_is_reader;
+    Mode m_mode;
 };
 inline rpsArchive& operator&(rpsArchive &ar,     char v) { ar.io(&v, sizeof(v)); return ar; }
 inline rpsArchive& operator&(rpsArchive &ar,   int8_t v) { ar.io(&v, sizeof(v)); return ar; }

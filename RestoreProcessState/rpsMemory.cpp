@@ -8,9 +8,9 @@ public:
 
     rpsMemory();
     ~rpsMemory();
-    virtual const char*		getModuleName() const;
-    virtual size_t			getNumHooks() const;
-    virtual rpsHookInfo*	getHooks() const;
+    virtual const char*     getModuleName() const;
+    virtual size_t          getNumHooks() const;
+    virtual rpsHookInfo*    getHooks() const;
     virtual void serialize(rpsArchive &ar);
 
     void* alloc(size_t size);
@@ -26,6 +26,7 @@ typedef LPVOID (WINAPI *HeapAllocT)( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes
 typedef LPVOID (WINAPI *HeapReAllocT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes );
 typedef BOOL (WINAPI *HeapFreeT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem );
 typedef BOOL (WINAPI *HeapValidateT)( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem );
+
 HeapAllocT      origHeapAlloc   = nullptr;
 HeapReAllocT    origHeapReAlloc = nullptr;
 HeapFreeT       origHeapFree    = nullptr;
@@ -34,12 +35,10 @@ HeapValidateT   origHeapValidate= nullptr;
 void rpsInitializeMalloc()
 {
     if(!origHeapAlloc) {
-        rpsEnumerateModules([&](HMODULE mod){
-            rpsEnumerateDLLImports(mod, "kernel32.dll", [&](const char *name, void *&func){
-                if     (strcmp(name, "HeapAlloc")==0) { origHeapAlloc=(HeapAllocT)func; }
-                else if(strcmp(name, "HeapFree")==0)  { origHeapFree=(HeapFreeT)func; }
-            });
-        });
+        if(HMODULE mod = ::LoadLibraryA("kernel32.dll")) {
+            (void*&)origHeapAlloc = ::GetProcAddress(mod, "HeapAlloc");
+            (void*&)origHeapFree = ::GetProcAddress(mod, "HeapFree");
+        }
     }
 }
 

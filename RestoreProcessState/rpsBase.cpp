@@ -19,7 +19,7 @@ rpsDLLExport rpsModuleCreator*	rpsGetModuleCreators()		{ return g_mcreators; }
 
 rpsArchive::rpsArchive()
     : m_file(nullptr)
-    , m_is_reader(false)
+    , m_mode(Unknown)
 {
 }
 
@@ -51,7 +51,8 @@ void rpsArchive::io(void *dst, size_t size)
 bool rpsArchive::open(const char *path_to_file, Mode mode)
 {
     close();
-    m_file = fopen(path_to_file, mode==Reader ? "rb" : "wb");
+    m_mode = mode;
+    m_file = fopen(path_to_file, m_mode==Reader ? "rb" : "wb");
     return m_file!=nullptr;
 }
 
