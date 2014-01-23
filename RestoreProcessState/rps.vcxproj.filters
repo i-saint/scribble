@@ -24,13 +24,13 @@
     <ClCompile Include="rpsThreads.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="rpsCore.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="rpsFoundation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="rpsMainModule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rpsPCH.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -48,6 +48,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="rpsFuncTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpsPCH.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

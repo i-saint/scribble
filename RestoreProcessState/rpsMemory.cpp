@@ -1,4 +1,5 @@
-﻿#include "rpsInternal.h"
+﻿#include "rpsPCH.h"
+#include "rpsInternal.h"
 
 //// todo
 //#define USE_DL_PREFIX

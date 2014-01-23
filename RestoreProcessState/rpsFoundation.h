@@ -8,6 +8,11 @@ void rpsInitializeFoundation();
 void* rpsMalloc(size_t size);
 void rpsFree(void *addr);
 
+bool rpsIsValidMemory(void *p);
+BYTE* rpsAddJumpInstruction(BYTE* from, const BYTE* to);
+void* rpsOverrideDLLExport(HMODULE module, const char *funcname, void *hook_, void *trampoline_space);
+
+
 // rpsMalloc() で実装されたアロケータ。
 template<typename T>
 class rps_allocator
