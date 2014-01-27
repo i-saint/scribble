@@ -162,7 +162,7 @@ rpsProtocolSocket::~rpsProtocolSocket() {}
 bool rpsProtocolSocket::open(const char *host, uint16_t port) { return m_socket.open(host, port); }
 void rpsProtocolSocket::close() { m_socket.close(); }
 
-bool rpsProtocolSocket::read(std::string &o_str)
+bool rpsProtocolSocket::read(rps_string &o_str)
 {
     uint32_t len;
     if(m_socket.read(&len, sizeof(len))==sizeof(len)) {

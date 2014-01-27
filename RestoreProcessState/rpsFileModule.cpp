@@ -3,15 +3,14 @@
 
 namespace {
 
-class rpsFiles : public rpsIModule
+class rpsFileModule : public rpsIModule
 {
 public:
-    static rpsFiles* getInstance();
+    static rpsFileModule* getInstance();
 
-    rpsFiles();
-    ~rpsFiles();
+    rpsFileModule();
+    ~rpsFileModule();
     virtual const char*     getModuleName() const;
-    virtual size_t          getNumHooks() const;
     virtual rpsHookInfo*    getHooks() const;
     virtual void serialize(rpsArchive &ar);
 
@@ -98,32 +97,33 @@ rpsHookInfo g_hookinfo[] = {
     rpsHookInfo("kernel32.dll", "CreateFile2", 0, rpsCreateFile2, &(void*&)vaCreateFile2),
     rpsHookInfo("kernel32.dll", "WriteFile",   0, rpsWriteFile,   &(void*&)vaWriteFile),
     rpsHookInfo("kernel32.dll", "ReadFile",    0, rpsReadFile,    &(void*&)vaReadFile),
+
+    rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };
 
-const char*     rpsFiles::getModuleName() const { return "rpsFiles"; }
-size_t          rpsFiles::getNumHooks() const   { return _countof(g_hookinfo); }
-rpsHookInfo*    rpsFiles::getHooks() const      { return g_hookinfo; }
+const char*     rpsFileModule::getModuleName() const { return "rpsFileModule"; }
+rpsHookInfo*    rpsFileModule::getHooks() const      { return g_hookinfo; }
 
 
-rpsFiles* rpsFiles::getInstance()
+rpsFileModule* rpsFileModule::getInstance()
 {
-    static rpsFiles *s_inst = new rpsFiles();
+    static rpsFileModule *s_inst = new rpsFileModule();
     return s_inst;
 }
 
-rpsFiles::rpsFiles()
+rpsFileModule::rpsFileModule()
 {
 }
 
-rpsFiles::~rpsFiles()
+rpsFileModule::~rpsFileModule()
 {
 }
 
-void rpsFiles::serialize(rpsArchive &ar)
+void rpsFileModule::serialize(rpsArchive &ar)
 {
 }
 
-HANDLE rpsFiles::translate(HANDLE h)
+HANDLE rpsFileModule::translate(HANDLE h)
 {
     // todo
     return h;
@@ -131,4 +131,4 @@ HANDLE rpsFiles::translate(HANDLE h)
 
 } // namespace
 
-rpsDLLExport rpsIModule* rpsCreateFiles() { return rpsFiles::getInstance(); }
+rpsDLLExport rpsIModule* rpsCreateFileModule() { return rpsFileModule::getInstance(); }

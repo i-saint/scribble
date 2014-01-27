@@ -169,10 +169,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="rpsCommunicator.cpp" />
-    <ClCompile Include="rpsFiles.cpp" />
+    <ClCompile Include="rpsFileModule.cpp" />
     <ClCompile Include="rpsFoundation.cpp" />
     <ClCompile Include="rpsMainModule.cpp" />
-    <ClCompile Include="rpsMemory.cpp" />
+    <ClCompile Include="rpsMemoryModule.cpp" />
     <ClCompile Include="rpsNetwork.cpp" />
     <ClCompile Include="rpsPCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -180,7 +180,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="rpsThreads.cpp" />
+    <ClCompile Include="rpsThreadModule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rps.h" />

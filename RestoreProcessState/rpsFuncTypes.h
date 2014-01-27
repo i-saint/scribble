@@ -9,6 +9,7 @@ typedef LPVOID (WINAPI *HeapAllocT)( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes
 typedef LPVOID (WINAPI *HeapReAllocT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes );
 typedef BOOL (WINAPI *HeapFreeT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem );
 typedef BOOL (WINAPI *HeapValidateT)( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem );
+typedef SIZE_T (WINAPI *HeapSizeT)(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
 
 // thread
 typedef LPVOID (WINAPI *CreateThreadT)(

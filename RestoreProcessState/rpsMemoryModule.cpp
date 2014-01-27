@@ -9,20 +9,20 @@
 
 namespace {
 
-class rpsMemory : public rpsIModule
+class rpsMemoryModule : public rpsIModule
 {
 public:
-    static rpsMemory* getInstance();
+    static rpsMemoryModule* getInstance();
 
-    rpsMemory();
-    ~rpsMemory();
+    rpsMemoryModule();
+    ~rpsMemoryModule();
     virtual const char*     getModuleName() const;
-    virtual size_t          getNumHooks() const;
     virtual rpsHookInfo*    getHooks() const;
     virtual void serialize(rpsArchive &ar);
 
     void* alloc(size_t size);
     void free(void *addr);
+    size_t getSize(const void *addr) const;
 
 private:
     char *m_mem;
@@ -47,20 +47,21 @@ HeapAllocT      vaHeapAlloc;
 HeapReAllocT    vaHeapReAlloc;
 HeapFreeT       vaHeapFree;
 HeapValidateT   vaHeapValidate;
+HeapSizeT       vaHeapSize;
 
 LPVOID WINAPI rpsHeapAlloc( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes )
 {
-    return rpsMemory::getInstance()->alloc(dwBytes);
+    return rpsMemoryModule::getInstance()->alloc(dwBytes);
 }
 
 LPVOID WINAPI rpsHeapReAlloc( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes )
 {
-    return rpsMemory::getInstance()->alloc(dwBytes);
+    return rpsMemoryModule::getInstance()->alloc(dwBytes);
 }
 
 BOOL WINAPI rpsHeapFree( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem )
 {
-    rpsMemory::getInstance()->free(lpMem);
+    rpsMemoryModule::getInstance()->free(lpMem);
     return TRUE;
 }
 
@@ -69,46 +70,52 @@ BOOL WINAPI rpsHeapValidate( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem )
     return TRUE;
 }
 
+BOOL WINAPI rpsHeapSize( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem )
+{
+    return rpsMemoryModule::getInstance()->getSize(lpMem);
+}
+
 rpsHookInfo g_hookinfo[] = {
     rpsHookInfo("kernel32.dll", "HeapAlloc",   0, rpsHeapAlloc,   &(void*&)vaHeapAlloc),
     rpsHookInfo("kernel32.dll", "HeapReAlloc", 0, rpsHeapReAlloc, &(void*&)vaHeapReAlloc),
     rpsHookInfo("kernel32.dll", "HeapFree",    0, rpsHeapFree,    &(void*&)vaHeapFree),
     rpsHookInfo("kernel32.dll", "HeapValidate",0, rpsHeapValidate,&(void*&)vaHeapValidate),
+    rpsHookInfo("kernel32.dll", "HeapSize",    0, rpsHeapSize,    &(void*&)vaHeapSize),
+
+    rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };
 
 
-const char*     rpsMemory::getModuleName() const    { return "rpsMemory"; }
-size_t          rpsMemory::getNumHooks() const      { return _countof(g_hookinfo); }
-rpsHookInfo*    rpsMemory::getHooks() const         { return g_hookinfo; }
+const char*     rpsMemoryModule::getModuleName() const    { return "rpsMemoryModule"; }
+rpsHookInfo*    rpsMemoryModule::getHooks() const         { return g_hookinfo; }
 
-rpsMemory* rpsMemory::getInstance()
+rpsMemoryModule* rpsMemoryModule::getInstance()
 {
-    static rpsMemory *s_inst = new rpsMemory();
+    static rpsMemoryModule *s_inst = new rpsMemoryModule();
     return s_inst;
 }
 
-rpsMemory::rpsMemory()
+rpsMemoryModule::rpsMemoryModule()
     : m_mem(nullptr)
     , m_size(0)
     , m_pos(0)
 {
     // 適当
-    m_size = 0x10000000;
-    void *addr = 
 #if defined(_M_IX86)
-        (void*)0x60000000;
+    m_size = 0x10000000;
 #elif defined(_M_X64)
-        (void*)0x60000000;
+    m_size = 0x40000000;
 #endif 
+	void *addr = (void*)0x60000000;
     m_mem = (char*)::VirtualAlloc(addr, m_size, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 }
 
-rpsMemory::~rpsMemory()
+rpsMemoryModule::~rpsMemoryModule()
 {
     // 意図的に開放しない
 }
 
-void rpsMemory::serialize(rpsArchive &ar)
+void rpsMemoryModule::serialize(rpsArchive &ar)
 {
     ar & m_size & m_pos;
     ar.io(m_mem, m_pos);
@@ -152,22 +159,27 @@ void rpsMemory::serialize(rpsArchive &ar)
     }
 }
 
-void* rpsMemory::alloc(size_t size)
+void* rpsMemoryModule::alloc(size_t size)
 {
     // 現状増える一方
     // todo: dlmalloc かなんか使う
-    const size_t minimum_alignment = 8;
+    const size_t alignment_mask = 8-1;
     void *ret = m_mem + m_pos;
     m_pos += size;
-    m_pos = m_pos+minimum_alignment-1 & ~minimum_alignment;
+    m_pos = m_pos+alignment_mask & ~alignment_mask;
     return ret;
 }
 
-void rpsMemory::free(void *addr)
+void rpsMemoryModule::free(void *addr)
 {
     // todo
 }
 
+size_t rpsMemoryModule::getSize( const void *addr ) const
+{
+    return m_size;
+}
+
 } // namespace
 
-rpsDLLExport rpsIModule* rpsCreateMemory() { return rpsMemory::getInstance(); }
+rpsDLLExport rpsIModule* rpsCreateMemoryModule() { return rpsMemoryModule::getInstance(); }

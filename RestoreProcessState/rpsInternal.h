@@ -4,6 +4,7 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif // WIN32_LEAN_AND_MEAN
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <cstdio>
 #include <cstdlib>
@@ -56,16 +57,15 @@ struct rpsHookInfo
     }
 };
 
-
 class rpsIModule
 {
 public:
     virtual ~rpsIModule() {}
     virtual void            release() { delete this; }
     virtual const char*     getModuleName() const=0;
-    virtual size_t          getNumHooks() const=0;
     virtual rpsHookInfo*    getHooks() const=0;
     virtual void            serialize(rpsArchive &ar)=0;
+    virtual void            handleMessage(rpsMessage &mes) {}
 
     void* operator new(size_t s) { return rpsMalloc(s); }
     void  operator delete(void *p) { return rpsFree(p); }
@@ -73,12 +73,28 @@ public:
 typedef rpsIModule* (*rpsModuleCreator)();
 
 typedef std::basic_string<char, std::char_traits<char>, rps_allocator<char> > rps_string;
+class rpsCommunicator;
 
 class rpsMainModule
 {
 public:
+    struct SerializeRequest
+    {
+        rps_string path;
+        rpsArchive::Mode mode;
+    };
+    typedef std::map<rps_string, rpsIModule*, std::less<rps_string>, rps_allocator<std::pair<rps_string, rpsIModule*> > > Modules;
+    typedef std::vector<rpsHookInfo*, rps_allocator<rpsHookInfo*> > Hooks;
+    typedef std::map<rps_string, Hooks, std::less<rps_string>, rps_allocator<std::pair<rps_string, Hooks> > > FuncHookTable;
+    typedef std::map<rps_string, FuncHookTable, std::less<rps_string>, rps_allocator<std::pair<rps_string, FuncHookTable> > > DLLHookTable;
+    typedef std::vector<SerializeRequest, rps_allocator<SerializeRequest> > Requests;
+
     static void initialize();
-    static void serialize(const char *path, rpsArchive::Mode mode);
+    static rpsMainModule* getInstance();
+
+    void sendMessage(rpsMessage &m);
+    void pushRequest(SerializeRequest &req);
+    void processRequest();
 
     void* operator new(size_t s) { return rpsMalloc(s); }
     void  operator delete(void *p) { return rpsFree(p); }
@@ -86,22 +102,8 @@ public:
 private:
     friend DWORD __stdcall rpsMainThread(LPVOID lpThreadParameter);
 
-    struct SerializeRequest
-    {
-        rps_string path;
-        rpsArchive::Mode mode;
-    };
-
-    typedef std::map<rps_string, rpsIModule*, std::less<rps_string>, rps_allocator<std::pair<rps_string, rpsIModule*> > > Modules;
-    typedef std::vector<rpsHookInfo*, rps_allocator<rpsHookInfo*> > Hooks;
-    typedef std::map<rps_string, Hooks, std::less<rps_string>, rps_allocator<std::pair<rps_string, Hooks> > > FuncHookTable;
-    typedef std::map<rps_string, FuncHookTable, std::less<rps_string>, rps_allocator<std::pair<rps_string, FuncHookTable> > > DLLHookTable;
-    typedef std::vector<SerializeRequest, rps_allocator<SerializeRequest> > Requests;
-
-    static rpsMainModule* getInstance();
     rpsMainModule();
     ~rpsMainModule();
-    void processRequest(SerializeRequest &req);
     void serializeImpl(rpsArchive &ar);
     void serializeImpl(const char *path, rpsArchive::Mode mode);
     void mainloop();
@@ -119,6 +121,7 @@ private:
     DLLHookTable m_hooks;
     Requests m_requests;
     rpsMutex m_mtx_requests;
+    rpsCommunicator *m_communicator;
 };
 
 #include "rpsInlines.h"

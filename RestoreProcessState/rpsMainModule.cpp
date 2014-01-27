@@ -1,18 +1,19 @@
 ﻿#include "rpsPCH.h"
 #include "rpsInternal.h"
-#include "rpsNetwork.h"
+#include "rpsCommunicator.h"
 
 
-extern rpsIModule* rpsCreateMemory();
-extern rpsIModule* rpsCreateThreads();
-extern rpsIModule* rpsCreateFiles();
+extern rpsIModule* rpsCreateMemoryModule();
+extern rpsIModule* rpsCreateThreadModule();
+extern rpsIModule* rpsCreateFileModule();
 
 static rpsModuleCreator g_mcreators[] = {
-    rpsCreateMemory,
-    rpsCreateThreads,
-    rpsCreateFiles,
+    rpsCreateMemoryModule,
+    rpsCreateThreadModule,
+    rpsCreateFileModule,
+
+    nullptr,
 };
-rpsDLLExport size_t             rpsGetNumModuleCreators()   { return _countof(g_mcreators); }
 rpsDLLExport rpsModuleCreator*  rpsGetModuleCreators()      { return g_mcreators; }
 
 
@@ -31,33 +32,31 @@ void rpsMainModule::initialize()
     getInstance();
 }
 
+static rpsMainModule *g_inst;
+
 rpsMainModule* rpsMainModule::getInstance()
 {
-    static rpsMainModule *s_inst = new rpsMainModule();
-    return s_inst;
-}
-
-void rpsMainModule::serialize(const char *path, rpsArchive::Mode mode)
-{
-    SerializeRequest req = {rps_string(path), mode};
-    getInstance()->processRequest(req);
+    if(!g_inst) { new rpsMainModule(); }
+    return g_inst;
 }
 
 
 rpsMainModule::rpsMainModule()
 {
+    g_inst = this;
+
     DWORD tid;
     ::CreateThread(nullptr, 0, rpsMainThread, this, 0, &tid);
 
     rpsModuleCreator *ctab = rpsGetModuleCreators();
-    size_t n = rpsGetNumModuleCreators();
-    for(size_t mi=0; mi<n; ++mi) {
+    for(size_t mi=0; ; ++mi) {
+        if(!ctab[mi]) { break; }
         rpsIModule *mod = ctab[mi]();
         m_modules[mod->getModuleName()] = mod;
 
         rpsHookInfo *hooks = mod->getHooks();
-        size_t num_hooks = mod->getNumHooks();
-        for(size_t hi=0; hi<num_hooks; ++hi) {
+        for(size_t hi=0; ; ++hi) {
+            if(!hooks[hi].dllname) { break; }
             m_hooks[hooks[hi].dllname][hooks[hi].funcname].push_back(&hooks[hi]);
         }
     }
@@ -89,18 +88,23 @@ rpsMainModule::rpsMainModule()
             });
         }
     });
+
+    //m_communicator = new rpsCommunicator();
+    //m_communicator->run(rpsDefaultPort);
 }
 
 rpsMainModule::~rpsMainModule()
 {
 }
 
-void rpsMainModule::processRequest(SerializeRequest &req)
+void rpsMainModule::pushRequest( SerializeRequest &req )
 {
-    {
-        rpsMutex::ScopedLock lock(m_mtx_requests);
-        m_requests.push_back(req);
-    }
+    rpsMutex::ScopedLock lock(m_mtx_requests);
+    m_requests.push_back(req);
+}
+
+void rpsMainModule::processRequest()
+{
     while(!m_requests.empty()) {
         ::Sleep(1);
     }
@@ -137,9 +141,18 @@ void rpsMainModule::mainloop()
     }
 }
 
+void rpsMainModule::sendMessage( rpsMessage &m )
+{
+    auto it = m_modules.find(m.modulename);
+    if(it!=m_modules.end()) {
+        it->second->handleMessage(m);
+    }
+}
+
 
 rpsAPI void rpsInitialize()
 {
+    if(g_inst) { return; }
     rpsInitializeFoundation();
     rpsExecExclusive([](){
         rpsMainModule::initialize();
@@ -148,12 +161,21 @@ rpsAPI void rpsInitialize()
 
 rpsAPI void rpsSaveState(const char *path_to_outfile)
 {
-    rpsMainModule::serialize(path_to_outfile, rpsArchive::Writer);
+    rpsMainModule::SerializeRequest req = {rps_string(path_to_outfile), rpsArchive::Writer};
+    rpsMainModule::getInstance()->pushRequest(req);
+    rpsMainModule::getInstance()->processRequest();
 }
 
 rpsAPI void rpsLoadState(const char *path_to_infile)
 {
-    rpsMainModule::serialize(path_to_infile, rpsArchive::Reader);
+    rpsMainModule::SerializeRequest req = {rps_string(path_to_infile), rpsArchive::Reader};
+    rpsMainModule::getInstance()->pushRequest(req);
+    rpsMainModule::getInstance()->processRequest();
+}
+
+rpsAPI void rpsSendMessage(rpsMessage &mes)
+{
+    rpsMainModule::getInstance()->sendMessage(mes);
 }
 
 

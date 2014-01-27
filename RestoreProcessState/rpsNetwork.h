@@ -1,6 +1,8 @@
 ﻿#ifndef rpsNetwork_h
 #define rpsNetwork_h
 
+#define rpsDefaultPort 14846
+
 class rpsTCPSocket;
 class rpsCommunicator;
 void rpsInitializeNetwork();
@@ -39,7 +41,7 @@ public:
     ~rpsProtocolSocket();
     bool open(const char *host, uint16_t port);
     void close();
-    bool read(std::string &o_str);
+    bool read(rps_string &o_str);
     bool write(const void *data, uint32_t data_size);
 private:
     rpsTCPSocket m_socket;

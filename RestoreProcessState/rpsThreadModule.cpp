@@ -3,21 +3,26 @@
 
 namespace {
 
-class rpsThreads : public rpsIModule
+class rpsThreadModule : public rpsIModule
 {
 public:
-    static rpsThreads* getInstance();
+    static rpsThreadModule* getInstance();
 
-    rpsThreads();
-    ~rpsThreads();
+    rpsThreadModule();
+    ~rpsThreadModule();
     virtual const char*     getModuleName() const;
-    virtual size_t          getNumHooks() const;
     virtual rpsHookInfo*    getHooks() const;
     virtual void serialize(rpsArchive &ar);
+    virtual void handleMessage(rpsMessage &m);
 
+    void addExcludeThread(DWORD tid);
+    bool isExcludeThread(DWORD tid) const;
     HANDLE translate(HANDLE h);
 
 private:
+    typedef std::vector<DWORD, rps_allocator<DWORD> > ThreadIDs;
+    ThreadIDs m_exclude_threads;
+    rpsMutex m_mutex;
 };
 
 struct rpsThreadInformation
@@ -53,33 +58,34 @@ LPVOID WINAPI rpsCreateThread(
 
 static rpsHookInfo g_hookinfo[] = {
     rpsHookInfo("kernel32.dll", "CreateThread",   0, rpsCreateThread, &(void*&)vaCreateThread),
+
+    rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };
 
 
-const char*     rpsThreads::getModuleName() const   { return "rpsThreads"; }
-size_t          rpsThreads::getNumHooks() const     { return _countof(g_hookinfo); }
-rpsHookInfo*    rpsThreads::getHooks() const        { return g_hookinfo; }
+const char*     rpsThreadModule::getModuleName() const   { return "rpsThreadModule"; }
+rpsHookInfo*    rpsThreadModule::getHooks() const        { return g_hookinfo; }
 
-rpsThreads* rpsThreads::getInstance()
+rpsThreadModule* rpsThreadModule::getInstance()
 {
-    static rpsThreads *s_inst = new rpsThreads();
+    static rpsThreadModule *s_inst = new rpsThreadModule();
     return s_inst;
 }
 
-rpsThreads::rpsThreads()
+rpsThreadModule::rpsThreadModule()
 {
 }
 
-rpsThreads::~rpsThreads()
+rpsThreadModule::~rpsThreadModule()
 {
 }
 
-void rpsThreads::serialize(rpsArchive &ar)
+void rpsThreadModule::serialize(rpsArchive &ar)
 {
     std::vector<rpsThreadInformation, rps_allocator<rpsThreadInformation> > tinfo;
     if(ar.isWriter()) {
         rpsEnumerateThreads(::GetCurrentProcessId(), [&](DWORD tid){
-            if(tid==::GetCurrentThreadId()) { return; }
+            if(isExcludeThread(tid)) { return; }
             if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
                 rpsThreadInformation tmp;
                 tmp.contxt.ContextFlags = CONTEXT_ALL; 
@@ -113,12 +119,35 @@ void rpsThreads::serialize(rpsArchive &ar)
     }
 }
 
-HANDLE rpsThreads::translate(HANDLE h)
+void rpsThreadModule::handleMessage( rpsMessage &m )
 {
+    if(strcmp(m.command, "addExcludeThread")==0) {
+        addExcludeThread(m.value.cast<DWORD>());
+        return;
+    }
+}
+
+void rpsThreadModule::addExcludeThread(DWORD tid)
+{
+    rpsMutex::ScopedLock lock(m_mutex);
+    m_exclude_threads.push_back(tid);
+    std::sort(m_exclude_threads.begin(), m_exclude_threads.end());
+}
+
+bool rpsThreadModule::isExcludeThread(DWORD tid) const
+{
+    if(tid==::GetCurrentThreadId()) { return true; }
+    auto it = std::lower_bound(m_exclude_threads.begin(), m_exclude_threads.end(), tid);
+    return it!=m_exclude_threads.end() && *it==tid;
+}
+
+HANDLE rpsThreadModule::translate(HANDLE h)
+{
+    rpsMutex::ScopedLock lock(m_mutex);
     // todo
     return h;
 }
 
 } // namespace
 
-rpsDLLExport rpsIModule* rpsCreateThreads() { return rpsThreads::getInstance(); }
+rpsDLLExport rpsIModule* rpsCreateThreadModule() { return rpsThreadModule::getInstance(); }
