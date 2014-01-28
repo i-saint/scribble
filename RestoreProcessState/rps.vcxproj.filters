@@ -39,6 +39,9 @@
     <ClCompile Include="rpsThreadModule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rpsTimeModule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rps.h">

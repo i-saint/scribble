@@ -32,15 +32,13 @@ inline void rpsEnumerateThreads(DWORD pid, const F &proc)
     if(ss!=INVALID_HANDLE_VALUE) {
         THREADENTRY32 te;
         te.dwSize = sizeof(te);
-        if(::Thread32First(ss, &te)) {
-            do {
-                if(te.dwSize >= FIELD_OFFSET(THREADENTRY32, th32OwnerProcessID)+sizeof(te.th32OwnerProcessID) &&
-                    te.th32OwnerProcessID==pid)
-                {
-                    proc(te.th32ThreadID);
-                }
-                te.dwSize = sizeof(te);
-            } while(::Thread32Next(ss, &te));
+        for(BOOL ok=::Thread32First(ss, &te); ok; ok=::Thread32Next(ss, &te)) {
+            if(te.dwSize >= FIELD_OFFSET(THREADENTRY32, th32OwnerProcessID)+sizeof(te.th32OwnerProcessID) &&
+                te.th32OwnerProcessID==pid)
+            {
+                proc(te.th32ThreadID);
+            }
+            te.dwSize = sizeof(te);
         }
         ::CloseHandle(ss);
     }
@@ -79,6 +77,33 @@ inline void rpsEnumerateModules(const F &f)
         f(modules[i]);
     }
 }
+
+struct rpsModuleInfo
+{
+    void *base;
+    size_t size;
+    char filename[MAX_MODULE_NAME32+1];
+    char path[MAX_PATH];
+};
+// F: [](rpsModuleInfo &minfo) -> void
+template<class F>
+inline void rpsEnumerateModulesDetailed(const F &f)
+{
+    HANDLE snap = ::CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, ::GetCurrentProcessId());
+    MODULEENTRY32 mod;
+    mod.dwSize = sizeof(MODULEENTRY32);
+    for(BOOL ok=::Module32First(snap, &mod); ok; ok=::Module32Next(snap, &mod)) {
+        rpsModuleInfo mi;
+        mi.base = mod.modBaseAddr;
+        mi.size = mod.modBaseSize;
+        memcpy(mi.path, mod.szExePath, sizeof(mi.path));
+        memcpy(mi.filename, mod.szModule, sizeof(mi.filename));
+        f(mi);
+    }
+    ::CloseHandle(snap);
+}
+
+
 
 // F: [](const char*, void *&) -> void
 template<class F>

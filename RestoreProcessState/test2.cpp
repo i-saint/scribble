@@ -10,10 +10,10 @@ __declspec(noinline) void func(int stack_variable)
 
     global_variable += " func1()";
 
-	::Sleep(2000);
+    ::Sleep(2000);
     printf( "func1(): \n"
             "  global_variable: %s\n"
-			"  heap_variable: %d (%p)\n"
+            "  heap_variable: %d (%p)\n"
             "  stack_variable: %d\n"
             , global_variable.c_str(), *heap_variable, heap_variable, stack_variable );
 
@@ -24,8 +24,8 @@ __declspec(noinline) void func(int stack_variable)
 
 int main(int argc, char *argv[])
 {
-	::Sleep(5000);
-	for(;;) {
-		func((int)argv);
-	}
+    ::Sleep(5000);
+    for(;;) {
+        func((int)argv);
+    }
 }

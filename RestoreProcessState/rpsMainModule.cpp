@@ -6,11 +6,13 @@
 extern rpsIModule* rpsCreateMemoryModule();
 extern rpsIModule* rpsCreateThreadModule();
 extern rpsIModule* rpsCreateFileModule();
+extern rpsIModule* rpsCreateTimeModule();
 
 static rpsModuleCreator g_mcreators[] = {
     rpsCreateMemoryModule,
     rpsCreateThreadModule,
     rpsCreateFileModule,
+    rpsCreateTimeModule,
 
     nullptr,
 };
@@ -52,6 +54,7 @@ rpsMainModule::rpsMainModule()
     for(size_t mi=0; ; ++mi) {
         if(!ctab[mi]) { break; }
         rpsIModule *mod = ctab[mi]();
+        mod->initialize();
         m_modules[mod->getModuleName()] = mod;
 
         rpsHookInfo *hooks = mod->getHooks();
@@ -61,6 +64,7 @@ rpsMainModule::rpsMainModule()
         }
     }
 
+    HMODULE main_module = ::GetModuleHandleA(nullptr);
     rpsEnumerateModules([&](HMODULE mod){
         rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
             rpsEnumerateDLLImports(mod, hp.first.c_str(), [&](const char *name, void *&func){
@@ -70,7 +74,10 @@ rpsMainModule::rpsMainModule()
                     Hooks &hooks = it->second;
                     rpsREach(hooks, [&](rpsHookInfo *hinfo){
                         void *orig = func;
-                        rpsForceWrite<void*>(func, hinfo->hookfunc);
+                        // 単純化のためメインモジュールに限定
+                        if(mod==main_module) {
+                            rpsForceWrite<void*>(func, hinfo->hookfunc);
+                        }
                         if(hinfo->origfunc) {
                             *hinfo->origfunc = orig;
                         }
@@ -84,13 +91,14 @@ rpsMainModule::rpsMainModule()
             FuncHookTable &htab = hp.second;
             rpsEach(htab, [&](FuncHookTable::value_type &hp2){
                 rpsHookInfo *hinfo = hp2.second[0];
-                rpsOverrideDLLExport(mod, hinfo->funcname, hinfo->hookfunc, nullptr);
+                // 単純化のためメインモジュールに限定
+                //rpsOverrideDLLExport(mod, hinfo->funcname, hinfo->hookfunc, nullptr);
             });
         }
     });
 
-    //m_communicator = new rpsCommunicator();
-    //m_communicator->run(rpsDefaultPort);
+    m_communicator = new rpsCommunicator();
+    m_communicator->run(rpsDefaultPort);
 }
 
 rpsMainModule::~rpsMainModule()

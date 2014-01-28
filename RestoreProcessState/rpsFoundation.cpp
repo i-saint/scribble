@@ -162,6 +162,13 @@ void rpsArchive::write(const void *data, size_t size)
     vaWriteFile(m_file, data, (DWORD)size, &written, nullptr);
 }
 
+void rpsArchive::skip(size_t size)
+{
+    void *tmp = rpsMalloc(size);
+    io(tmp, size);
+    rpsFree(tmp);
+}
+
 void rpsArchive::io(void *dst, size_t size)
 {
     if(isReader()) {

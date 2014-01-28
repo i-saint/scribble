@@ -97,6 +97,7 @@ public:
     ~rpsArchive();
     void read(void *dst, size_t size);
     void write(const void *data, size_t size);
+    void skip(size_t size);
     void io(void *dst, size_t size);
     bool open(const char *path_to_file, Mode mode);
     void close();

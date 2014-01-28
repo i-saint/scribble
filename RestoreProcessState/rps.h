@@ -3,15 +3,17 @@
 
 #define rpsDLLExport __declspec(dllexport)
 #define rpsDLLImport __declspec(dllimport)
-#ifdef rpsImplDLL
+#if defined(rpsImplDLL)
 #   define rpsAPI rpsDLLExport
-#else  // rpsImplDLL
+#elif !defined(rpsNoLib)
 #   define rpsAPI rpsDLLImport
 #   if defined(_M_IX86)
 #       pragma comment(lib,"rps32.lib")
 #   elif defined(_M_X64)
 #       pragma comment(lib,"rps64.lib")
 #   endif
+#else
+#   define rpsAPI 
 #endif // rpsImplDLL
 
 template<size_t Size>

@@ -21,6 +21,11 @@
   <ItemGroup>
     <ClCompile Include="test1.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="rps.vcxproj">
+      <Project>{4d3303f1-356e-452b-85ea-5a8867f8701e}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C1AF1A48-6C59-4700-A171-84A229EF5960}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -86,6 +91,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -126,6 +132,7 @@
     </Link>
     <ClCompile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

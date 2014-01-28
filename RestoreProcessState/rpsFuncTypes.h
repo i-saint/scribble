@@ -4,12 +4,18 @@
 
 typedef BOOL (WINAPI *CloseHandleT)(_In_  HANDLE hObject);
 
-// heap
+// memory
 typedef LPVOID (WINAPI *HeapAllocT)( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes );
 typedef LPVOID (WINAPI *HeapReAllocT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes );
 typedef BOOL (WINAPI *HeapFreeT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem );
 typedef BOOL (WINAPI *HeapValidateT)( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem );
 typedef SIZE_T (WINAPI *HeapSizeT)(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
+
+typedef LPVOID (WINAPI *VirtualAllocT)(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
+typedef BOOL (WINAPI *VirtualFreeT)(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
+typedef LPVOID (WINAPI *VirtualAllocExT)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
+typedef BOOL (WINAPI *VirtualFreeExT)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
+
 
 // thread
 typedef LPVOID (WINAPI *CreateThreadT)(
@@ -74,5 +80,11 @@ typedef BOOL (WINAPI *ReadFileT)(
     LPDWORD lpNumberOfBytesRead,
     LPOVERLAPPED lpOverlapped
     );
+
+
+// time
+typedef BOOL (WINAPI *QueryPerformanceFrequencyT)( LARGE_INTEGER *lpFrequency );
+typedef BOOL (WINAPI *QueryPerformanceCounterT)( LARGE_INTEGER *lpPerformanceCount );
+typedef DWORD (*timeGetTimeT)(void);
 
 #endif // rpsFuncTypes_h

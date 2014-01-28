@@ -181,6 +181,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="rpsThreadModule.cpp" />
+    <ClCompile Include="rpsTimeModule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rps.h" />

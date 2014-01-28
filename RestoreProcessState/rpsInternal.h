@@ -64,6 +64,7 @@ public:
     virtual void            release() { delete this; }
     virtual const char*     getModuleName() const=0;
     virtual rpsHookInfo*    getHooks() const=0;
+    virtual void            initialize()=0;
     virtual void            serialize(rpsArchive &ar)=0;
     virtual void            handleMessage(rpsMessage &mes) {}
 

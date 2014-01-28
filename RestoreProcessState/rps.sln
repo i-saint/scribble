@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rps", "rps.vcxproj", "{4D3303F1-356E-452B-85EA-5A8867F8701E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rpsSendCommand", "rpsSendCommand.vcxproj", "{82F5554D-C305-458E-8844-6B804F197FE9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4D3303F1-356E-452B-85EA-5A8867F8701E} = {4D3303F1-356E-452B-85EA-5A8867F8701E}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rpsInjector", "rpsInjector.vcxproj", "{D9C0B31E-4A46-4182-908A-47C7306B82DD}"
 EndProject

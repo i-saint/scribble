@@ -12,6 +12,7 @@ public:
     ~rpsThreadModule();
     virtual const char*     getModuleName() const;
     virtual rpsHookInfo*    getHooks() const;
+    virtual void initialize();
     virtual void serialize(rpsArchive &ar);
     virtual void handleMessage(rpsMessage &m);
 
@@ -21,6 +22,7 @@ public:
 
 private:
     typedef std::vector<DWORD, rps_allocator<DWORD> > ThreadIDs;
+    DWORD m_main_thread_id;
     ThreadIDs m_exclude_threads;
     rpsMutex m_mutex;
 };
@@ -73,10 +75,16 @@ rpsThreadModule* rpsThreadModule::getInstance()
 }
 
 rpsThreadModule::rpsThreadModule()
+    : m_main_thread_id(0)
 {
+    m_main_thread_id = ::GetCurrentThreadId();
 }
 
 rpsThreadModule::~rpsThreadModule()
+{
+}
+
+void rpsThreadModule::initialize()
 {
 }
 
@@ -84,8 +92,12 @@ void rpsThreadModule::serialize(rpsArchive &ar)
 {
     std::vector<rpsThreadInformation, rps_allocator<rpsThreadInformation> > tinfo;
     if(ar.isWriter()) {
-        rpsEnumerateThreads(::GetCurrentProcessId(), [&](DWORD tid){
-            if(isExcludeThread(tid)) { return; }
+        //rpsEnumerateThreads(::GetCurrentProcessId(), [&](DWORD tid){
+        //    if(isExcludeThread(tid)) { return; }
+
+            // 単純化のためメインスレッドに限定
+            DWORD tid = m_main_thread_id;
+
             if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
                 rpsThreadInformation tmp;
                 tmp.contxt.ContextFlags = CONTEXT_ALL; 
@@ -104,7 +116,7 @@ void rpsThreadModule::serialize(rpsArchive &ar)
                 tinfo.push_back(tmp);
                 ::CloseHandle(thread);
             }
-        });
+        //});
         ar & tinfo;
     }
     else if(ar.isReader()) {

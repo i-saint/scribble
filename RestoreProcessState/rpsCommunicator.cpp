@@ -56,5 +56,11 @@ bool rpsCommunicator::onAccept(rpsProtocolSocket &client)
     else if(strncmp(&command[0], "stop", 4)==0) {
         return false;
     }
+    else if(strncmp(&command[0], "timescale ", 10)==0) {
+        float tmp;
+        sscanf(&command[10], "%f", &tmp);
+        rpsMessage mes("rpsTimeModule", "setTimeScale", tmp);
+        rpsSendMessage(mes);
+    }
     return true;
 }

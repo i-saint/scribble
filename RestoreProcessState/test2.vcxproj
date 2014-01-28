@@ -21,6 +21,11 @@
   <ItemGroup>
     <ClCompile Include="test2.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="rps.vcxproj">
+      <Project>{4d3303f1-356e-452b-85ea-5a8867f8701e}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C583DCA2-95D3-4A73-B3FD-0A5504B73D05}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

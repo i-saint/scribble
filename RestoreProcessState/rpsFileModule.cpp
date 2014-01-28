@@ -12,6 +12,7 @@ public:
     ~rpsFileModule();
     virtual const char*     getModuleName() const;
     virtual rpsHookInfo*    getHooks() const;
+    virtual void initialize();
     virtual void serialize(rpsArchive &ar);
 
     HANDLE translate(HANDLE h);
@@ -116,6 +117,10 @@ rpsFileModule::rpsFileModule()
 }
 
 rpsFileModule::~rpsFileModule()
+{
+}
+
+void rpsFileModule::initialize()
 {
 }
 
