@@ -21,11 +21,6 @@ bool rpsCommunicator::run(uint16_t port)
     m_port = port;
     m_running = true;
     rpsRunThread([&](){
-        {
-            rpsMessage mes("rpsThreadModule", "addExcludeThread", ::GetCurrentThreadId());
-            rpsSendMessage(mes);
-        }
-
         bool r = rpsRunTCPServer(m_port, [&](rpsTCPSocket &client){
             rpsProtocolSocket s(client.getHandle(), false);
             return onAccept(s);
@@ -60,6 +55,12 @@ bool rpsCommunicator::onAccept(rpsProtocolSocket &client)
         float tmp;
         sscanf(&command[10], "%f", &tmp);
         rpsMessage mes("rpsTimeModule", "setTimeScale", tmp);
+        rpsSendMessage(mes);
+    }
+    else if(strncmp(&command[0], "addSerializableThread ", 22)==0) {
+        DWORD tmp;
+        sscanf(&command[22], "%d", &tmp);
+        rpsMessage mes("rpsThreadModule", "addSerializableThread", tmp);
         rpsSendMessage(mes);
     }
     return true;

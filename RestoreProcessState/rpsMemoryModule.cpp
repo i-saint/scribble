@@ -7,6 +7,21 @@ extern "C" {
 
 namespace {
 
+struct rpsModuleMemoryInfo
+{
+    void *base;
+    size_t size;
+};
+
+struct rpsMemoryPageInfo
+{
+    void *base;
+    size_t size;
+    DWORD type;
+    DWORD protect;
+};
+
+
 class rpsMemoryModule : public rpsIModule
 {
 public:
@@ -22,18 +37,23 @@ public:
 
     void setMemorySize(size_t size) { m_size=size; }
 
-    LPVOID rpsHeapAllocImpl(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
-    LPVOID rpsHeapReAllocImpl(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes);
-    BOOL rpsHeapFreeImpl(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
-    BOOL rpsHeapValidateImpl(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
-    SIZE_T rpsHeapSizeImpl(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
+    LPVOID  rpsHeapAllocImpl(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
+    LPVOID  rpsHeapReAllocImpl(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes);
+    BOOL    rpsHeapFreeImpl(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
+    BOOL    rpsHeapValidateImpl(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
+    SIZE_T  rpsHeapSizeImpl(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
+    LPVOID  rpsVirtualAllocImpl(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
+    BOOL    rpsVirtualFreeImpl(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
 
 private:
+    typedef std::map<size_t, rpsMemoryPageInfo, std::less<size_t>, rps_allocator< std::pair<size_t, rpsMemoryPageInfo> > > MemoryPages;
+
+    rpsMutex m_mutex;
     char *m_mem;
     size_t m_size;
     size_t m_pos;
-    rpsMutex m_mutex;
     mspace m_msp;
+    MemoryPages m_pages;
 };
 
 inline bool rpsIsValidMemory(void *p)
@@ -61,28 +81,6 @@ inline bool rpsIsWritableMemory(void *p)
     return false;
 }
 
-struct rpsMemoryPageInfo
-{
-    void *base;
-    size_t size;
-};
-
-inline rpsArchive& operator&(rpsArchive &ar, rpsMemoryPageInfo &v)
-{
-    ar & (size_t&)v.base & v.size;
-    if(ar.isWriter()) {
-        ar.io(v.base, v.size);
-    }
-    else if(ar.isReader()) {
-        if(rpsIsWritableMemory(v.base)) {
-            ar.io(v.base, v.size);
-        }
-        else {
-            ar.skip(v.size);
-        }
-    }
-    return ar;
-}
 
 
 HeapAllocT      vaHeapAlloc;
@@ -124,14 +122,12 @@ SIZE_T WINAPI rpsHeapSize( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem )
 
 LPVOID WINAPI rpsVirtualAlloc(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect)
 {
-    LPVOID ret = vaVirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
-    return ret;
+    return rpsMemoryModule::getInstance()->rpsVirtualAllocImpl(lpAddress, dwSize, flAllocationType, flProtect);
 }
 
 BOOL WINAPI rpsVirtualFree(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType)
 {
-    BOOL ret = vaVirtualFree(lpAddress, dwSize, dwFreeType);
-    return ret;
+    return rpsMemoryModule::getInstance()->rpsVirtualFreeImpl(lpAddress, dwSize, dwFreeType);
 }
 
 LPVOID WINAPI rpsVirtualAllocEx(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect)
@@ -162,6 +158,39 @@ rpsHookInfo g_hookinfo[] = {
 };
 
 
+inline rpsArchive& operator&(rpsArchive &ar, rpsModuleMemoryInfo &v)
+{
+    ar & (size_t&)v.base & v.size;
+    if(ar.isWriter()) {
+        ar.io(v.base, v.size);
+    }
+    else if(ar.isReader()) {
+        if(rpsIsWritableMemory(v.base)) {
+            ar.io(v.base, v.size);
+        }
+        else {
+            ar.skip(v.size);
+        }
+    }
+    return ar;
+}
+
+inline rpsArchive& operator&(rpsArchive &ar, rpsMemoryPageInfo &v)
+{
+    ar & (size_t&)v.base & v.size & v.type & v.protect;
+    if(ar.isWriter()) {
+        ar.io(v.base, v.size);
+    }
+    else if(ar.isReader()) {
+        DWORD prot;
+        void *p = vaVirtualAlloc(v.base, v.size, v.type, PAGE_EXECUTE_READWRITE);
+        ar.io(v.base, v.size);
+        ::VirtualProtect(v.base, v.size, v.protect, &prot);
+    }
+    return ar;
+}
+
+
 const char*     rpsMemoryModule::getModuleName() const    { return "rpsMemoryModule"; }
 rpsHookInfo*    rpsMemoryModule::getHooks() const         { return g_hookinfo; }
 
@@ -182,6 +211,7 @@ rpsMemoryModule::rpsMemoryModule()
 #elif defined(_M_X64)
     m_size = 0x100000000;
 #endif 
+    void *p = GetProcAddress(GetModuleHandleA("kernel32.dll"), "VirtualFree");
 }
 
 rpsMemoryModule::~rpsMemoryModule()
@@ -206,7 +236,7 @@ void rpsMemoryModule::serialize(rpsArchive &ar)
 
     // static 変数群の serialize
     // これらは module 内の書き込み可能領域にある
-    std::vector<rpsMemoryPageInfo, rps_allocator<rpsMemoryPageInfo> > sinfo;
+    std::vector<rpsModuleMemoryInfo, rps_allocator<rpsModuleMemoryInfo> > sinfo;
     if(ar.isWriter()) {
         HMODULE mod = ::GetModuleHandleA(nullptr);
         rpsEnumerateModulesDetailed([&](rpsModuleInfo &modinfo){
@@ -221,7 +251,7 @@ void rpsMemoryModule::serialize(rpsArchive &ar)
                     if( (mi.Protect & PAGE_READWRITE)!=0 ||
                         (mi.Protect & PAGE_EXECUTE_READWRITE)!=0 )
                     {
-                        rpsMemoryPageInfo tmp = {mi.BaseAddress, mi.RegionSize};
+                        rpsModuleMemoryInfo tmp = {mi.BaseAddress, mi.RegionSize};
                         sinfo.push_back(tmp);
                     }
                     pos = (char*)mi.BaseAddress + mi.RegionSize;
@@ -236,6 +266,13 @@ void rpsMemoryModule::serialize(rpsArchive &ar)
     else if(ar.isReader()) {
         ar & sinfo;
     }
+
+    if(ar.isReader()) {
+        rpsEach(m_pages, [](MemoryPages::value_type &v){
+            vaVirtualFree(v.second.base, 0, MEM_RELEASE);
+        });
+    }
+    ar & m_pages;
 }
 
 void rpsMemoryModule::handleMessage( rpsMessage &m )
@@ -277,6 +314,28 @@ BOOL rpsMemoryModule::rpsHeapValidateImpl(HANDLE hHeap, DWORD dwFlags, LPCVOID l
 SIZE_T rpsMemoryModule::rpsHeapSizeImpl(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem)
 {
     return m_size;
+}
+
+LPVOID rpsMemoryModule::rpsVirtualAllocImpl(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect)
+{
+    rpsMutex::ScopedLock lock(m_mutex);
+    LPVOID ret = vaVirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
+    rpsMemoryPageInfo pinfo = {ret, dwSize, flAllocationType, flProtect};
+    m_pages[(size_t)ret] = pinfo;
+    return ret;
+}
+
+BOOL rpsMemoryModule::rpsVirtualFreeImpl(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType)
+{
+    rpsMutex::ScopedLock lock(m_mutex);
+    BOOL ret = vaVirtualFree(lpAddress, dwSize, dwFreeType);
+    if(ret) {
+        auto it = m_pages.find((size_t)lpAddress);
+        if(it!=m_pages.end()) {
+            m_pages.erase(it);
+        }
+    }
+    return ret;
 }
 
 } // namespace

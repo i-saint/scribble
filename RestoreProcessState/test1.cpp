@@ -7,7 +7,9 @@ std::string global_variable = "g";
 void func1(int stack_variable)
 {
     std::string local_variable = "abc";
-    int *heap_variable = new int(123456);
+    int *heap_variable = new int(1234567);
+    int *page_memory = (int*)::VirtualAlloc(nullptr, 4, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+    *page_memory = 7654321;
 
     rpsSaveState("test.stat"); // 1. この時点の状態を保存
 
@@ -16,11 +18,13 @@ void func1(int stack_variable)
     printf( "func1(): \n"
             "  global_variable: %s\n"
             "  heap_variable: %d\n"
+            "  page_memory: %d\n"
             "  stack_variable: %d\n"
-            , global_variable.c_str(), *heap_variable, stack_variable );
+            , global_variable.c_str(), *heap_variable, *page_memory, stack_variable );
 
     local_variable.clear();
     *heap_variable = 0;
+    *page_memory = 0;
 }
 
 void func2()

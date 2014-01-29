@@ -191,4 +191,32 @@ inline rpsArchive& operator&(rpsArchive &ar, std::vector<T, Allocator<T> > &v)
     return ar;
 }
 
+template<class K, class V>
+inline rpsArchive& operator&(rpsArchive &ar, std::pair<K,V> &v)
+{
+    typedef std::remove_const<K>::type _K;
+    return ar & (_K&)v.first & v.second;
+}
+
+template<class K, class V, template<class> class Allocator >
+inline rpsArchive& operator&(rpsArchive &ar, std::map<K, V, std::less<K>, Allocator<std::pair<K,V> > > &v)
+{
+    if(ar.isReader()) {
+        v.clear();
+        size_t size;
+        ar & size;
+        for(size_t i=0; i<size; ++i) {
+            std::pair<K,V> tmp;
+            ar & tmp;
+            v.insert(tmp);
+        }
+    }
+    else if(ar.isWriter()) {
+        size_t size = v.size();
+        ar & size;
+        rpsEach(v, [&](std::pair<const K,V> &e){ ar & e; });
+    }
+    return ar;
+}
+
 #endif // rpsInlines_h

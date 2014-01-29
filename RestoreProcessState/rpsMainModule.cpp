@@ -43,6 +43,31 @@ rpsMainModule* rpsMainModule::getInstance()
 }
 
 
+// todo: 外部リスト化
+static bool ShouldHook(HMODULE mod)
+{
+    static const HMODULE main_module = GetModuleHandleA(nullptr);
+    if(mod==main_module) {
+        return true;
+    }
+
+    char path[MAX_PATH+1];
+    GetModuleFileNameA(mod, path, sizeof(path));
+    for(int i=0; path[i]!='\0'; ++i) {
+        path[i] = tolower(path[i]);
+    }
+
+    const char *whitelist[] = {
+        "wuvorbis.dll",
+        "x3daudio1_7.dll",
+    };
+    for(int i=0; i<_countof(whitelist); ++i) {
+        if(strstr(path, whitelist[i])) { return true; }
+    }
+
+    return false;
+}
+
 rpsMainModule::rpsMainModule()
 {
     g_inst = this;
@@ -60,13 +85,26 @@ rpsMainModule::rpsMainModule()
         rpsHookInfo *hooks = mod->getHooks();
         for(size_t hi=0; ; ++hi) {
             if(!hooks[hi].dllname) { break; }
-            m_hooks[hooks[hi].dllname][hooks[hi].funcname].push_back(&hooks[hi]);
+            m_hooks[ hooks[hi].dllname ][ hooks[hi].funcname ].push_back(&hooks[hi]);
         }
     }
 
     HMODULE main_module = ::GetModuleHandleA(nullptr);
     rpsEnumerateModules([&](HMODULE mod){
         rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
+            if(HMODULE mod=::GetModuleHandleA(hp.first.c_str())) {
+                FuncHookTable &htab = hp.second;
+                rpsEach(htab, [&](FuncHookTable::value_type &fp){
+                    if(void *proc=::GetProcAddress(mod, fp.first.c_str())) {
+                        rpsEach(fp.second, [&](rpsHookInfo *hook){
+                            if(hook->origfunc) {
+                                *hook->origfunc = proc;
+                            }
+                        });
+                    }
+                });
+            }
+
             rpsEnumerateDLLImports(mod, hp.first.c_str(), [&](const char *name, void *&func){
                 FuncHookTable &htab = hp.second;
                 auto it = htab.find(rps_string(name));
@@ -74,12 +112,8 @@ rpsMainModule::rpsMainModule()
                     Hooks &hooks = it->second;
                     rpsREach(hooks, [&](rpsHookInfo *hinfo){
                         void *orig = func;
-                        // 単純化のためメインモジュールに限定
-                        if(mod==main_module) {
+                        if(ShouldHook(mod)) {
                             rpsForceWrite<void*>(func, hinfo->hookfunc);
-                        }
-                        if(hinfo->origfunc) {
-                            *hinfo->origfunc = orig;
                         }
                     });
                 }
