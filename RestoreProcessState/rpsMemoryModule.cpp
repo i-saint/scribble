@@ -178,7 +178,7 @@ rpsMemoryModule::rpsMemoryModule()
 {
     // 適当
 #if defined(_M_IX86)
-    m_size = 0x40000000;
+    m_size = 0x10000000;
 #elif defined(_M_X64)
     m_size = 0x100000000;
 #endif 

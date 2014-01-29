@@ -1,5 +1,6 @@
 ﻿#include <string>
 #include <windows.h>
+#pragma comment(lib,"winmm.lib")
 
 std::string global_variable = "long long global string variable";
 
@@ -15,7 +16,8 @@ __declspec(noinline) void func(int stack_variable)
             "  global_variable: %s\n"
             "  heap_variable: %d (%p)\n"
             "  stack_variable: %d\n"
-            , global_variable.c_str(), *heap_variable, heap_variable, stack_variable );
+            "  timeGetTime(): %d\n"
+            , global_variable.c_str(), *heap_variable, heap_variable, stack_variable, ::timeGetTime() );
 
     local_variable.clear();
     *heap_variable = 0;
