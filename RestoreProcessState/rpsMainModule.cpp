@@ -69,8 +69,17 @@ static bool ShouldHook(HMODULE mod)
 }
 
 rpsMainModule::rpsMainModule()
+    : m_mainthread(0)
 {
     g_inst = this;
+
+    DWORD ctid = ::GetCurrentThreadId();
+    m_mainthread = ctid;
+    rpsEnumerateThreads([&](DWORD tid){
+        if(tid!=ctid) {
+            m_mainthread = tid;
+        }
+    });
 
     DWORD tid;
     ::CreateThread(nullptr, 0, rpsMainThread, this, 0, &tid);
@@ -87,6 +96,10 @@ rpsMainModule::rpsMainModule()
             if(!hooks[hi].dllname) { break; }
             m_hooks[ hooks[hi].dllname ][ hooks[hi].funcname ].push_back(&hooks[hi]);
         }
+    }
+    {
+        rpsMessage mes("rpsThreadModule", "addSerializableThread", m_mainthread);
+        rpsSendMessage(mes);
     }
 
     HMODULE main_module = ::GetModuleHandleA(nullptr);

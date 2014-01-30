@@ -211,7 +211,6 @@ rpsMemoryModule::rpsMemoryModule()
 #elif defined(_M_X64)
     m_size = 0x100000000;
 #endif 
-    void *p = GetProcAddress(GetModuleHandleA("kernel32.dll"), "VirtualFree");
 }
 
 rpsMemoryModule::~rpsMemoryModule()

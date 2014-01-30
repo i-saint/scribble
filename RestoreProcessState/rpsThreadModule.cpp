@@ -88,10 +88,7 @@ rpsThreadModule* rpsThreadModule::getInstance()
 }
 
 rpsThreadModule::rpsThreadModule()
-    : m_main_thread_id(0)
 {
-    m_main_thread_id = ::GetCurrentThreadId();
-    m_serializable_threads.push_back(m_main_thread_id);
 }
 
 rpsThreadModule::~rpsThreadModule()
@@ -106,7 +103,7 @@ void rpsThreadModule::serialize(rpsArchive &ar)
 {
     std::vector<rpsThreadInformation, rps_allocator<rpsThreadInformation> > tinfo;
     if(ar.isWriter()) {
-        rpsEnumerateThreads(::GetCurrentProcessId(), [&](DWORD tid){
+        rpsEnumerateThreads([&](DWORD tid){
             if(!isSerializableThread(tid)) { return; }
 
             if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {

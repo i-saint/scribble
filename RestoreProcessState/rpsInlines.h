@@ -26,8 +26,9 @@ inline void rpsREach(C &cont, const F &f)
 
 // F: [](DWORD thread_id) -> void
 template<class F>
-inline void rpsEnumerateThreads(DWORD pid, const F &proc)
+inline void rpsEnumerateThreads(const F &proc)
 {
+    DWORD pid = ::GetCurrentProcessId();
     HANDLE ss = ::CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
     if(ss!=INVALID_HANDLE_VALUE) {
         THREADENTRY32 te;
@@ -49,7 +50,7 @@ template<class F>
 void rpsExecExclusive(const F &proc)
 {
     std::vector<HANDLE, rps_allocator<HANDLE> > threads;
-    rpsEnumerateThreads(::GetCurrentProcessId(), [&](DWORD tid){
+    rpsEnumerateThreads([&](DWORD tid){
         if(tid==::GetCurrentThreadId()) { return; }
         if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
             ::SuspendThread(thread);
