@@ -44,7 +44,6 @@ struct rpsHookInfo
     uint32_t funcordinal;
     void *hookfunc;
     void **origfunc;
-    uint32_t nth;
 
     rpsHookInfo(const char *dll=nullptr, const char *fname=nullptr, uint32_t ford=0, void *hook=nullptr, void **orig=nullptr)
         : dllname(dll)
@@ -52,10 +51,10 @@ struct rpsHookInfo
         , funcordinal(ford)
         , hookfunc(hook)
         , origfunc(orig)
-        , nth(0)
     {
     }
 };
+
 
 class rpsIModule
 {
@@ -73,8 +72,24 @@ public:
 };
 typedef rpsIModule* (*rpsModuleCreator)();
 
-typedef std::basic_string<char, std::char_traits<char>, rps_allocator<char> > rps_string;
+typedef std::basic_string<   char, std::char_traits<   char>, rps_allocator<   char> > rps_string;
+typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, rps_allocator<wchar_t> > rps_wstring;
 class rpsCommunicator;
+
+inline bool rpsIsRpsHandle(HANDLE h) { return (DWORD)h>>24=='R'; }
+
+struct rpsHandleInfo
+{
+    HANDLE rps_handle;
+    HANDLE win_handle;
+    rpsIModule *owner;
+};
+
+rpsAPI HANDLE rpsCreateHandle(rpsIModule *owner, HANDLE win_handle);
+rpsAPI bool rpsReleaseHandle(HANDLE rps_handle);
+rpsAPI HANDLE rpsTranslateHandle(HANDLE rps_handle); // return win handle
+rpsAPI rpsHandleInfo* rpsGetHandleInfo(HANDLE rps_handle);
+
 
 class rpsMainModule
 {

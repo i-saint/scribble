@@ -124,9 +124,11 @@ void* rpsOverrideDLLExport(HMODULE module, const char *funcname, void *hook_, vo
 
 DWORD __stdcall rpsRunThread_(LPVOID proc_)
 {
-    auto *proc = (std::function<void ()>*)proc_;
+    typedef std::function<void ()> functor;
+    auto *proc = (functor*)proc_;
     (*proc)();
-    delete proc;
+    proc->~functor();
+    rpsFree(proc);
     return 0;
 }
 

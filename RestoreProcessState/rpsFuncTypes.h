@@ -16,6 +16,10 @@ typedef BOOL (WINAPI *VirtualFreeT)(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFre
 typedef LPVOID (WINAPI *VirtualAllocExT)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
 typedef BOOL (WINAPI *VirtualFreeExT)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
 
+// handle
+typedef BOOL (WINAPI *CloseHandleT)(HANDLE hObject);
+typedef DWORD (WINAPI *WaitForSingleObjectT)(HANDLE hHandle, DWORD dwMilliseconds);
+
 
 // thread
 typedef LPVOID (WINAPI *CreateThreadT)(
@@ -80,7 +84,21 @@ typedef BOOL (WINAPI *ReadFileT)(
     LPDWORD lpNumberOfBytesRead,
     LPOVERLAPPED lpOverlapped
     );
-
+typedef DWORD (WINAPI *SetFilePointerT)(
+    HANDLE hFile,
+    LONG lDistanceToMove,
+    PLONG lpDistanceToMoveHigh,
+    DWORD dwMoveMethod
+    );
+typedef BOOL (WINAPI *SetFilePointerExT)(
+    HANDLE hFile,
+    LARGE_INTEGER liDistanceToMove,
+    PLARGE_INTEGER lpNewFilePointer,
+    DWORD dwMoveMethod
+    );
+typedef DWORD (WINAPI *GetFileTypeT)(
+    HANDLE hFile
+    );
 
 // time
 typedef BOOL (WINAPI *QueryPerformanceFrequencyT)( LARGE_INTEGER *lpFrequency );

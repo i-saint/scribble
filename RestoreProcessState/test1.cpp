@@ -1,8 +1,10 @@
-﻿#include <string>
+﻿#define _CRT_SECURE_NO_WARNINGS
+#include <string>
 #include <windows.h>
 #include "rps.h"
 
 std::string global_variable = "g";
+FILE *testfile = nullptr;
 
 void func1(int stack_variable)
 {
@@ -10,6 +12,7 @@ void func1(int stack_variable)
     int *heap_variable = new int(1234567);
     int *page_memory = (int*)::VirtualAlloc(nullptr, 4, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
     *page_memory = 7654321;
+    testfile = fopen("test1.cpp", "rb");
 
     rpsSaveState("test.stat"); // 1. この時点の状態を保存
 
@@ -21,6 +24,12 @@ void func1(int stack_variable)
             "  page_memory: %d\n"
             "  stack_variable: %d\n"
             , global_variable.c_str(), *heap_variable, *page_memory, stack_variable );
+
+    {
+        char buf[256];
+        fgets(buf, _countof(buf), testfile);
+        printf("  fgets: %s\n", buf);
+    }
 
     local_variable.clear();
     *heap_variable = 0;

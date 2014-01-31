@@ -171,6 +171,7 @@
     <ClCompile Include="rpsCommunicator.cpp" />
     <ClCompile Include="rpsFileModule.cpp" />
     <ClCompile Include="rpsFoundation.cpp" />
+    <ClCompile Include="rpsHandleManager.cpp" />
     <ClCompile Include="rpsMainModule.cpp" />
     <ClCompile Include="rpsMemoryModule.cpp" />
     <ClCompile Include="rpsNetwork.cpp" />

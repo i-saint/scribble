@@ -164,13 +164,13 @@ inline rpsArchive& operator&(rpsArchive &ar, std::basic_string<CharT, std::char_
     if(ar.isWriter()) {
         size_t size = v.size();
         ar & size;
-        if(size>0) { ar.io(&v[0], size); }
+        if(size>0) { ar.io(&v[0], size*sizeof(CharT)); }
     }
     else if(ar.isReader()) {
         size_t size;
         ar & size;
         v.resize(size);
-        if(size>0) { ar.io(&v[0], size); }
+        if(size>0) { ar.io(&v[0], size*sizeof(CharT)); }
     }
     return ar;
 }

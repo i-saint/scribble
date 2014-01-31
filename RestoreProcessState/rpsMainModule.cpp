@@ -4,12 +4,14 @@
 
 
 extern rpsIModule* rpsCreateMemoryModule();
+extern rpsIModule* rpsCreateHandleManager();
 extern rpsIModule* rpsCreateThreadModule();
 extern rpsIModule* rpsCreateFileModule();
 extern rpsIModule* rpsCreateTimeModule();
 
 static rpsModuleCreator g_mcreators[] = {
     rpsCreateMemoryModule,
+    rpsCreateHandleManager,
     rpsCreateThreadModule,
     rpsCreateFileModule,
     rpsCreateTimeModule,
@@ -91,10 +93,12 @@ rpsMainModule::rpsMainModule()
         mod->initialize();
         m_modules[mod->getModuleName()] = mod;
 
-        rpsHookInfo *hooks = mod->getHooks();
-        for(size_t hi=0; ; ++hi) {
-            if(!hooks[hi].dllname) { break; }
-            m_hooks[ hooks[hi].dllname ][ hooks[hi].funcname ].push_back(&hooks[hi]);
+        if(rpsHookInfo *hinfo = mod->getHooks()) {
+            for(size_t hi=0; ; ++hi) {
+                if(!hinfo[hi].dllname) { break; }
+                Hooks &hooks = m_hooks[ hinfo[hi].dllname ][ hinfo[hi].funcname ];
+                hooks.push_back(&hinfo[hi]);
+            }
         }
     }
     {
@@ -102,22 +106,24 @@ rpsMainModule::rpsMainModule()
         rpsSendMessage(mes);
     }
 
-    HMODULE main_module = ::GetModuleHandleA(nullptr);
+
+    // gather original functions
+    rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
+        if(HMODULE mod=::GetModuleHandleA(hp.first.c_str())) {
+            FuncHookTable &htab = hp.second;
+            rpsEach(htab, [&](FuncHookTable::value_type &fp){
+                if(void *proc=::GetProcAddress(mod, fp.first.c_str())) {
+                    rpsREach(fp.second, [&](rpsHookInfo *hook){
+                        *hook->origfunc = proc;
+                        proc = hook->hookfunc;
+                    });
+                }
+            });
+        }
+    });
+    // override import table
     rpsEnumerateModules([&](HMODULE mod){
         rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
-            if(HMODULE mod=::GetModuleHandleA(hp.first.c_str())) {
-                FuncHookTable &htab = hp.second;
-                rpsEach(htab, [&](FuncHookTable::value_type &fp){
-                    if(void *proc=::GetProcAddress(mod, fp.first.c_str())) {
-                        rpsEach(fp.second, [&](rpsHookInfo *hook){
-                            if(hook->origfunc) {
-                                *hook->origfunc = proc;
-                            }
-                        });
-                    }
-                });
-            }
-
             rpsEnumerateDLLImports(mod, hp.first.c_str(), [&](const char *name, void *&func){
                 FuncHookTable &htab = hp.second;
                 auto it = htab.find(rps_string(name));
@@ -133,6 +139,7 @@ rpsMainModule::rpsMainModule()
             });
         });
     });
+    // override export table
     rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
         if(HMODULE mod = ::LoadLibraryA(hp.first.c_str())) {
             FuncHookTable &htab = hp.second;
