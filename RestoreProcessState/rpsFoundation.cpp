@@ -54,6 +54,25 @@ bool rpsIsValidMemory(void *p)
     return ::VirtualQuery(p, &meminfo, sizeof(meminfo))!=0 && meminfo.State!=MEM_FREE;
 }
 
+bool rpsIsInsideRpsModule( void *p )
+{
+    static rpsModuleInfo s_minfo = {0};
+    if(!s_minfo.base) {
+        rpsEnumerateModulesDetailed([&](rpsModuleInfo &mi){
+            size_t addr = (size_t)&rpsIsInsideRpsModule;
+            size_t mod_base = (size_t)mi.base;
+            size_t mod_size = (size_t)mi.size;
+            if(addr>=mod_base && addr<mod_base+mod_size) {
+                s_minfo = mi;
+            }
+        });
+    }
+    size_t addr = (size_t)p;
+    size_t mod_base = (size_t)s_minfo.base;
+    size_t mod_size = (size_t)s_minfo.size;
+    return addr>=mod_base && addr<mod_base+mod_size;
+}
+
 BYTE* rpsAddJumpInstruction(BYTE* from, const BYTE* to)
 {
     // 距離が 32bit に収まる範囲であれば、0xe9 RVA

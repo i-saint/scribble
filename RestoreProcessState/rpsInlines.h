@@ -220,4 +220,9 @@ inline rpsArchive& operator&(rpsArchive &ar, std::map<K, V, std::less<K>, Alloca
     return ar;
 }
 
+inline HANDLE rpsTranslateHandleC(HANDLE rps_handle, void *p)
+{
+    return rpsIsInsideRpsModule(p) ? rps_handle : rpsTranslateHandle(rps_handle);
+}
+
 #endif // rpsInlines_h

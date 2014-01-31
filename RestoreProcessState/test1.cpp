@@ -4,15 +4,19 @@
 #include "rps.h"
 
 std::string global_variable = "g";
-FILE *testfile = nullptr;
 
 void func1(int stack_variable)
 {
+    char buf[256];
+
     std::string local_variable = "abc";
     int *heap_variable = new int(1234567);
     int *page_memory = (int*)::VirtualAlloc(nullptr, 4, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
     *page_memory = 7654321;
-    testfile = fopen("test1.cpp", "rb");
+    FILE *file_for_read = fopen("test1.cpp", "rb");
+    FILE *file_for_write = fopen("test_write.txt", "wb");
+    fgets(buf, _countof(buf), file_for_read);
+    fputs("before serialization\n", file_for_write);
 
     rpsSaveState("test.stat"); // 1. この時点の状態を保存
 
@@ -25,11 +29,11 @@ void func1(int stack_variable)
             "  stack_variable: %d\n"
             , global_variable.c_str(), *heap_variable, *page_memory, stack_variable );
 
-    {
-        char buf[256];
-        fgets(buf, _countof(buf), testfile);
-        printf("  fgets: %s\n", buf);
-    }
+    fputs("after serialization\n", file_for_write);
+    fgets(buf, _countof(buf), file_for_read);
+    printf("  fgets: %s\n", buf);
+    fclose(file_for_write);
+    fclose(file_for_read);
 
     local_variable.clear();
     *heap_variable = 0;

@@ -85,21 +85,28 @@ struct rpsHandleInfo
     rpsIModule *owner;
 };
 
+rpsAPI void* rpsGetHeapBlock();
 rpsAPI HANDLE rpsCreateHandle(rpsIModule *owner, HANDLE win_handle);
 rpsAPI bool rpsReleaseHandle(HANDLE rps_handle);
-rpsAPI HANDLE rpsTranslateHandle(HANDLE rps_handle); // return win handle
+rpsAPI HANDLE rpsTranslateHandle(HANDLE rps_handle);
 rpsAPI rpsHandleInfo* rpsGetHandleInfo(HANDLE rps_handle);
-
 
 class rpsMainModule
 {
 public:
     struct SerializeRequest
     {
-        rps_string path;
+        char path[256];
         rpsArchive::Mode mode;
+
+        SerializeRequest(const char *p, rpsArchive::Mode m)
+        {
+            strncpy(path, p, _countof(path));
+            mode = m;
+        }
     };
-    typedef std::map<rps_string, rpsIModule*, std::less<rps_string>, rps_allocator<std::pair<rps_string, rpsIModule*> > > Modules;
+    typedef std::vector<rpsIModule*, rps_allocator<rpsIModule*> > Modules;
+    typedef std::map<rps_string, rpsIModule*, std::less<rps_string>, rps_allocator<std::pair<rps_string, rpsIModule*> > > ModuleMap;
     typedef std::vector<rpsHookInfo*, rps_allocator<rpsHookInfo*> > Hooks;
     typedef std::map<rps_string, Hooks, std::less<rps_string>, rps_allocator<std::pair<rps_string, Hooks> > > FuncHookTable;
     typedef std::map<rps_string, FuncHookTable, std::less<rps_string>, rps_allocator<std::pair<rps_string, FuncHookTable> > > DLLHookTable;
@@ -128,12 +135,11 @@ private:
     template<class F>
     void eachModules(const F &f)
     {
-        for(auto i=m_modules.begin(); i!=m_modules.end(); ++i) {
-            f(i->second);
-        }
+        rpsEach(m_modules, f);
     }
 
     Modules m_modules;
+    ModuleMap m_module_map;
     DLLHookTable m_hooks;
     Requests m_requests;
     rpsMutex m_mtx_requests;

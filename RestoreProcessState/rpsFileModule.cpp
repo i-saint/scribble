@@ -150,7 +150,7 @@ BOOL WINAPI rpsWriteFile(
 {
     if(rpsFileRecord *rec=rpsGetCurrentModule()->findFileRecord(hFile)) {
         DWORD written = 0;
-        BOOL ret = vaWriteFile(rec->win_handle, lpBuffer, nNumberOfBytesToWrite, &written, lpOverlapped);
+        BOOL ret = vaWriteFile(rpsTranslateHandleC(hFile, vaWriteFile), lpBuffer, nNumberOfBytesToWrite, &written, lpOverlapped);
         if(ret) {
             rec->pos += written;
             if(lpNumberOfBytesWritten) {
@@ -160,7 +160,7 @@ BOOL WINAPI rpsWriteFile(
         return ret;
     }
     else {
-        return vaWriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
+        return vaWriteFile(rpsTranslateHandleC(hFile, vaWriteFile), lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
     }
 }
 
@@ -174,7 +174,7 @@ BOOL WINAPI rpsReadFile(
 {
     if(rpsFileRecord *rec=rpsGetCurrentModule()->findFileRecord(hFile)) {
         DWORD read = 0;
-        BOOL ret = vaReadFile(rec->win_handle, lpBuffer, nNumberOfBytesToRead, &read, lpOverlapped);
+        BOOL ret = vaReadFile(rpsTranslateHandleC(hFile, vaReadFile), lpBuffer, nNumberOfBytesToRead, &read, lpOverlapped);
         if(ret) {
             rec->pos += read;
             if(lpNumberOfBytesRead) {
@@ -184,7 +184,7 @@ BOOL WINAPI rpsReadFile(
         return ret;
     }
     else {
-        return vaReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+        return vaReadFile(rpsTranslateHandleC(hFile, vaReadFile), lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
     }
 }
 
@@ -195,7 +195,11 @@ DWORD WINAPI rpsSetFilePointer(
     DWORD dwMoveMethod
     )
 {
-    return vaSetFilePointer(rpsTranslateHandle(hFile), lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod);
+    return vaSetFilePointer(
+        rpsTranslateHandleC(hFile, vaSetFilePointer),
+        lDistanceToMove,
+        lpDistanceToMoveHigh,
+        dwMoveMethod);
 }
 
 BOOL WINAPI rpsSetFilePointerEx(
@@ -205,25 +209,29 @@ BOOL WINAPI rpsSetFilePointerEx(
     DWORD dwMoveMethod
     )
 {
-    return vaSetFilePointerEx(rpsTranslateHandle(hFile), liDistanceToMove, lpNewFilePointer, dwMoveMethod);
+    return vaSetFilePointerEx(
+        rpsTranslateHandleC(hFile, vaSetFilePointerEx),
+        liDistanceToMove,
+        lpNewFilePointer,
+        dwMoveMethod);
 }
 
 DWORD WINAPI rpsGetFileType(HANDLE hFile)
 {
-    return vaGetFileType(rpsTranslateHandle(hFile));
+    return vaGetFileType(rpsTranslateHandleC(hFile, vaGetFileType));
 }
 
 BOOL WINAPI rpsCloseHandle(HANDLE hObject)
 {
     if(rpsFileRecord *rec=rpsGetCurrentModule()->findFileRecord(hObject)) {
-        BOOL ret = vaCloseHandle(rec->win_handle);
+        BOOL ret = vaCloseHandle(rpsTranslateHandleC(hObject, vaCloseHandle));
         if(ret) {
             rpsGetCurrentModule()->eraseFileRecord(hObject);
         }
         return ret;
     }
     else {
-        return vaCloseHandle(hObject);
+        return vaCloseHandle(rpsTranslateHandleC(hObject, vaCloseHandle));
     }
 }
 
@@ -236,7 +244,7 @@ rpsHookInfo g_hookinfo[] = {
     rpsHookInfo("kernel32.dll", "SetFilePointer",   0, rpsSetFilePointer,   &(void*&)vaSetFilePointer   ),
     rpsHookInfo("kernel32.dll", "SetFilePointerEx", 0, rpsSetFilePointerEx, &(void*&)vaSetFilePointerEx ),
     rpsHookInfo("kernel32.dll", "GetFileType",      0, rpsGetFileType,      &(void*&)vaGetFileType      ),
-    rpsHookInfo("kernel32.dll", "CloseHandle",       0, rpsCloseHandle,      &(void*&)vaCloseHandle      ),
+    rpsHookInfo("kernel32.dll", "CloseHandle",      0, rpsCloseHandle,      &(void*&)vaCloseHandle      ),
 
     rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };
@@ -256,7 +264,8 @@ inline rpsArchive& operator&(rpsArchive &ar, rpsFileRecord &v)
         if(v.access_mode==GENERIC_WRITE) {
             disposition = OPEN_EXISTING;
         }
-        v.win_handle = vaCreateFileW(v.path.c_str(), v.access_mode, v.share_mode, nullptr, v.disposition, v.attributes, nullptr);
+        v.win_handle = vaCreateFileW(v.path.c_str(), v.access_mode, v.share_mode, nullptr, disposition, v.attributes, nullptr);
+        rpsGetHandleInfo(v.rps_handle)->win_handle = v.win_handle;
         vaSetFilePointerEx(v.win_handle, (LARGE_INTEGER&)v.pos, nullptr, FILE_BEGIN);
     }
     return ar;

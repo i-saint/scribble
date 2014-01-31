@@ -41,11 +41,11 @@ bool rpsCommunicator::onAccept(rpsProtocolSocket &client)
     rps_string command;
     client.read(command);
     if(strncmp(&command[0], "save ", 5)==0) {
-        rpsMainModule::SerializeRequest req = {rps_string(&command[5]), rpsArchive::Writer};
+        rpsMainModule::SerializeRequest req(&command[5], rpsArchive::Writer);
         rpsMainModule::getInstance()->pushRequest(req);
     }
     else if(strncmp(&command[0], "load ", 5)==0) {
-        rpsMainModule::SerializeRequest req = {rps_string(&command[5]), rpsArchive::Reader};
+        rpsMainModule::SerializeRequest req(&command[5], rpsArchive::Reader);
         rpsMainModule::getInstance()->pushRequest(req);
     }
     else if(strncmp(&command[0], "stop", 4)==0) {

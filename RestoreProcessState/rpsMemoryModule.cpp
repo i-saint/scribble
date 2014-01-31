@@ -35,6 +35,7 @@ public:
     virtual void serialize(rpsArchive &ar);
     virtual void handleMessage(rpsMessage &m);
 
+    void* getHeapBlock() const { return m_mem; }
     void setMemorySize(size_t size) { m_size=size; }
 
     LPVOID  rpsHeapAllocImpl(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
@@ -338,5 +339,7 @@ BOOL rpsMemoryModule::rpsVirtualFreeImpl(LPVOID lpAddress, SIZE_T dwSize, DWORD 
 }
 
 } // namespace
+
+rpsAPI void* rpsGetHeapBlock() { return rpsMemoryModule::getInstance()->getHeapBlock(); }
 
 rpsDLLExport rpsIModule* rpsCreateMemoryModule() { return rpsMemoryModule::getInstance(); }

@@ -18,7 +18,7 @@ public:
     rpsHandleInfo* findHandleInfoByRpsHandle(HANDLE rps_handle);
     HANDLE createHandle(rpsIModule *owner, HANDLE win_handle);
     bool releaseHandle(HANDLE rps_handle);
-    HANDLE translateHandle(HANDLE rps_handle);
+    HANDLE findWinHandle(HANDLE rps_handle);
     rpsHandleInfo* getHandleInfo(HANDLE rps_handle);
 
 private:
@@ -36,7 +36,7 @@ WaitForSingleObjectT    vaWaitForSingleObject;
 
 BOOL WINAPI rpsCloseHandle(HANDLE hObject)
 {
-    BOOL ret = vaCloseHandle(rpsTranslateHandle(hObject));
+    BOOL ret = vaCloseHandle(rpsTranslateHandleC(hObject, vaCloseHandle));
     if(ret) {
         rpsCurrentModule::getInstance()->releaseHandle(hObject);
     }
@@ -115,7 +115,7 @@ bool rpsHandleManager::releaseHandle(HANDLE rps_handle)
     return false;
 }
 
-HANDLE rpsHandleManager::translateHandle( HANDLE rps_handle )
+HANDLE rpsHandleManager::findWinHandle( HANDLE rps_handle )
 {
     if(!rpsIsRpsHandle(rps_handle)) { return rps_handle; }
 
@@ -152,7 +152,7 @@ rpsAPI bool rpsReleaseHandle(HANDLE rps_handle)
 
 rpsAPI HANDLE rpsTranslateHandle(HANDLE rps_handle)
 {
-    return rpsHandleManager::getInstance()->translateHandle(rps_handle);
+    return rpsHandleManager::getInstance()->findWinHandle(rps_handle);
 }
 
 rpsAPI rpsHandleInfo* rpsGetHandleInfo(HANDLE rps_handle)

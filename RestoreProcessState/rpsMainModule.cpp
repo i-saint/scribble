@@ -91,7 +91,8 @@ rpsMainModule::rpsMainModule()
         if(!ctab[mi]) { break; }
         rpsIModule *mod = ctab[mi]();
         mod->initialize();
-        m_modules[mod->getModuleName()] = mod;
+        m_modules.push_back(mod);
+        m_module_map[mod->getModuleName()] = mod;
 
         if(rpsHookInfo *hinfo = mod->getHooks()) {
             for(size_t hi=0; ; ++hi) {
@@ -195,7 +196,7 @@ void rpsMainModule::mainloop()
         if(!m_requests.empty()) {
             rpsMutex::ScopedLock lock(m_mtx_requests);
             rpsEach(m_requests, [&](SerializeRequest &req){
-                serializeImpl(req.path.c_str(), req.mode);
+                serializeImpl(req.path, req.mode);
             });
             m_requests.clear();
         }
@@ -205,8 +206,8 @@ void rpsMainModule::mainloop()
 
 void rpsMainModule::sendMessage( rpsMessage &m )
 {
-    auto it = m_modules.find(m.modulename);
-    if(it!=m_modules.end()) {
+    auto it = m_module_map.find(m.modulename);
+    if(it!=m_module_map.end()) {
         it->second->handleMessage(m);
     }
 }
@@ -223,14 +224,14 @@ rpsAPI void rpsInitialize()
 
 rpsAPI void rpsSaveState(const char *path_to_outfile)
 {
-    rpsMainModule::SerializeRequest req = {rps_string(path_to_outfile), rpsArchive::Writer};
+    rpsMainModule::SerializeRequest req(path_to_outfile, rpsArchive::Writer);
     rpsMainModule::getInstance()->pushRequest(req);
     rpsMainModule::getInstance()->processRequest();
 }
 
 rpsAPI void rpsLoadState(const char *path_to_infile)
 {
-    rpsMainModule::SerializeRequest req = {rps_string(path_to_infile), rpsArchive::Reader};
+    rpsMainModule::SerializeRequest req (path_to_infile, rpsArchive::Reader);
     rpsMainModule::getInstance()->pushRequest(req);
     rpsMainModule::getInstance()->processRequest();
 }
