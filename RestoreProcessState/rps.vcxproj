@@ -96,6 +96,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>rpsPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>.</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -117,6 +118,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>rpsPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>.</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -136,6 +138,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>rpsPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>.</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -157,6 +160,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>rpsPCH.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>.</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -168,12 +172,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Modules\rpsFileModule.cpp" />
+    <ClCompile Include="Modules\rpsMemoryModule.cpp" />
+    <ClCompile Include="Modules\rpsSyncModule.cpp" />
+    <ClCompile Include="Modules\rpsThreadModule.cpp" />
+    <ClCompile Include="Modules\rpsTimeModule.cpp" />
     <ClCompile Include="rpsCommunicator.cpp" />
-    <ClCompile Include="rpsFileModule.cpp" />
     <ClCompile Include="rpsFoundation.cpp" />
     <ClCompile Include="rpsHandleManager.cpp" />
     <ClCompile Include="rpsMainModule.cpp" />
-    <ClCompile Include="rpsMemoryModule.cpp" />
     <ClCompile Include="rpsNetwork.cpp" />
     <ClCompile Include="rpsPCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -181,8 +188,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="rpsThreadModule.cpp" />
-    <ClCompile Include="rpsTimeModule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rps.h" />

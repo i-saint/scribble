@@ -34,7 +34,7 @@ typedef rpsHandleManager rpsCurrentModule;
 CloseHandleT            vaCloseHandle;
 WaitForSingleObjectT    vaWaitForSingleObject;
 
-BOOL WINAPI rpsCloseHandle(HANDLE hObject)
+rpsHookAPI BOOL WINAPI rpsCloseHandle(HANDLE hObject)
 {
     BOOL ret = vaCloseHandle(rpsTranslateHandleC(hObject, vaCloseHandle));
     if(ret) {
@@ -43,7 +43,7 @@ BOOL WINAPI rpsCloseHandle(HANDLE hObject)
     return ret;
 }
 
-DWORD WINAPI rpsWaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds)
+rpsHookAPI DWORD WINAPI rpsWaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds)
 {
     return vaWaitForSingleObject(rpsTranslateHandle(hHandle), dwMilliseconds);
 }
@@ -56,11 +56,6 @@ rpsHookInfo g_hookinfo[] = {
 };
 
 
-
-inline rpsArchive& operator&(rpsArchive &ar, HANDLE &v)
-{
-    return ar & (size_t&)v;
-}
 
 inline rpsArchive& operator&(rpsArchive &ar, rpsHandleInfo &v)
 {

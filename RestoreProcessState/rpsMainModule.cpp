@@ -5,6 +5,7 @@
 
 extern rpsIModule* rpsCreateMemoryModule();
 extern rpsIModule* rpsCreateHandleManager();
+extern rpsIModule* rpsCreateSyncModule();
 extern rpsIModule* rpsCreateThreadModule();
 extern rpsIModule* rpsCreateFileModule();
 extern rpsIModule* rpsCreateTimeModule();
@@ -12,6 +13,7 @@ extern rpsIModule* rpsCreateTimeModule();
 static rpsModuleCreator g_mcreators[] = {
     rpsCreateMemoryModule,
     rpsCreateHandleManager,
+    rpsCreateSyncModule,
     rpsCreateThreadModule,
     rpsCreateFileModule,
     rpsCreateTimeModule,

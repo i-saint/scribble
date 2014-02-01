@@ -157,6 +157,8 @@ inline rpsArchive& operator&(rpsArchive &ar,    float &v) { ar.io(&v, sizeof(v))
 inline rpsArchive& operator&(rpsArchive &ar,   double &v) { ar.io(&v, sizeof(v)); return ar; }
 inline rpsArchive& operator&(rpsArchive &ar,          long &v) { ar.io(&v, sizeof(v)); return ar; }
 inline rpsArchive& operator&(rpsArchive &ar, unsigned long &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar, HANDLE &v) { return ar & (size_t&)v; }
+
 
 template<class CharT, template<class> class Allocator >
 inline rpsArchive& operator&(rpsArchive &ar, std::basic_string<CharT, std::char_traits<CharT>, Allocator<CharT> > &v)
@@ -224,5 +226,68 @@ inline HANDLE rpsTranslateHandleC(HANDLE rps_handle, void *p)
 {
     return rpsIsInsideRpsModule(p) ? rps_handle : rpsTranslateHandle(rps_handle);
 }
+
+
+namespace {
+
+template<class RecordT>
+struct rpsTHandleRecords
+{
+public:
+    typedef RecordT Record;
+    typedef std::map<HANDLE, Record, std::less<HANDLE>, rps_allocator<std::pair<HANDLE, Record> > > Records;
+    typedef typename Records::value_type Pair;
+    typedef typename Records::iterator iterator;
+
+    iterator begin() { return m_records.begin(); }
+    iterator end()   { return m_records.end(); }
+
+    void serialize(rpsArchive &ar); // defined by user
+
+    void addRecord(HANDLE rps_handle, const Record &record)
+    {
+        if(!rpsIsRpsHandle(rps_handle)) { return; }
+
+        rpsMutex::ScopedLock lock(m_mutex);
+        m_records[rps_handle] = record;
+    }
+
+    bool eraseRecord(HANDLE rps_handle)
+    {
+        if(!rpsIsRpsHandle(rps_handle)) { return nullptr; }
+
+        rpsMutex::ScopedLock lock(m_mutex);
+        auto it = m_records.find(rps_handle);
+        if(it!=m_records.end()) {
+            m_records.erase(it);
+            return true;
+        }
+        return false;
+    }
+
+    Record* findRecord(HANDLE rps_handle)
+    {
+        if(!rpsIsRpsHandle(rps_handle)) { return nullptr; }
+
+        rpsMutex::ScopedLock lock(m_mutex);
+        auto it = m_records.find(rps_handle);
+        if(it!=m_records.end()) {
+            return &it->second;
+        }
+        return nullptr;
+    }
+
+private:
+    rpsMutex m_mutex;
+    Records m_records;
+};
+
+template<class T>
+inline rpsArchive & operator&(rpsArchive &ar, rpsTHandleRecords<T> &v)
+{
+    v.serialize(ar);
+    return ar;
+}
+} // namespace
 
 #endif // rpsInlines_h

@@ -36,6 +36,7 @@
 #define rpsPrintError(...) printf(__VA_ARGS__)
 #define rpsPrintInfo(...) printf(__VA_ARGS__)
 
+#define rpsHookAPI __declspec(noinline)
 
 struct rpsHookInfo
 {

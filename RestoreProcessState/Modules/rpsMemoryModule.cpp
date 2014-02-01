@@ -95,49 +95,49 @@ VirtualAllocExT vaVirtualAllocEx;
 VirtualFreeExT  vaVirtualFreeEx;
 
 
-LPVOID WINAPI rpsHeapAlloc( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes )
+rpsHookAPI LPVOID WINAPI rpsHeapAlloc( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes )
 {
     return rpsMemoryModule::getInstance()->rpsHeapAllocImpl(hHeap, dwFlags, dwBytes);
 }
 
-LPVOID WINAPI rpsHeapReAlloc( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes )
+rpsHookAPI LPVOID WINAPI rpsHeapReAlloc( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes )
 {
     return rpsMemoryModule::getInstance()->rpsHeapReAllocImpl(hHeap, dwFlags, lpMem, dwBytes);
 }
 
-BOOL WINAPI rpsHeapFree( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem )
+rpsHookAPI BOOL WINAPI rpsHeapFree( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem )
 {
     return rpsMemoryModule::getInstance()->rpsHeapFreeImpl(hHeap, dwFlags, lpMem);
 }
 
-BOOL WINAPI rpsHeapValidate( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem )
+rpsHookAPI BOOL WINAPI rpsHeapValidate( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem )
 {
     return rpsMemoryModule::getInstance()->rpsHeapValidateImpl(hHeap, dwFlags, lpMem);
 }
 
-SIZE_T WINAPI rpsHeapSize( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem )
+rpsHookAPI SIZE_T WINAPI rpsHeapSize( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem )
 {
     return rpsMemoryModule::getInstance()->rpsHeapSizeImpl(hHeap, dwFlags, lpMem);
 }
 
 
-LPVOID WINAPI rpsVirtualAlloc(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect)
+rpsHookAPI LPVOID WINAPI rpsVirtualAlloc(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect)
 {
     return rpsMemoryModule::getInstance()->rpsVirtualAllocImpl(lpAddress, dwSize, flAllocationType, flProtect);
 }
 
-BOOL WINAPI rpsVirtualFree(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType)
+rpsHookAPI BOOL WINAPI rpsVirtualFree(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType)
 {
     return rpsMemoryModule::getInstance()->rpsVirtualFreeImpl(lpAddress, dwSize, dwFreeType);
 }
 
-LPVOID WINAPI rpsVirtualAllocEx(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect)
+rpsHookAPI LPVOID WINAPI rpsVirtualAllocEx(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect)
 {
     LPVOID ret = vaVirtualAllocEx(hProcess, lpAddress, dwSize, flAllocationType, flProtect);
     return ret;
 }
 
-BOOL WINAPI rpsVirtualFreeEx(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType)
+rpsHookAPI BOOL WINAPI rpsVirtualFreeEx(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType)
 {
     BOOL ret = vaVirtualFreeEx(hProcess, lpAddress, dwSize, dwFreeType);
     return ret;

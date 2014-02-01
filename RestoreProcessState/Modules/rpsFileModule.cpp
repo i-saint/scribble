@@ -14,6 +14,7 @@ struct rpsFileRecord
     DWORD disposition;
     DWORD attributes;
 };
+typedef rpsTHandleRecords<rpsFileRecord> rpsFileRecords;
 
 class rpsFileModule : public rpsIModule
 {
@@ -27,44 +28,14 @@ public:
     virtual void initialize();
     virtual void serialize(rpsArchive &ar);
 
-    void addFileRecord(HANDLE rps_handle, const rpsFileRecord &stat)
-    {
-        rpsMutex::ScopedLock lock(m_mutex);
-        m_files[rps_handle] = stat;
-    }
-
-    bool eraseFileRecord(HANDLE rps_handle)
-    {
-        if(!rpsIsRpsHandle(rps_handle)) { return nullptr; }
-
-        rpsMutex::ScopedLock lock(m_mutex);
-        auto it = m_files.find(rps_handle);
-        if(it!=m_files.end()) {
-            m_files.erase(it);
-            return true;
-        }
-        return false;
-    }
-
-    rpsFileRecord* findFileRecord(HANDLE rps_handle)
-    {
-        if(!rpsIsRpsHandle(rps_handle)) { return nullptr; }
-
-        rpsMutex::ScopedLock lock(m_mutex);
-        auto it = m_files.find(rps_handle);
-        if(it!=m_files.end()) {
-            return &it->second;
-        }
-        return nullptr;
-    }
+    rpsFileRecords* getFileRecords() { return &m_file_records; }
 
 private:
-    typedef std::map<HANDLE, rpsFileRecord, std::less<HANDLE>, rps_allocator<std::pair<HANDLE, rpsFileRecord> > > FileRecords;
-    rpsMutex m_mutex;
-    FileRecords m_files;
+    rpsFileRecords m_file_records;
 };
 typedef rpsFileModule rpsCurrentModule;
 inline rpsCurrentModule* rpsGetCurrentModule() { return rpsCurrentModule::getInstance(); }
+inline rpsFileRecords* rpsGetFileRecords() { return rpsGetCurrentModule()->getFileRecords(); }
 
 
 CreateFileAT        vaCreateFileA;
@@ -77,7 +48,7 @@ SetFilePointerExT   vaSetFilePointerEx;
 GetFileTypeT        vaGetFileType;
 CloseHandleT        vaCloseHandle;
 
-HANDLE WINAPI rpsCreateFileA(
+rpsHookAPI HANDLE WINAPI rpsCreateFileA(
     LPCSTR lpFileName,
     DWORD dwDesiredAccess,
     DWORD dwShareMode,
@@ -97,11 +68,11 @@ HANDLE WINAPI rpsCreateFileA(
         mbstowcs(&path[0], lpFileName, mblen);
     }
     rpsFileRecord record = {path, rps_handle, win_handle, 0, dwDesiredAccess, dwShareMode, dwCreationDisposition, dwFlagsAndAttributes};
-    rpsGetCurrentModule()->addFileRecord(rps_handle, record);
+    rpsGetFileRecords()->addRecord(rps_handle, record);
     return rps_handle;
 }
 
-HANDLE WINAPI rpsCreateFileW(
+rpsHookAPI HANDLE WINAPI rpsCreateFileW(
     LPCWSTR lpFileName,
     DWORD dwDesiredAccess,
     DWORD dwShareMode,
@@ -114,11 +85,11 @@ HANDLE WINAPI rpsCreateFileW(
     HANDLE win_handle = vaCreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
     HANDLE rps_handle = rpsCreateHandle(rpsFileModule::getInstance(), win_handle);
     rpsFileRecord record = {lpFileName, rps_handle, win_handle, 0, dwDesiredAccess, dwShareMode, dwCreationDisposition, dwFlagsAndAttributes};
-    rpsGetCurrentModule()->addFileRecord(rps_handle, record);
+    rpsGetFileRecords()->addRecord(rps_handle, record);
     return rps_handle;
 }
 
-HANDLE WINAPI rpsCreateFile2(
+rpsHookAPI HANDLE WINAPI rpsCreateFile2(
     LPCTSTR lpFileName,
     DWORD dwDesiredAccess,
     DWORD dwShareMode,
@@ -136,11 +107,11 @@ HANDLE WINAPI rpsCreateFile2(
         mbstowcs(&path[0], lpFileName, mblen);
     }
     rpsFileRecord record = {path, rps_handle, win_handle, 0, dwDesiredAccess, dwShareMode, dwCreationDisposition, pCreateExParams->dwFileAttributes};
-    rpsGetCurrentModule()->addFileRecord(rps_handle, record);
+    rpsGetFileRecords()->addRecord(rps_handle, record);
     return rps_handle;
 }
 
-BOOL WINAPI rpsWriteFile(
+rpsHookAPI BOOL WINAPI rpsWriteFile(
     HANDLE hFile,
     LPCVOID lpBuffer,
     DWORD nNumberOfBytesToWrite,
@@ -148,7 +119,7 @@ BOOL WINAPI rpsWriteFile(
     LPOVERLAPPED lpOverlapped
     )
 {
-    if(rpsFileRecord *rec=rpsGetCurrentModule()->findFileRecord(hFile)) {
+    if(rpsFileRecord *rec=rpsGetFileRecords()->findRecord(hFile)) {
         DWORD written = 0;
         BOOL ret = vaWriteFile(rpsTranslateHandleC(hFile, vaWriteFile), lpBuffer, nNumberOfBytesToWrite, &written, lpOverlapped);
         if(ret) {
@@ -164,7 +135,7 @@ BOOL WINAPI rpsWriteFile(
     }
 }
 
-BOOL WINAPI rpsReadFile(
+rpsHookAPI BOOL WINAPI rpsReadFile(
     HANDLE hFile,
     LPVOID lpBuffer,
     DWORD nNumberOfBytesToRead,
@@ -172,7 +143,7 @@ BOOL WINAPI rpsReadFile(
     LPOVERLAPPED lpOverlapped
     )
 {
-    if(rpsFileRecord *rec=rpsGetCurrentModule()->findFileRecord(hFile)) {
+    if(rpsFileRecord *rec=rpsGetFileRecords()->findRecord(hFile)) {
         DWORD read = 0;
         BOOL ret = vaReadFile(rpsTranslateHandleC(hFile, vaReadFile), lpBuffer, nNumberOfBytesToRead, &read, lpOverlapped);
         if(ret) {
@@ -188,7 +159,7 @@ BOOL WINAPI rpsReadFile(
     }
 }
 
-DWORD WINAPI rpsSetFilePointer(
+rpsHookAPI DWORD WINAPI rpsSetFilePointer(
     HANDLE hFile,
     LONG lDistanceToMove,
     PLONG lpDistanceToMoveHigh,
@@ -202,7 +173,7 @@ DWORD WINAPI rpsSetFilePointer(
         dwMoveMethod);
 }
 
-BOOL WINAPI rpsSetFilePointerEx(
+rpsHookAPI BOOL WINAPI rpsSetFilePointerEx(
     HANDLE hFile,
     LARGE_INTEGER liDistanceToMove,
     PLARGE_INTEGER lpNewFilePointer,
@@ -216,17 +187,17 @@ BOOL WINAPI rpsSetFilePointerEx(
         dwMoveMethod);
 }
 
-DWORD WINAPI rpsGetFileType(HANDLE hFile)
+rpsHookAPI DWORD WINAPI rpsGetFileType(HANDLE hFile)
 {
     return vaGetFileType(rpsTranslateHandleC(hFile, vaGetFileType));
 }
 
-BOOL WINAPI rpsCloseHandle(HANDLE hObject)
+rpsHookAPI BOOL WINAPI rpsCloseHandle(HANDLE hObject)
 {
-    if(rpsFileRecord *rec=rpsGetCurrentModule()->findFileRecord(hObject)) {
+    if(rpsFileRecord *rec=rpsGetFileRecords()->findRecord(hObject)) {
         BOOL ret = vaCloseHandle(rpsTranslateHandleC(hObject, vaCloseHandle));
         if(ret) {
-            rpsGetCurrentModule()->eraseFileRecord(hObject);
+            rpsGetFileRecords()->eraseRecord(hObject);
         }
         return ret;
     }
@@ -250,11 +221,6 @@ rpsHookInfo g_hookinfo[] = {
 };
 
 
-
-inline rpsArchive& operator&(rpsArchive &ar, HANDLE &v)
-{
-    return ar & (size_t&)v;
-}
 
 inline rpsArchive& operator&(rpsArchive &ar, rpsFileRecord &v)
 {
@@ -295,12 +261,17 @@ void rpsFileModule::initialize()
 
 void rpsFileModule::serialize(rpsArchive &ar)
 {
+    ar & m_file_records;
+}
+
+void rpsFileRecords::serialize(rpsArchive &ar)
+{
     if(ar.isReader()) {
-        rpsEach(m_files, [](FileRecords::value_type &rec){
+        rpsEach(m_records, [](rpsFileRecords::Pair &rec){
             vaCloseHandle(rec.second.win_handle);
         });
     }
-    ar & m_files;
+    ar & m_records;
 }
 
 } // namespace

@@ -1,75 +1,41 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    <Filter Include="Modules">
+      <UniqueIdentifier>{53f96215-6e08-47c6-9bcc-e4b72674d166}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="rpsFoundation.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="rpsCommunicator.cpp" />
+    <ClCompile Include="rpsFoundation.cpp" />
+    <ClCompile Include="rpsHandleManager.cpp" />
+    <ClCompile Include="rpsMainModule.cpp" />
+    <ClCompile Include="rpsNetwork.cpp" />
+    <ClCompile Include="rpsPCH.cpp" />
+    <ClCompile Include="Modules\rpsFileModule.cpp">
+      <Filter>Modules</Filter>
     </ClCompile>
-    <ClCompile Include="rpsMainModule.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Modules\rpsMemoryModule.cpp">
+      <Filter>Modules</Filter>
     </ClCompile>
-    <ClCompile Include="rpsPCH.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Modules\rpsSyncModule.cpp">
+      <Filter>Modules</Filter>
     </ClCompile>
-    <ClCompile Include="rpsNetwork.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Modules\rpsThreadModule.cpp">
+      <Filter>Modules</Filter>
     </ClCompile>
-    <ClCompile Include="rpsCommunicator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="rpsFileModule.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="rpsMemoryModule.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="rpsThreadModule.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="rpsTimeModule.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="rpsHandleManager.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Modules\rpsTimeModule.cpp">
+      <Filter>Modules</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="rps.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rpsInlines.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rpsInternal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rpsFoundation.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rpsFuncTypes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rpsPCH.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rpsNetwork.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rpsCommunicator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <ClInclude Include="rps.h" />
+    <ClInclude Include="rpsCommunicator.h" />
+    <ClInclude Include="rpsFoundation.h" />
+    <ClInclude Include="rpsFuncTypes.h" />
+    <ClInclude Include="rpsInlines.h" />
+    <ClInclude Include="rpsInternal.h" />
+    <ClInclude Include="rpsNetwork.h" />
+    <ClInclude Include="rpsPCH.h" />
   </ItemGroup>
 </Project>
