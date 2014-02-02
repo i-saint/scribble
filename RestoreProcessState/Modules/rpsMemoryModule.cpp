@@ -144,16 +144,16 @@ rpsHookAPI BOOL WINAPI rpsVirtualFreeEx(HANDLE hProcess, LPVOID lpAddress, SIZE_
 }
 
 rpsHookInfo g_hookinfo[] = {
-    rpsHookInfo("kernel32.dll", "HeapAlloc",   0, rpsHeapAlloc,   &(void*&)vaHeapAlloc),
-    rpsHookInfo("kernel32.dll", "HeapReAlloc", 0, rpsHeapReAlloc, &(void*&)vaHeapReAlloc),
-    rpsHookInfo("kernel32.dll", "HeapFree",    0, rpsHeapFree,    &(void*&)vaHeapFree),
-    rpsHookInfo("kernel32.dll", "HeapValidate",0, rpsHeapValidate,&(void*&)vaHeapValidate),
-    rpsHookInfo("kernel32.dll", "HeapSize",    0, rpsHeapSize,    &(void*&)vaHeapSize),
+    rpsDefineHookInfo("kernel32.dll", HeapAlloc     ),
+    rpsDefineHookInfo("kernel32.dll", HeapReAlloc   ),
+    rpsDefineHookInfo("kernel32.dll", HeapFree      ),
+    rpsDefineHookInfo("kernel32.dll", HeapValidate  ),
+    rpsDefineHookInfo("kernel32.dll", HeapSize      ),
 
-    rpsHookInfo("kernel32.dll", "VirtualAlloc",   0, rpsVirtualAlloc,   &(void*&)vaVirtualAlloc),
-    rpsHookInfo("kernel32.dll", "VirtualFree",    0, rpsVirtualFree,    &(void*&)vaVirtualFree),
-    rpsHookInfo("kernel32.dll", "VirtualAllocEx", 0, rpsVirtualAllocEx, &(void*&)vaVirtualAllocEx),
-    rpsHookInfo("kernel32.dll", "VirtualFreeEx",  0, rpsVirtualFreeEx,  &(void*&)vaVirtualFreeEx),
+    rpsDefineHookInfo("kernel32.dll", VirtualAlloc  ),
+    rpsDefineHookInfo("kernel32.dll", VirtualFree   ),
+    rpsDefineHookInfo("kernel32.dll", VirtualAllocEx),
+    rpsDefineHookInfo("kernel32.dll", VirtualFreeEx ),
 
     rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };

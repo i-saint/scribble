@@ -73,8 +73,6 @@ public:
 };
 typedef rpsIModule* (*rpsModuleCreator)();
 
-typedef std::basic_string<   char, std::char_traits<   char>, rps_allocator<   char> > rps_string;
-typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, rps_allocator<wchar_t> > rps_wstring;
 class rpsCommunicator;
 
 inline bool rpsIsRpsHandle(HANDLE h) { return (DWORD)h>>24=='R'; }
@@ -89,7 +87,8 @@ struct rpsHandleInfo
 rpsAPI void* rpsGetHeapBlock();
 rpsAPI HANDLE rpsCreateHandle(rpsIModule *owner, HANDLE win_handle);
 rpsAPI bool rpsReleaseHandle(HANDLE rps_handle);
-rpsAPI HANDLE rpsTranslateHandle(HANDLE rps_handle);
+rpsAPI HANDLE rpsToWinHandle(HANDLE rps_handle);
+rpsAPI HANDLE rpsToRpsHandle(HANDLE win_handle);
 rpsAPI rpsHandleInfo* rpsGetHandleInfo(HANDLE rps_handle);
 
 class rpsMainModule

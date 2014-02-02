@@ -2,6 +2,17 @@
 #define rpsInlines_h
 
 
+inline rps_wstring rpsL(const char *mbs)
+{
+    rps_wstring ret;
+    size_t mblen = strlen(mbs);
+    size_t len = mbstowcs(nullptr, mbs, mblen);
+    ret.resize(len);
+    mbstowcs(&ret[0], mbs, mblen);
+    return ret;
+}
+
+
 template<class T>
 inline void rpsForceWrite(T &dst, const T &src)
 {
@@ -222,9 +233,14 @@ inline rpsArchive& operator&(rpsArchive &ar, std::map<K, V, std::less<K>, Alloca
     return ar;
 }
 
-inline HANDLE rpsTranslateHandleC(HANDLE rps_handle, void *p)
+inline HANDLE rpsToWinHandleC(HANDLE rps_handle, void *p)
 {
-    return rpsIsInsideRpsModule(p) ? rps_handle : rpsTranslateHandle(rps_handle);
+    return rpsIsInsideRpsModule(p) ? rps_handle : rpsToWinHandle(rps_handle);
+}
+
+inline HANDLE rpsToRpsHandleC(HANDLE win_handle, void *p)
+{
+    return rpsIsInsideRpsModule(p) ? win_handle : rpsToRpsHandle(win_handle);
 }
 
 
@@ -289,5 +305,7 @@ inline rpsArchive & operator&(rpsArchive &ar, rpsTHandleRecords<T> &v)
     return ar;
 }
 } // namespace
+
+#define rpsDefineHookInfo(Module, FuncName) rpsHookInfo(Module, #FuncName, 0, rps##FuncName, &(void*&)va##FuncName )
 
 #endif // rpsInlines_h

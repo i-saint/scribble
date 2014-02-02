@@ -16,7 +16,6 @@ void* rpsOverrideDLLExport(HMODULE module, const char *funcname, void *hook_, vo
 
 void rpsRunThread(const std::function<void ()> &proc);
 
-
 // rpsMalloc() で実装されたアロケータ。
 template<typename T>
 class rps_allocator
@@ -54,6 +53,11 @@ public :
 };
 template<class T, typename Alloc> inline bool operator==(const rps_allocator<T>& l, const rps_allocator<T>& r) { return (l.equals(r)); }
 template<class T, typename Alloc> inline bool operator!=(const rps_allocator<T>& l, const rps_allocator<T>& r) { return (!(l == r)); }
+
+typedef std::basic_string<   char, std::char_traits<   char>, rps_allocator<   char> > rps_string;
+typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, rps_allocator<wchar_t> > rps_wstring;
+
+bool rpsFileToString(const char *path, rps_string &str);
 
 
 template<class T>

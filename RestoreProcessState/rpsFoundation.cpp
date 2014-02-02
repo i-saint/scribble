@@ -158,6 +158,20 @@ void rpsRunThread(const std::function<void ()> &proc)
     vaCreateThread(nullptr, 0, &rpsRunThread_, fp, 0, nullptr);
 }
 
+bool rpsFileToString( const char *path, rps_string &str )
+{
+    HANDLE fin = vaCreateFileA(path, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if(!fin) { return false; }
+
+    char buf[1024];
+    DWORD read = 0;
+    for(; read!=0; vaReadFile(fin, buf, sizeof(buf), &read, nullptr)) {
+        str.insert(str.end(), buf, buf+read);
+    }
+    vaCloseHandle(fin);
+    return true;
+}
+
 
 
 rpsArchive::rpsArchive()

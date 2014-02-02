@@ -58,7 +58,7 @@ inline rpsArchive& operator&(rpsArchive &ar, rpsThreadInformation &v)
 
 CreateThreadT vaCreateThread;
 
-LPVOID WINAPI rpsCreateThread(
+rpsHookAPI LPVOID WINAPI rpsCreateThread(
     LPSECURITY_ATTRIBUTES lpThreadAttributes,
     SIZE_T dwStackSize,
     LPTHREAD_START_ROUTINE lpStartAddress,
@@ -72,7 +72,7 @@ LPVOID WINAPI rpsCreateThread(
 }
 
 static rpsHookInfo g_hookinfo[] = {
-    rpsHookInfo("kernel32.dll", "CreateThread",   0, rpsCreateThread, &(void*&)vaCreateThread),
+    rpsDefineHookInfo("kernel32.dll", CreateThread),
 
     rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };

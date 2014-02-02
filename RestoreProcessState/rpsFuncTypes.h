@@ -46,16 +46,22 @@ typedef BOOL   (WINAPI *ResetEventT)(HANDLE hEvent);
 typedef BOOL   (WINAPI *SetEventT)(HANDLE hEvent);
 
 // mutex
-typedef HANDLE (WINAPI *CreateMutexAT)(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCTSTR lpName);
-typedef HANDLE (WINAPI *CreateMutexWT)(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCTSTR lpName);
-typedef HANDLE (WINAPI *CreateMutexExAT)(LPSECURITY_ATTRIBUTES lpMutexAttributes, LPCTSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess);
-typedef HANDLE (WINAPI *CreateMutexExWT)(LPSECURITY_ATTRIBUTES lpMutexAttributes, LPCTSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess);
+typedef HANDLE (WINAPI *CreateMutexAT)(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName);
+typedef HANDLE (WINAPI *CreateMutexWT)(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCWSTR lpName);
+typedef HANDLE (WINAPI *CreateMutexExAT)(LPSECURITY_ATTRIBUTES lpMutexAttributes, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess);
+typedef HANDLE (WINAPI *CreateMutexExWT)(LPSECURITY_ATTRIBUTES lpMutexAttributes, LPCWSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess);
 typedef HANDLE (WINAPI *OpenMutexAT)(DWORD dwDesiredAccess, BOOL bInheritHandle, LPCSTR lpName);
 typedef HANDLE (WINAPI *OpenMutexWT)(DWORD dwDesiredAccess, BOOL bInheritHandle, LPCWSTR lpName);
 typedef BOOL   (WINAPI *ReleaseMutexT)(HANDLE hMutex);
 
 // semaphore
-
+typedef HANDLE (WINAPI *CreateSemaphoreAT)(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCSTR lpName);
+typedef HANDLE (WINAPI *CreateSemaphoreWT)(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCWSTR lpName);
+typedef HANDLE (WINAPI *CreateSemaphoreExAT)(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess);
+typedef HANDLE (WINAPI *CreateSemaphoreExWT)(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCWSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess);
+typedef HANDLE (WINAPI *OpenSemaphoreAT)(DWORD dwDesiredAccess, BOOL bInheritHandle, LPCSTR lpName);
+typedef HANDLE (WINAPI *OpenSemaphoreWT)(DWORD dwDesiredAccess, BOOL bInheritHandle, LPCWSTR lpName);
+typedef BOOL   (WINAPI *ReleaseSemaphoreT)(HANDLE hSemaphore, LONG lReleaseCount, LPLONG lpPreviousCount);
 
 // file
 typedef HANDLE (WINAPI *CreateFileAT)(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);

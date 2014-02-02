@@ -33,20 +33,20 @@ private:
 QueryPerformanceCounterT    vaQueryPerformanceCounter;
 timeGetTimeT                vatimeGetTime;
 
-BOOL WINAPI rpsQueryPerformanceCounter( LARGE_INTEGER *lpPerformanceCount )
+rpsHookAPI BOOL WINAPI rpsQueryPerformanceCounter( LARGE_INTEGER *lpPerformanceCount )
 {
     return rpsTimeModule::getInstance()->rpsQueryPerformanceCounterImpl(lpPerformanceCount);
 }
 
-DWORD rpstimeGetTime( void )
+rpsHookAPI DWORD rpstimeGetTime( void )
 {
     return rpsTimeModule::getInstance()->rpstimeGetTimeImpl();
 }
 
 
 rpsHookInfo g_hookinfo[] = {
-    rpsHookInfo("kernel32.dll", "QueryPerformanceCounter",   0, rpsQueryPerformanceCounter,   &(void*&)vaQueryPerformanceCounter),
-    rpsHookInfo("winmm.dll",    "timeGetTime",               0, rpstimeGetTime,               &(void*&)vatimeGetTime),
+    rpsDefineHookInfo("kernel32.dll", QueryPerformanceCounter   ),
+    rpsDefineHookInfo("winmm.dll",    timeGetTime               ),
 
     rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };
