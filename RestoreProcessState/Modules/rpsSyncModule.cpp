@@ -242,7 +242,7 @@ rpsHookAPI HANDLE WINAPI rpsOpenMutexA(DWORD dwDesiredAccess, BOOL bInheritHandl
 }
 rpsHookAPI BOOL   WINAPI rpsReleaseMutex(HANDLE hMutex)
 {
-    return vaReleaseMutex(hMutex);
+    return vaReleaseMutex(rpsToWinHandleC(hMutex, vaReleaseMutex));
 }
 
 
@@ -282,7 +282,7 @@ rpsHookAPI HANDLE WINAPI rpsOpenSemaphoreA(DWORD dwDesiredAccess, BOOL bInheritH
 }
 rpsHookAPI BOOL   WINAPI rpsReleaseSemaphore(HANDLE hSemaphore, LONG lReleaseCount, LPLONG lpPreviousCount)
 {
-    return vaReleaseSemaphore(hSemaphore, lReleaseCount, lpPreviousCount);
+    return vaReleaseSemaphore(rpsToWinHandleC(hSemaphore, vaReleaseSemaphore), lReleaseCount, lpPreviousCount);
 }
 
 

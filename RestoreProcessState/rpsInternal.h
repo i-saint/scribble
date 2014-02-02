@@ -91,6 +91,8 @@ rpsAPI HANDLE rpsToWinHandle(HANDLE rps_handle);
 rpsAPI HANDLE rpsToRpsHandle(HANDLE win_handle);
 rpsAPI rpsHandleInfo* rpsGetHandleInfo(HANDLE rps_handle);
 
+
+
 class rpsMainModule
 {
 public:
@@ -105,12 +107,20 @@ public:
             mode = m;
         }
     };
+    struct ModuleHookConfig
+    {
+    };
+    struct ThreadHookConfig
+    {
+    };
     typedef std::vector<rpsIModule*, rps_allocator<rpsIModule*> > Modules;
     typedef std::map<rps_string, rpsIModule*, std::less<rps_string>, rps_allocator<std::pair<rps_string, rpsIModule*> > > ModuleMap;
     typedef std::vector<rpsHookInfo*, rps_allocator<rpsHookInfo*> > Hooks;
     typedef std::map<rps_string, Hooks, std::less<rps_string>, rps_allocator<std::pair<rps_string, Hooks> > > FuncHookTable;
     typedef std::map<rps_string, FuncHookTable, std::less<rps_string>, rps_allocator<std::pair<rps_string, FuncHookTable> > > DLLHookTable;
     typedef std::vector<SerializeRequest, rps_allocator<SerializeRequest> > Requests;
+    typedef std::map<rps_string, ModuleHookConfig, std::less<rps_string>, rps_allocator<std::pair<rps_string, ModuleHookConfig> > > ModuleHookConfigs;
+    typedef std::map<DWORD, ThreadHookConfig, std::less<DWORD>, rps_allocator<std::pair<DWORD, ThreadHookConfig> > > ThreadHookConfigs;
 
     static void initialize();
     static rpsMainModule* getInstance();
