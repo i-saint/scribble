@@ -72,6 +72,8 @@ typedef BOOL   (WINAPI *ReadFileT)(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberO
 typedef DWORD  (WINAPI *SetFilePointerT)(HANDLE hFile, LONG lDistanceToMove, PLONG lpDistanceToMoveHigh, DWORD dwMoveMethod);
 typedef BOOL   (WINAPI *SetFilePointerExT)(HANDLE hFile, LARGE_INTEGER liDistanceToMove, PLARGE_INTEGER lpNewFilePointer, DWORD dwMoveMethod);
 typedef DWORD  (WINAPI *GetFileTypeT)(HANDLE hFile);
+typedef DWORD  (WINAPI *GetFileSizeT)(HANDLE hFile, LPDWORD lpFileSizeHigh);
+typedef BOOL   (WINAPI *GetFileSizeExT)(HANDLE hFile, PLARGE_INTEGER lpFileSize);
 
 // time
 typedef BOOL (WINAPI *QueryPerformanceFrequencyT)( LARGE_INTEGER *lpFrequency );

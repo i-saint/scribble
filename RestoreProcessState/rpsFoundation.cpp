@@ -37,6 +37,44 @@ void rpsInitializeFoundation()
     }
 }
 
+template<size_t N>
+inline int rpsVSprintf(char (&buf)[N], const char *format, va_list vl)
+{
+    return _vsnprintf(buf, N, format, vl);
+}
+template<size_t N>
+inline int rpsVWSprintf(wchar_t (&buf)[N], const wchar_t *format, va_list vl)
+{
+    return _vsnwprintf(buf, N, format, vl);
+}
+void rpsPrintV(const char* fmt, va_list vl)
+{
+    char buf[4096];
+    rpsVSprintf(buf, fmt, vl);
+    ::OutputDebugStringA(buf);
+}
+void rpsPrintVW(const wchar_t* fmt, va_list vl)
+{
+    wchar_t buf[4096];
+    rpsVWSprintf(buf, fmt, vl);
+    ::OutputDebugStringW(buf);
+}
+void rpsPrint(const char* fmt, ...)
+{
+    va_list vl;
+    va_start(vl, fmt);
+    rpsPrintV(fmt, vl);
+    va_end(vl);
+}
+void rpsPrint(const wchar_t *fmt, ...)
+{
+    va_list vl;
+    va_start(vl, fmt);
+    rpsPrintVW(fmt, vl);
+    va_end(vl);
+}
+
+
 void* rpsMalloc(size_t s)
 {
     return vaHeapAlloc((HANDLE)_get_heap_handle(), 0, s);

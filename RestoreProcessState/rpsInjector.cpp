@@ -30,10 +30,11 @@ bool InjectDLL(HANDLE hProcess, const char* dllname)
     return true;
 }
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev, LPWSTR cmd, int show)
+int main(int argc, char *argv[])
 {
     char exepath[MAX_PATH+1];
     char *exefilename = nullptr;
+
     if(!exefilename) {
         ::GetModuleFileNameA(nullptr, exepath, sizeof(exepath));
         exefilename = exepath;
@@ -43,19 +44,28 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev, LPWSTR cmd, int show)
         }
     }
 
-    if(__argc<2) {
+    if(argc<2) {
         printf("usage: %s path-to-exe\n", exefilename);
         return 0;
     }
 
-    {
+    std::string exe_path;
+    DWORD exe_pid = 0;
+    if(strncmp(argv[1], "/pid:", 5)==0) {
+        sscanf(argv[1]+5, "%u", &exe_pid);
+    }
+    else {
+        exe_path = argv[1];
+    }
+
+    if(!exe_path.empty()) {
         DWORD flags = NORMAL_PRIORITY_CLASS | CREATE_SUSPENDED;
-        STARTUPINFOW si;
+        STARTUPINFOA si;
         PROCESS_INFORMATION pi;
         ::ZeroMemory(&si, sizeof(si));
         ::ZeroMemory(&pi, sizeof(pi));
         si.cb = sizeof(si);
-        BOOL ret = ::CreateProcessW(nullptr, __wargv[1], nullptr, nullptr, FALSE, flags, nullptr, nullptr, &si, &pi);
+        BOOL ret = ::CreateProcessA(nullptr, argv[1], nullptr, nullptr, FALSE, flags, nullptr, nullptr, &si, &pi);
         if(ret) {
             std::string dllpath(exepath, (size_t)exefilename-(size_t)exepath);
             dllpath += rpsCoreDLL;
@@ -64,7 +74,27 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev, LPWSTR cmd, int show)
             ::ResumeThread(pi.hThread);
             ::CloseHandle(pi.hThread);
             ::CloseHandle(pi.hProcess);
+
+            printf("injection done [%s]\n", exe_path.c_str());
             return pi.dwProcessId;
+        }
+        else {
+            printf("failed to create process [%s]\n", exe_path.c_str());
+        }
+    }
+    else if(exe_pid!=0) {
+        HANDLE process = ::OpenProcess(PROCESS_ALL_ACCESS, FALSE, exe_pid);
+        if(process!=nullptr) {
+            std::string dllpath(exepath, (size_t)exefilename-(size_t)exepath);
+            dllpath += rpsCoreDLL;
+
+            InjectDLL(process, dllpath.c_str());
+            ::CloseHandle(process);
+            printf("injection done [pid:%u]\n", exe_pid);
+            return exe_pid;
+        }
+        else {
+            printf("process [pid:%u] not found\n", exe_pid);
         }
     }
     return 0;

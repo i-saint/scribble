@@ -95,6 +95,7 @@ HANDLE rpsHandleManager::createHandle(rpsIModule *owner, HANDLE win_handle)
 {
     if(win_handle==nullptr || win_handle==INVALID_HANDLE_VALUE) { return win_handle; }
 
+    rpsMutex::ScopedLock lock(m_mutex);
     HANDLE ret = (void*)(++m_handle_seed + ('R'<<24));
     rpsHandleInfo info = {ret, win_handle, owner};
     m_rps_to_win[ret] = info;
@@ -103,6 +104,7 @@ HANDLE rpsHandleManager::createHandle(rpsIModule *owner, HANDLE win_handle)
 
 bool rpsHandleManager::releaseHandle(HANDLE rps_handle)
 {
+    rpsMutex::ScopedLock lock(m_mutex);
     auto it = m_rps_to_win.find(rps_handle);
     if(it!=m_rps_to_win.end()) {
         m_rps_to_win.erase(it);
@@ -115,6 +117,7 @@ rpsHandleInfo* rpsHandleManager::getHandleInfoByRpsHandle( HANDLE rps_handle )
 {
     if(!rpsIsRpsHandle(rps_handle)) { return nullptr; }
 
+    rpsMutex::ScopedLock lock(m_mutex);
     auto it = m_rps_to_win.find(rps_handle);
     if(it!=m_rps_to_win.end()) {
         return &it->second;
@@ -126,6 +129,7 @@ rpsHandleInfo* rpsHandleManager::getHandleInfoByWinHandle( HANDLE win_handle )
 {
     if(rpsIsRpsHandle(win_handle)) { return nullptr; }
 
+    rpsMutex::ScopedLock lock(m_mutex);
     rpsHandleInfo *ret = nullptr;
     rpsEach(m_rps_to_win, [&](HandleInfoTable::value_type &v){
         if(v.second.win_handle==win_handle) {

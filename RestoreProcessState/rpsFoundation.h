@@ -8,6 +8,9 @@ void rpsInitializeFoundation();
 void* rpsMalloc(size_t size);
 void rpsFree(void *addr);
 
+void rpsPrint(const char *format, ...);
+void rpsPrint(const wchar_t *format, ...);
+#define rpsLogInfo(...) rpsPrint(__VA_ARGS__)
 
 bool rpsIsValidMemory(void *p);
 bool rpsIsInsideRpsModule(void *p);
@@ -15,6 +18,7 @@ BYTE* rpsAddJumpInstruction(BYTE* from, const BYTE* to);
 void* rpsOverrideDLLExport(HMODULE module, const char *funcname, void *hook_, void *trampoline_space);
 
 void rpsRunThread(const std::function<void ()> &proc);
+
 
 // rpsMalloc() で実装されたアロケータ。
 template<typename T>
