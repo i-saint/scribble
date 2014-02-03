@@ -63,15 +63,15 @@ void rpsExecExclusive(const F &proc)
     std::vector<HANDLE, rps_allocator<HANDLE> > threads;
     rpsEnumerateThreads([&](DWORD tid){
         if(tid==::GetCurrentThreadId()) { return; }
-        if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
-            ::SuspendThread(thread);
-            threads.push_back(thread);
+        if(HANDLE thandle=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
+            ::SuspendThread(thandle);
+            threads.push_back(thandle);
         }
     });
     proc();
-    rpsEach(threads, [](HANDLE thread){
-        ::ResumeThread(thread);
-        ::CloseHandle(thread);
+    rpsEach(threads, [](HANDLE thandle){
+        ::ResumeThread(thandle);
+        ::CloseHandle(thandle);
     });
 }
 

@@ -150,6 +150,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateEventExW(LPSECURITY_ATTRIBUTES lpEventAttribut
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsEventRecord record = {rps_handle, win_handle, dwFlags, dwDesiredAccess, lpName};
     rpsGetEventRecords()->addRecord(rps_handle, record);
+    rpsLogInfo("rpsCreateEventExW() win:%p rps:%p", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateEventExA(LPSECURITY_ATTRIBUTES lpEventAttributes, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess)
@@ -158,6 +159,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateEventExA(LPSECURITY_ATTRIBUTES lpEventAttribut
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsEventRecord record = {rps_handle, win_handle, dwFlags, dwDesiredAccess, rpsL(lpName)};
     rpsGetEventRecords()->addRecord(rps_handle, record);
+    rpsLogInfo("rpsCreateEventExA() win:%p rps:%p", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateEventW(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCWSTR lpName)
@@ -206,6 +208,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateMutexExW(LPSECURITY_ATTRIBUTES lpMutexAttribut
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsEventRecord record = {rps_handle, win_handle, dwFlags, dwDesiredAccess, lpName};
     rpsGetEventRecords()->addRecord(rps_handle, record);
+    rpsLogInfo("rpsCreateMutexExW() win:%p rps:%p", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateMutexExA(LPSECURITY_ATTRIBUTES lpMutexAttributes, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess)
@@ -214,6 +217,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateMutexExA(LPSECURITY_ATTRIBUTES lpMutexAttribut
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsEventRecord record = {rps_handle, win_handle, dwFlags, dwDesiredAccess, rpsL(lpName)};
     rpsGetEventRecords()->addRecord(rps_handle, record);
+    rpsLogInfo("rpsCreateMutexExA() win:%p rps:%p", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateMutexW(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCWSTR lpName)
@@ -252,6 +256,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateSemaphoreExW(LPSECURITY_ATTRIBUTES lpSemaphore
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsSemaphoreRecord record = {rps_handle, win_handle, lInitialCount, lMaximumCount, dwFlags, dwDesiredAccess, lpName};
     rpsGetSemaphoreRecords()->addRecord(rps_handle, record);
+    rpsLogInfo("rpsCreateSemaphoreExW() win:%p rps:%p", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateSemaphoreExA(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess)
@@ -260,6 +265,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateSemaphoreExA(LPSECURITY_ATTRIBUTES lpSemaphore
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsSemaphoreRecord record = {rps_handle, win_handle, lInitialCount, lMaximumCount, dwFlags, dwDesiredAccess, rpsL(lpName)};
     rpsGetSemaphoreRecords()->addRecord(rps_handle, record);
+    rpsLogInfo("rpsCreateSemaphoreExA() win:%p rps:%p", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateSemaphoreW(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCWSTR lpName)

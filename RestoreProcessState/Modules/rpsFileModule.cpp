@@ -148,7 +148,7 @@ rpsHookAPI BOOL WINAPI rpsReadFile(
     if(rpsFileRecord *rec=rpsGetFileRecords()->findRecord(hFile)) {
         DWORD read = 0;
         BOOL ret = vaReadFile(rpsToWinHandleC(hFile, vaReadFile), lpBuffer, nNumberOfBytesToRead, &read, lpOverlapped);
-        rpsLogInfo("vaReadFile(%p, %p, %u, %p, %p): %u",
+        rpsLogInfo("rpsReadFile(%p, %p, %u, %p, %p): %u",
             hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped, ret);
         if(ret) {
             rec->pos += read;

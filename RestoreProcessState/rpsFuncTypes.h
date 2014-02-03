@@ -7,23 +7,34 @@ typedef BOOL (WINAPI *CloseHandleT)(_In_  HANDLE hObject);
 // memory
 typedef LPVOID (WINAPI *HeapAllocT)( HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes );
 typedef LPVOID (WINAPI *HeapReAllocT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes );
-typedef BOOL (WINAPI *HeapFreeT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem );
-typedef BOOL (WINAPI *HeapValidateT)( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem );
+typedef BOOL   (WINAPI *HeapFreeT)( HANDLE hHeap, DWORD dwFlags, LPVOID lpMem );
+typedef BOOL   (WINAPI *HeapValidateT)( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem );
 typedef SIZE_T (WINAPI *HeapSizeT)(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
 
+typedef HGLOBAL (WINAPI *GlobalAllocT)(UINT uFlags, SIZE_T dwBytes);
+typedef HGLOBAL (WINAPI *GlobalReAllocT)(HGLOBAL hMem, SIZE_T dwBytes, UINT uFlags);
+typedef HGLOBAL (WINAPI *GlobalFreeT)(HGLOBAL hMem);
+typedef SIZE_T  (WINAPI *GlobalSizeT)(HGLOBAL hMem);
+
+typedef HLOCAL  (WINAPI *LocalAllocT)(UINT uFlags, SIZE_T uBytes);
+typedef HLOCAL  (WINAPI *LocalReAllocT)(HLOCAL hMem, SIZE_T uBytes, UINT uFlags);
+typedef HLOCAL  (WINAPI *LocalFreeT)(HLOCAL hMem);
+typedef UINT    (WINAPI *LocalSizeT)(HLOCAL hMem);
+
 typedef LPVOID (WINAPI *VirtualAllocT)(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
-typedef BOOL (WINAPI *VirtualFreeT)(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
+typedef BOOL   (WINAPI *VirtualFreeT)(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
 typedef LPVOID (WINAPI *VirtualAllocExT)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
-typedef BOOL (WINAPI *VirtualFreeExT)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
+typedef BOOL   (WINAPI *VirtualFreeExT)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
 
 // handle
-typedef BOOL (WINAPI *CloseHandleT)(HANDLE hObject);
+typedef BOOL  (WINAPI *CloseHandleT)(HANDLE hObject);
 typedef DWORD (WINAPI *WaitForSingleObjectT)(HANDLE hHandle, DWORD dwMilliseconds);
 
-
 // thread
-typedef LPVOID (WINAPI *CreateThreadT)(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
-
+typedef HANDLE (WINAPI *CreateThreadT)(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
+typedef HANDLE (WINAPI *OpenThreadT)(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwThreadId);
+typedef BOOL   (WINAPI *GetThreadTimesT)(HANDLE hThread, LPFILETIME lpCreationTime, LPFILETIME lpExitTime, LPFILETIME lpKernelTime, LPFILETIME lpUserTime);
+typedef DWORD  (WINAPI *GetThreadIdT)(HANDLE Thread);
 
 // critical section
 typedef void  (WINAPI *DeleteCriticalSectionT)(LPCRITICAL_SECTION lpCriticalSection);

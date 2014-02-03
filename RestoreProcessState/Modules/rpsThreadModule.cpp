@@ -3,6 +3,41 @@
 
 namespace {
 
+struct rpsThreadRecord
+{
+    HANDLE rps_handle;
+    HANDLE win_handle;
+    DWORD tid;
+    CONTEXT contxt;
+    void *stack_base;
+    size_t stack_size;
+
+    bool create(DWORD tid);
+    bool create(HANDLE thandle);
+    bool update();
+};
+inline rpsArchive& operator&(rpsArchive &ar, CONTEXT &v) { ar.io(&v, sizeof(v)); return ar; }
+inline rpsArchive& operator&(rpsArchive &ar, rpsThreadRecord &v)
+{
+    ar & v.rps_handle & v.win_handle & v.tid & v.contxt & (size_t&)v.stack_base & v.stack_size;
+    if(ar.isWriter()) {
+        ar.io(v.stack_base, v.stack_size);
+    }
+    else if(ar.isReader()) {
+        if(HANDLE thandle=::OpenThread(THREAD_ALL_ACCESS, FALSE, v.tid)) {
+            ar.io(v.stack_base, v.stack_size);
+            BOOL r = ::SetThreadContext(thandle, &v.contxt);
+            ::CloseHandle(thandle);
+        }
+        else {
+            ar.skip(v.stack_size);
+        }
+    }
+    return ar;
+}
+typedef rpsTHandleRecords<rpsThreadRecord> rpsThreadRecords;
+
+
 class rpsThreadModule : public rpsIModule
 {
 public:
@@ -14,51 +49,22 @@ public:
     virtual rpsHookInfo*    getHooks() const;
     virtual void initialize();
     virtual void serialize(rpsArchive &ar);
-    virtual void handleMessage(rpsMessage &m);
 
-    void addSerializableThread(DWORD tid);
-    bool isSerializableThread(DWORD tid) const;
-    HANDLE translate(HANDLE h);
+    rpsThreadRecords* getThreadRecords() { return &m_records; }
 
 private:
-    typedef std::vector<DWORD, rps_allocator<DWORD> > ThreadIDs;
-    DWORD m_main_thread_id;
-    ThreadIDs m_serializable_threads;
-    rpsMutex m_mutex;
+    rpsThreadRecords m_records;
 };
-
-struct rpsThreadInformation
-{
-    DWORD tid;
-    CONTEXT contxt;
-    void *stack_base;
-    size_t stack_size;
-};
-inline rpsArchive& operator&(rpsArchive &ar, CONTEXT &v) { ar.io(&v, sizeof(v)); return ar; }
-inline rpsArchive& operator&(rpsArchive &ar, rpsThreadInformation &v)
-{
-    ar & v.tid & v.contxt & (size_t&)v.stack_base & v.stack_size;
-    if(ar.isWriter()) {
-        ar.io(v.stack_base, v.stack_size);
-    }
-    else if(ar.isReader()) {
-        if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, v.tid)) {
-            ar.io(v.stack_base, v.stack_size);
-            BOOL r = ::SetThreadContext(thread, &v.contxt);
-            ::CloseHandle(thread);
-        }
-        else {
-            ar.skip(v.stack_size);
-        }
-    }
-    return ar;
-}
-
+typedef rpsThreadModule rpsCurrentModule;
+inline rpsCurrentModule* rpsGetCurrentModule() { return rpsCurrentModule::getInstance(); }
+inline rpsThreadRecords* rpsGetThreadRecords() { return rpsGetCurrentModule()->getThreadRecords(); }
 
 
 CreateThreadT vaCreateThread;
+CloseHandleT  vaCloseHandle;
+GetThreadIdT vaGetThreadId;
 
-rpsHookAPI LPVOID WINAPI rpsCreateThread(
+rpsHookAPI HANDLE WINAPI rpsCreateThread(
     LPSECURITY_ATTRIBUTES lpThreadAttributes,
     SIZE_T dwStackSize,
     LPTHREAD_START_ROUTINE lpStartAddress,
@@ -67,16 +73,90 @@ rpsHookAPI LPVOID WINAPI rpsCreateThread(
     LPDWORD lpThreadId
     )
 {
-    LPVOID ret = vaCreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+    HANDLE ret = vaCreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+    rpsThreadRecord rec;
+    rec.create(ret);
     return ret;
 }
 
-static rpsHookInfo g_hookinfo[] = {
+rpsHookAPI BOOL WINAPI rpsCloseHandle(HANDLE hObject)
+{
+    if(rpsThreadRecord *rec=rpsGetThreadRecords()->findRecord(hObject)) {
+        HANDLE win_handle = rpsToWinHandleC(hObject, vaCloseHandle);
+        BOOL ret = vaCloseHandle(win_handle);
+        rpsLogInfo("rpsCloseHandle(%p): %u", win_handle, ret);
+        if(ret) {
+            rpsGetThreadRecords()->eraseRecord(hObject);
+        }
+        return ret;
+    }
+    else {
+        return vaCloseHandle(rpsToWinHandleC(hObject, vaCloseHandle));
+    }
+}
+
+DWORD  WINAPI rpsGetThreadId(HANDLE Thread)
+{
+    return vaGetThreadId(Thread);
+}
+
+
+rpsHookInfo g_hookinfo[] = {
     rpsDefineHookInfo("kernel32.dll", CreateThread),
+    rpsDefineHookInfo("kernel32.dll", CloseHandle),
+    rpsDefineHookInfo("kernel32.dll", GetThreadId),
 
     rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };
 
+
+bool create(DWORD tid);
+bool create(HANDLE thandle);
+bool update();
+
+bool rpsThreadRecord::create(DWORD _tid)
+{
+    if(HANDLE thandle=::OpenThread(THREAD_ALL_ACCESS, FALSE, _tid)) {
+        return create(thandle);
+    }
+    return false;
+}
+
+bool rpsThreadRecord::create(HANDLE thandle)
+{
+    contxt.ContextFlags = CONTEXT_ALL; 
+    tid = vaGetThreadId(thandle);
+    win_handle = thandle;
+    rps_handle = rpsCreateHandle(rpsGetCurrentModule(), win_handle);
+    ::GetThreadContext(thandle, &contxt);
+
+    MEMORY_BASIC_INFORMATION mi;
+    if(
+#if defined(_M_IX86)
+        ::VirtualQuery((void*)contxt.Esp, &mi, sizeof(mi))
+#elif defined(_M_X64)
+        ::VirtualQuery((void*)contxt.Rsp, &mi, sizeof(mi))
+#endif
+        )
+    {
+        stack_base = mi.BaseAddress;
+        stack_size = mi.RegionSize;
+    }
+    ::CloseHandle(thandle);
+    return true;
+
+}
+
+bool rpsThreadRecord::update()
+{
+    if(HANDLE thandle=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
+        contxt.ContextFlags = CONTEXT_ALL; 
+        ::GetThreadContext(thandle, &contxt);
+        ::CloseHandle(thandle);
+        return true;
+    }
+    return false;
+}
 
 const char*     rpsThreadModule::getModuleName() const   { return "rpsThreadModule"; }
 rpsHookInfo*    rpsThreadModule::getHooks() const        { return g_hookinfo; }
@@ -97,71 +177,27 @@ rpsThreadModule::~rpsThreadModule()
 
 void rpsThreadModule::initialize()
 {
+    {
+        rpsThreadRecord tmp;
+        tmp.create(rpsGetMainThreadID());
+        m_records.addRecord(tmp.rps_handle, tmp);
+    }
 }
 
 void rpsThreadModule::serialize(rpsArchive &ar)
 {
-    std::vector<rpsThreadInformation, rps_allocator<rpsThreadInformation> > tinfo;
+    ar & m_records;
+}
+
+void rpsThreadRecords::serialize(rpsArchive &ar)
+{
+    // todo: thread 再生成
     if(ar.isWriter()) {
-        rpsEnumerateThreads([&](DWORD tid){
-            if(!isSerializableThread(tid)) { return; }
-
-            if(HANDLE thread=::OpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
-                rpsThreadInformation tmp;
-                tmp.contxt.ContextFlags = CONTEXT_ALL; 
-                tmp.tid = tid;
-                ::GetThreadContext(thread, &tmp.contxt);
-
-                MEMORY_BASIC_INFORMATION mi;
-                if(
-#if defined(_M_IX86)
-                ::VirtualQuery((void*)tmp.contxt.Esp, &mi, sizeof(mi))
-#elif defined(_M_X64)
-                ::VirtualQuery((void*)tmp.contxt.Rsp, &mi, sizeof(mi))
-#endif
-                )
-                {
-                    tmp.stack_base = mi.BaseAddress;
-                    tmp.stack_size = mi.RegionSize;
-                    tinfo.push_back(tmp);
-                }
-                ::CloseHandle(thread);
-            }
+        rpsEach(m_records, [&](rpsThreadRecords::Pair &v){
+            v.second.update();
         });
-        ar & tinfo;
     }
-    else if(ar.isReader()) {
-        ar & tinfo;
-    }
-}
-
-void rpsThreadModule::handleMessage( rpsMessage &m )
-{
-    if(strcmp(m.command, "addSerializableThread")==0) {
-        addSerializableThread(m.value.cast<DWORD>());
-        return;
-    }
-}
-
-void rpsThreadModule::addSerializableThread(DWORD tid)
-{
-    rpsMutex::ScopedLock lock(m_mutex);
-    m_serializable_threads.push_back(tid);
-    std::sort(m_serializable_threads.begin(), m_serializable_threads.end());
-}
-
-bool rpsThreadModule::isSerializableThread(DWORD tid) const
-{
-    if(tid==::GetCurrentThreadId()) { return false; }
-    auto it = std::lower_bound(m_serializable_threads.begin(), m_serializable_threads.end(), tid);
-    return it!=m_serializable_threads.end() && *it==tid;
-}
-
-HANDLE rpsThreadModule::translate(HANDLE h)
-{
-    rpsMutex::ScopedLock lock(m_mutex);
-    // todo
-    return h;
+    ar & m_records;
 }
 
 } // namespace

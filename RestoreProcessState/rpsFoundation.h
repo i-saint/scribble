@@ -18,7 +18,7 @@ BYTE* rpsAddJumpInstruction(BYTE* from, const BYTE* to);
 void* rpsOverrideDLLExport(HMODULE module, const char *funcname, void *hook_, void *trampoline_space);
 
 void rpsRunThread(const std::function<void ()> &proc);
-
+DWORD rpsGetMainThreadID();
 
 // rpsMalloc() で実装されたアロケータ。
 template<typename T>

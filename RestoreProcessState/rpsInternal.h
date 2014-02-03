@@ -154,7 +154,6 @@ private:
     Requests m_requests;
     rpsMutex m_mtx_requests;
     rpsCommunicator *m_communicator;
-    DWORD m_mainthread;
 };
 
 #include "rpsInlines.h"

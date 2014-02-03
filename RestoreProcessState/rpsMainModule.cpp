@@ -73,26 +73,18 @@ static bool ShouldHook(HMODULE mod)
 }
 
 rpsMainModule::rpsMainModule()
-    : m_mainthread(0)
 {
+    rpsLogInfo("rpsMainModule::rpsMainModule()");
     g_inst = this;
-
-    DWORD ctid = ::GetCurrentThreadId();
-    m_mainthread = ctid;
-    rpsEnumerateThreads([&](DWORD tid){
-        if(tid!=ctid) {
-            m_mainthread = tid;
-        }
-    });
 
     DWORD tid;
     ::CreateThread(nullptr, 0, rpsMainThread, this, 0, &tid);
 
+    rpsLogInfo("rpsMainModule: creating modules");
     rpsModuleCreator *ctab = rpsGetModuleCreators();
     for(size_t mi=0; ; ++mi) {
         if(!ctab[mi]) { break; }
         rpsIModule *mod = ctab[mi]();
-        mod->initialize();
         m_modules.push_back(mod);
         m_module_map[mod->getModuleName()] = mod;
 
@@ -104,12 +96,8 @@ rpsMainModule::rpsMainModule()
             }
         }
     }
-    {
-        rpsMessage mes("rpsThreadModule", "addSerializableThread", m_mainthread);
-        rpsSendMessage(mes);
-    }
 
-
+    rpsLogInfo("rpsMainModule: setting hook functions");
     // gather original functions
     rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
         if(HMODULE mod=::GetModuleHandleA(hp.first.c_str())) {
@@ -126,18 +114,13 @@ rpsMainModule::rpsMainModule()
     });
     // override import table
     rpsEnumerateModules([&](HMODULE mod){
+        if(!ShouldHook(mod)) { return; }
         rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
             rpsEnumerateDLLImports(mod, hp.first.c_str(), [&](const char *name, void *&func){
                 FuncHookTable &htab = hp.second;
                 auto it = htab.find(rps_string(name));
                 if(it!=htab.end()) {
-                    Hooks &hooks = it->second;
-                    rpsREach(hooks, [&](rpsHookInfo *hinfo){
-                        void *orig = func;
-                        if(ShouldHook(mod)) {
-                            rpsForceWrite<void*>(func, hinfo->hookfunc);
-                        }
-                    });
+                    rpsForceWrite<void*>(func, it->second[0]->hookfunc);
                 }
             });
         });
@@ -154,6 +137,12 @@ rpsMainModule::rpsMainModule()
         }
     });
 
+    rpsLogInfo("rpsMainModule: initializing modules");
+    rpsEach(m_modules, [&](rpsIModule *mod){
+        mod->initialize();
+    });
+
+    rpsLogInfo("rpsMainModule: running communicator");
     m_communicator = new rpsCommunicator();
     m_communicator->run(rpsDefaultPort);
 }
@@ -218,6 +207,7 @@ void rpsMainModule::sendMessage( rpsMessage &m )
 rpsAPI void rpsInitialize()
 {
     if(g_inst) { return; }
+    rpsLogInfo("rpsInitialize()");
     rpsInitializeFoundation();
     rpsExecExclusive([](){
         rpsMainModule::initialize();
@@ -247,6 +237,7 @@ rpsAPI void rpsSendMessage(rpsMessage &mes)
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if(fdwReason==DLL_PROCESS_ATTACH) {
+        ::Sleep(8000);
         rpsInitialize();
     }
     else if(fdwReason==DLL_PROCESS_DETACH) {

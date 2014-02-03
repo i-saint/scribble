@@ -3,7 +3,6 @@
 
 namespace {
 
-CloseHandleT                vaCloseHandle;
 HeapAllocT                  vaHeapAlloc;
 HeapFreeT                   vaHeapFree;
 CreateThreadT               vaCreateThread;
@@ -17,24 +16,37 @@ CreateFileAT                vaCreateFileA;
 WriteFileT                  vaWriteFile;
 ReadFileT                   vaReadFile;
 
+OpenThreadT                 vaOpenThread;
+GetThreadTimesT             vaGetThreadTimes;
+
+CloseHandleT                vaCloseHandle;
 } // namespace
 
 void rpsInitializeFoundation()
 {
+#define GetProc(FuncName) (void*&)va##FuncName = ::GetProcAddress(mod, #FuncName)
+
     if(HMODULE mod = ::LoadLibraryA("kernel32.dll")) {
-        (void*&)vaCloseHandle = ::GetProcAddress(mod, "CloseHandle");
-        (void*&)vaHeapAlloc = ::GetProcAddress(mod, "HeapAlloc");
-        (void*&)vaHeapFree = ::GetProcAddress(mod, "HeapFree");
-        (void*&)vaCreateThread = ::GetProcAddress(mod, "CreateThread");
-        (void*&)vaInitializeCriticalSection = ::GetProcAddress(mod, "InitializeCriticalSection");
-        (void*&)vaDeleteCriticalSection = ::GetProcAddress(mod, "DeleteCriticalSection");
-        (void*&)vaEnterCriticalSection = ::GetProcAddress(mod, "EnterCriticalSection");
-        (void*&)vaLeaveCriticalSection = ::GetProcAddress(mod, "LeaveCriticalSection");
-        (void*&)vaTryEnterCriticalSection = ::GetProcAddress(mod, "TryEnterCriticalSection");
-        (void*&)vaCreateFileA = ::GetProcAddress(mod, "CreateFileA");
-        (void*&)vaWriteFile = ::GetProcAddress(mod, "WriteFile");
-        (void*&)vaReadFile = ::GetProcAddress(mod, "ReadFile");
+        GetProc(CloseHandle);
+        GetProc(HeapAlloc);
+        GetProc(HeapFree);
+        GetProc(CreateThread);
+        GetProc(InitializeCriticalSection);
+        GetProc(DeleteCriticalSection);
+        GetProc(EnterCriticalSection);
+        GetProc(LeaveCriticalSection);
+        GetProc(TryEnterCriticalSection);
+
+        GetProc(CreateFileA);
+        GetProc(WriteFile);
+        GetProc(ReadFile);
+
+        GetProc(OpenThread);
+        GetProc(GetThreadTimes);
+        GetProc(CloseHandle);
     }
+
+#undef GetProc
 }
 
 template<size_t N>
@@ -195,6 +207,27 @@ void rpsRunThread(const std::function<void ()> &proc)
     functor *fp = new (rpsMalloc(sizeof(functor))) functor(proc);
     vaCreateThread(nullptr, 0, &rpsRunThread_, fp, 0, nullptr);
 }
+
+DWORD rpsGetMainThreadID()
+{
+    static DWORD ret = 0;
+    uint64_t oldest;
+    if(ret==0) {
+        rpsEnumerateThreads([&](DWORD tid){
+            if(HANDLE thandle=vaOpenThread(THREAD_ALL_ACCESS, FALSE, tid)) {
+                FILETIME ctime, etime, ktime, utime;
+                vaGetThreadTimes(thandle, &ctime, &etime, &ktime, &utime);
+                if(ret==0 || (uint64_t&)ctime < oldest) {
+                    ret = tid;
+                    oldest = (uint64_t&)ctime;
+                }
+                vaCloseHandle(thandle);
+            }
+        });
+    }
+    return ret;
+}
+
 
 bool rpsFileToString( const char *path, rps_string &str )
 {
