@@ -142,11 +142,6 @@ struct SectionData
     }
 };
 
-static inline const char* dpGetSymbolName(PSTR pStringTable, PIMAGE_SYMBOL pSym)
-{
-    return pSym->N.Name.Short!=0 ? (const char*)&pSym->N.ShortName : (const char*)(pStringTable + pSym->N.Name.Long);
-}
-
 
 // CV8 data structures
 // thanks for http://sage.math.washington.edu/home/wstein/www/home/wbhart/mpir-1.2.2/yasm/modules/dbgfmts/codeview/cv8.txt
@@ -259,48 +254,110 @@ inline bool EachCV8Data(void *data_, uint32_t size, const F &f)
     return true;
 }
 
+static inline const char* dpGetSymbolName(PSTR pStringTable, PIMAGE_SYMBOL pSym)
+{
+    return pSym->N.Name.Short!=0 ? (const char*)&pSym->N.ShortName : (const char*)(pStringTable + pSym->N.Name.Long);
+}
 
+struct TIMAGE_SYMBOL
+{
+    const char *Name;
+    DWORD   Value;
+    LONG    SectionNumber;
+    WORD    Type;
+    BYTE    StorageClass;
+    BYTE    NumberOfAuxSymbols;
+
+    TIMAGE_SYMBOL(void *data, PSTR pStringTable, bool is_bigobj)
+    {
+        if(is_bigobj) {
+            PIMAGE_SYMBOL_EX pSym = (PIMAGE_SYMBOL_EX)data;
+            Name = dpGetSymbolName(pStringTable, (PIMAGE_SYMBOL)pSym);
+            Value = pSym->Value;
+            SectionNumber = pSym->SectionNumber;
+            Type = pSym->Type;
+            StorageClass = pSym->StorageClass;
+            NumberOfAuxSymbols = pSym->NumberOfAuxSymbols;
+        }
+        else {
+            PIMAGE_SYMBOL pSym = (PIMAGE_SYMBOL)data;
+            Name = dpGetSymbolName(pStringTable, pSym);
+            Value = pSym->Value;
+            SectionNumber = pSym->SectionNumber;
+            Type = pSym->Type;
+            StorageClass = pSym->StorageClass;
+            NumberOfAuxSymbols = pSym->NumberOfAuxSymbols;
+        }
+    }
+};
 
 bool GetFunctionByFileAndLineImpl(void *data, const char *fullpath_to_cpp, int line, char *out_funcname, int len_funcname)
 {
     size_t ImageBase = (size_t)(data);
-    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
-#ifdef _M_X64
-    if( pDosHeader->e_magic!=IMAGE_FILE_MACHINE_AMD64 || pDosHeader->e_sp!=0 ) {
-#else // _M_X64
-    if( pDosHeader->e_magic!=IMAGE_FILE_MACHINE_I386 || pDosHeader->e_sp!=0 ) {
-#endif // _M_X64
-        return false;
-    }
 
-    PIMAGE_FILE_HEADER pImageHeader = (PIMAGE_FILE_HEADER)ImageBase;
-    PIMAGE_SECTION_HEADER pSectionHeader = (PIMAGE_SECTION_HEADER)(ImageBase + sizeof(IMAGE_FILE_HEADER) + pImageHeader->SizeOfOptionalHeader);
-    PIMAGE_SYMBOL pSymbolTable = (PIMAGE_SYMBOL)((size_t)pImageHeader + pImageHeader->PointerToSymbolTable);
-    DWORD SymbolCount = pImageHeader->NumberOfSymbols;
-    PSTR StringTable = (PSTR)&pSymbolTable[SymbolCount];
+    WORD Arch = IMAGE_FILE_MACHINE_UNKNOWN;
+    bool bigobj = false;
+    size_t sym_size = 0;
 
+    PIMAGE_SECTION_HEADER pSectionHeader = nullptr;
+    char *pSymbolTable = nullptr;
+    DWORD SectionCount = 0;
+    DWORD SymbolCount = 0;
+    PSTR StringTable = nullptr;
     char *CV8StrTab = nullptr;
     char *CV8FileTab = nullptr;
     std::map<uint32_t, SectionData> section_data;
 
+    {
+        PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
+        ANON_OBJECT_HEADER_BIGOBJ *pBigHeader = (ANON_OBJECT_HEADER_BIGOBJ*)ImageBase;
+        if( (pDosHeader->e_magic==IMAGE_FILE_MACHINE_I386 || pDosHeader->e_magic==IMAGE_FILE_MACHINE_AMD64) && pDosHeader->e_sp==0 )
+        {
+            Arch = pDosHeader->e_magic;
+            PIMAGE_FILE_HEADER pImageHeader = (PIMAGE_FILE_HEADER)ImageBase;
+            pSectionHeader = (PIMAGE_SECTION_HEADER)(ImageBase + sizeof(IMAGE_FILE_HEADER) + pImageHeader->SizeOfOptionalHeader);
+            pSymbolTable = (char*)(ImageBase + pImageHeader->PointerToSymbolTable);
+            SectionCount = pImageHeader->NumberOfSections;
+            SymbolCount = pImageHeader->NumberOfSymbols;
+        }
+        else if(pBigHeader->Sig1==IMAGE_FILE_MACHINE_UNKNOWN && pBigHeader->Sig2==0xFFFF && pBigHeader->Version>=2 &&
+            (pBigHeader->Machine==IMAGE_FILE_MACHINE_I386 || pBigHeader->Machine==IMAGE_FILE_MACHINE_AMD64) )
+        {
+            bigobj = true;
+            Arch = pBigHeader->Machine;
+            pSectionHeader = (PIMAGE_SECTION_HEADER)(ImageBase + sizeof(ANON_OBJECT_HEADER_BIGOBJ) + pBigHeader->SizeOfData);
+            pSymbolTable = (char*)(ImageBase + pBigHeader->PointerToSymbolTable);
+            SectionCount = pBigHeader->NumberOfSections;
+            SymbolCount = pBigHeader->NumberOfSymbols;
+        }
+        else {
+            printf("unknown file format\n");
+            return false;
+        }
+        sym_size = bigobj ? sizeof(IMAGE_SYMBOL_EX) : sizeof(IMAGE_SYMBOL);
+        StringTable = (PSTR)(pSymbolTable + sym_size*SymbolCount);
+    }
+
     // gather function symbols
     for( DWORD symi=0; symi < SymbolCount; ++symi ) {
-        PIMAGE_SYMBOL sym = pSymbolTable + symi;
-        if(sym->SectionNumber > 0) {
-            IMAGE_SECTION_HEADER &sect = pSectionHeader[sym->SectionNumber-1];
-            if(sym->SectionNumber==IMAGE_SYM_UNDEFINED || (sect.Characteristics&IMAGE_SCN_CNT_CODE)==0) { continue; }
-            const char *name = dpGetSymbolName(StringTable, sym);
+        TIMAGE_SYMBOL sym(pSymbolTable+sym_size*symi, StringTable, bigobj);
+        int secti = sym.SectionNumber;
+        if(secti > 0) {
+            IMAGE_SECTION_HEADER &sect = pSectionHeader[secti-1];
+            if(secti==IMAGE_SYM_UNDEFINED || (sect.Characteristics&IMAGE_SCN_CNT_CODE)==0) { goto NextSymbol; }
+            const char *name = sym.Name;
             if(name[0]!='.' && name[0]!='$') {
-                section_data[sym->SectionNumber].symbols.push_back(SymbolData(name, symi, sym->Value));
+                section_data[secti].symbols.push_back(SymbolData(name, symi, sym.Value));
             }
         }
-        symi += pSymbolTable[symi].NumberOfAuxSymbols;
+    NextSymbol:
+        symi += sym.NumberOfAuxSymbols;
     }
     std::for_each(section_data.begin(), section_data.end(),
         [](std::pair<const uint32_t, SectionData> &p){ p.second.sortSymbolsByOffset(); });
 
     // relocate .debug$S sections and gather line numbers
-    for(DWORD secti=0; secti<pImageHeader->NumberOfSections; ++secti) {
+    for(DWORD secti=0; secti<SectionCount; ++secti) {
         IMAGE_SECTION_HEADER &sect = pSectionHeader[secti];
         size_t SectionBase = (size_t)(ImageBase + (int)sect.PointerToRawData);
         if(strncmp((char*)sect.Name, ".debug$S", 8)!=0) { continue; }
@@ -318,21 +375,35 @@ bool GetFunctionByFileAndLineImpl(void *data, const char *fullpath_to_cpp, int l
             PIMAGE_RELOCATION pRelocation = (PIMAGE_RELOCATION)(ImageBase + (int)sect.PointerToRelocations);
             for(size_t ri=FirstRelocation; ri<NumRelocations; ++ri) {
                 PIMAGE_RELOCATION pReloc = pRelocation + ri;
-                PIMAGE_SYMBOL rsym = pSymbolTable + pReloc->SymbolTableIndex;
+                TIMAGE_SYMBOL rsym(pSymbolTable+sym_size*pReloc->SymbolTableIndex, StringTable, bigobj);
                 size_t addr = SectionBase + pReloc->VirtualAddress;
 
-                switch(pReloc->Type) {
-                OnX64(case IMAGE_REL_AMD64_SECTION:)
-                OnX86(case IMAGE_REL_I386_SECTION:)
-                    {
-                        *(SHORT*)(addr) = rsym->SectionNumber;
-                        break;
+                if(Arch==IMAGE_FILE_MACHINE_AMD64) {
+                    switch(pReloc->Type) {
+                    case IMAGE_REL_AMD64_SECTION:
+                        {
+                            *(SHORT*)(addr) = rsym.SectionNumber;
+                            break;
+                        }
+                    case IMAGE_REL_AMD64_SECREL:
+                        {
+                            *(DWORD*)(addr) = rsym.Value; // i'm not sure this is correct...
+                            break;
+                        }
                     }
-                OnX64(case IMAGE_REL_AMD64_SECREL:)
-                OnX86(case IMAGE_REL_I386_SECREL:)
-                    {
-                        *(DWORD*)(addr) = rsym->Value; // i'm not sure this is correct...
-                        break;
+                }
+                else if(Arch==IMAGE_FILE_MACHINE_I386) {
+                    switch(pReloc->Type) {
+                        case IMAGE_REL_I386_SECTION:
+                        {
+                            *(SHORT*)(addr) = rsym.SectionNumber;
+                            break;
+                        }
+                        case IMAGE_REL_I386_SECREL:
+                        {
+                            *(DWORD*)(addr) = rsym.Value; // i'm not sure this is correct...
+                            break;
+                        }
                     }
                 }
             }
