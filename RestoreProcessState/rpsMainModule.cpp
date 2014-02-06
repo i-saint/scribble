@@ -10,6 +10,7 @@ extern rpsIModule* rpsCreateThreadModule();
 extern rpsIModule* rpsCreateFileModule();
 extern rpsIModule* rpsCreateTimeModule();
 
+
 static rpsModuleCreator g_mcreators[] = {
     rpsCreateMemoryModule,
     rpsCreateHandleManager,
@@ -23,13 +24,58 @@ static rpsModuleCreator g_mcreators[] = {
 rpsDLLExport rpsModuleCreator*  rpsGetModuleCreators()      { return g_mcreators; }
 
 
+namespace {
 
-DWORD __stdcall rpsMainThread(LPVOID lpThreadParameter)
+LoadLibraryAT   vaLoadLibraryA;
+LoadLibraryWT   vaLoadLibraryW;
+LoadLibraryExAT vaLoadLibraryExA;
+LoadLibraryExWT vaLoadLibraryExW;
+
+rpsHookAPI HMODULE WINAPI rpsLoadLibraryA(LPCSTR lpFileName)
+{
+    HMODULE ret = vaLoadLibraryA(lpFileName);
+    rpsMainModule::getInstance()->setHooks(ret);
+    return ret;
+}
+
+rpsHookAPI HMODULE WINAPI rpsLoadLibraryW(LPWSTR lpFileName)
+{
+    HMODULE ret = vaLoadLibraryW(lpFileName);
+    rpsMainModule::getInstance()->setHooks(ret);
+    return ret;
+}
+
+rpsHookAPI HMODULE WINAPI rpsLoadLibraryExA(LPCSTR lpFileName, HANDLE hFile, DWORD dwFlags)
+{
+    HMODULE ret = vaLoadLibraryExA(lpFileName, hFile, dwFlags);
+    rpsMainModule::getInstance()->setHooks(ret);
+    return ret;
+}
+
+rpsHookAPI HMODULE WINAPI rpsLoadLibraryExW(LPWSTR lpFileName, HANDLE hFile, DWORD dwFlags)
+{
+    HMODULE ret = vaLoadLibraryExW(lpFileName, hFile, dwFlags);
+    rpsMainModule::getInstance()->setHooks(ret);
+    return ret;
+}
+
+rpsHookInfo g_loadlibraryhooks[] = {
+    rpsDefineHookInfo("kernel32.dll", LoadLibraryA),
+    rpsDefineHookInfo("kernel32.dll", LoadLibraryW),
+    rpsDefineHookInfo("kernel32.dll", LoadLibraryExA),
+    rpsDefineHookInfo("kernel32.dll", LoadLibraryExW),
+    rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
+};
+
+} // namespace
+
+
+
+static DWORD __stdcall rpsMainThread(LPVOID lpThreadParameter)
 {
     ((rpsMainModule*)lpThreadParameter)->mainloop();
     return 0;
 }
-
 
 void rpsMainModule::initialize()
 {
@@ -48,7 +94,7 @@ rpsMainModule* rpsMainModule::getInstance()
 
 
 // todo: 外部リスト化
-static bool ShouldHook(HMODULE mod)
+static bool rpsShouldHook(HMODULE mod)
 {
     static const HMODULE main_module = GetModuleHandleA(nullptr);
     if(mod==main_module) {
@@ -62,6 +108,17 @@ static bool ShouldHook(HMODULE mod)
     }
 
     const char *whitelist[] = {
+        "msvcr120.dll",
+        "msvcr120d.dll",
+        "msvcr110.dll",
+        "msvcr110d.dll",
+        "msvcr100.dll",
+        "msvcr100d.dll",
+        "msvcr90.dll",
+        "msvcr90d.dll",
+        "msvcr80.dll",
+        "msvcr80d.dll",
+        "msvcrt.dll",
         "wuvorbis.dll",
         "x3daudio1_7.dll",
     };
@@ -73,12 +130,12 @@ static bool ShouldHook(HMODULE mod)
 }
 
 rpsMainModule::rpsMainModule()
+    : m_tid(0)
 {
     rpsLogInfo("rpsMainModule::rpsMainModule()");
     g_inst = this;
 
-    DWORD tid;
-    ::CreateThread(nullptr, 0, rpsMainThread, this, 0, &tid);
+    ::CreateThread(nullptr, 0, rpsMainThread, this, 0, &m_tid);
 
     rpsLogInfo("rpsMainModule: creating modules");
     rpsModuleCreator *ctab = rpsGetModuleCreators();
@@ -94,6 +151,13 @@ rpsMainModule::rpsMainModule()
                 Hooks &hooks = m_hooks[ hinfo[hi].dllname ][ hinfo[hi].funcname ];
                 hooks.push_back(&hinfo[hi]);
             }
+        }
+    }
+    if(rpsHookInfo *hinfo = g_loadlibraryhooks) {
+        for(size_t hi=0; ; ++hi) {
+            if(!hinfo[hi].dllname) { break; }
+            Hooks &hooks = m_hooks[ hinfo[hi].dllname ][ hinfo[hi].funcname ];
+            hooks.push_back(&hinfo[hi]);
         }
     }
 
@@ -114,28 +178,18 @@ rpsMainModule::rpsMainModule()
     });
     // override import table
     rpsEnumerateModules([&](HMODULE mod){
-        if(!ShouldHook(mod)) { return; }
-        rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
-            rpsEnumerateDLLImports(mod, hp.first.c_str(), [&](const char *name, void *&func){
-                FuncHookTable &htab = hp.second;
-                auto it = htab.find(rps_string(name));
-                if(it!=htab.end()) {
-                    rpsForceWrite<void*>(func, it->second[0]->hookfunc);
-                }
-            });
-        });
+        setHooks(mod);
     });
     // override export table
-    rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
-        if(HMODULE mod = ::LoadLibraryA(hp.first.c_str())) {
-            FuncHookTable &htab = hp.second;
-            rpsEach(htab, [&](FuncHookTable::value_type &hp2){
-                rpsHookInfo *hinfo = hp2.second[0];
-                // 単純化のためメインモジュールに限定
-                //rpsOverrideDLLExport(mod, hinfo->funcname, hinfo->hookfunc, nullptr);
-            });
+    // (only for LoadLibrary*)
+    if(HMODULE mod = ::GetModuleHandleA("kernel32.dll")) {
+        rpsHookInfo *hinfo = g_loadlibraryhooks;
+        for(size_t hi=0; ; ++hi) {
+            if(!hinfo[hi].dllname) { break; }
+            rpsHookInfo *hook = &hinfo[hi];
+            rpsOverrideDLLExport(mod, hook->funcname, hook->hookfunc, nullptr);
         }
-    });
+    }
 
     rpsLogInfo("rpsMainModule: initializing modules");
     rpsEach(m_modules, [&](rpsIModule *mod){
@@ -157,11 +211,26 @@ void rpsMainModule::pushRequest( SerializeRequest &req )
     m_requests.push_back(req);
 }
 
-void rpsMainModule::processRequest()
+void rpsMainModule::waitForCompleteRequests()
 {
     while(!m_requests.empty()) {
         ::Sleep(1);
     }
+}
+
+void rpsMainModule::setHooks( HMODULE mod )
+{
+    if(!rpsShouldHook(mod)) { return; }
+
+    rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
+        rpsEnumerateDLLImports(mod, hp.first.c_str(), [&](const char *name, void *&func){
+            FuncHookTable &htab = hp.second;
+            auto it = htab.find(rps_string(name));
+            if(it!=htab.end()) {
+                rpsForceWrite<void*>(func, it->second[0]->hookfunc);
+            }
+        });
+    });
 }
 
 void rpsMainModule::serializeImpl(rpsArchive &ar)
@@ -179,6 +248,12 @@ void rpsMainModule::serializeImpl(const char *path, rpsArchive::Mode mode)
     if(ar.open(path, mode)) {
         serializeImpl(ar);
     }
+    if(ar.isWriter()) {
+        rpsLogInfo("rps: save completed %s", path);
+    }
+    else {
+        rpsLogInfo("rps: load completed %s", path);
+    }
 }
 
 void rpsMainModule::mainloop()
@@ -191,7 +266,23 @@ void rpsMainModule::mainloop()
             });
             m_requests.clear();
         }
-        ::Sleep(1);
+
+        for(int i=0; i<10; ++i) {
+            if(::GetAsyncKeyState('1'+i)) {
+                char filename[64];
+                sprintf(filename, "rpsstate%c.bin", '1'+i);
+                if(::GetAsyncKeyState(VK_MENU)) {
+                    rpsMainModule::SerializeRequest req(filename, rpsArchive::Writer);
+                    pushRequest(req);
+                }
+                else if(::GetAsyncKeyState(VK_CONTROL)) {
+                    rpsMainModule::SerializeRequest req(filename, rpsArchive::Reader);
+                    pushRequest(req);
+                }
+                ::Sleep(200);
+            }
+        }
+        ::Sleep(50);
     }
 }
 
@@ -218,14 +309,14 @@ rpsAPI void rpsSaveState(const char *path_to_outfile)
 {
     rpsMainModule::SerializeRequest req(path_to_outfile, rpsArchive::Writer);
     rpsMainModule::getInstance()->pushRequest(req);
-    rpsMainModule::getInstance()->processRequest();
+    rpsMainModule::getInstance()->waitForCompleteRequests();
 }
 
 rpsAPI void rpsLoadState(const char *path_to_infile)
 {
     rpsMainModule::SerializeRequest req (path_to_infile, rpsArchive::Reader);
     rpsMainModule::getInstance()->pushRequest(req);
-    rpsMainModule::getInstance()->processRequest();
+    rpsMainModule::getInstance()->waitForCompleteRequests();
 }
 
 rpsAPI void rpsSendMessage(rpsMessage &mes)

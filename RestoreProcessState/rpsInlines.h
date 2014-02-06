@@ -4,6 +4,7 @@
 
 inline rps_wstring rpsL(const char *mbs)
 {
+    if(mbs==nullptr) { return rps_wstring(); }
     rps_wstring ret;
     size_t mblen = strlen(mbs);
     size_t len = mbstowcs(nullptr, mbs, mblen);

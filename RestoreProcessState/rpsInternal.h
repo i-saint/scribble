@@ -127,7 +127,8 @@ public:
 
     void sendMessage(rpsMessage &m);
     void pushRequest(SerializeRequest &req);
-    void processRequest();
+    void waitForCompleteRequests();
+	void setHooks(HMODULE mod);
 
     void* operator new(size_t s) { return rpsMalloc(s); }
     void  operator delete(void *p) { return rpsFree(p); }
@@ -154,6 +155,7 @@ private:
     Requests m_requests;
     rpsMutex m_mtx_requests;
     rpsCommunicator *m_communicator;
+    DWORD m_tid;
 };
 
 #include "rpsInlines.h"

@@ -26,6 +26,13 @@ typedef BOOL   (WINAPI *VirtualFreeT)(LPVOID lpAddress, SIZE_T dwSize, DWORD dwF
 typedef LPVOID (WINAPI *VirtualAllocExT)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
 typedef BOOL   (WINAPI *VirtualFreeExT)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
 
+// dll
+typedef HMODULE (WINAPI *LoadLibraryAT)(LPCSTR lpFileName);
+typedef HMODULE (WINAPI *LoadLibraryWT)(LPWSTR lpFileName);
+typedef HMODULE (WINAPI *LoadLibraryExAT)(LPCSTR lpFileName, HANDLE hFile, DWORD dwFlags);
+typedef HMODULE (WINAPI *LoadLibraryExWT)(LPWSTR lpFileName, HANDLE hFile, DWORD dwFlags);
+
+
 // handle
 typedef BOOL  (WINAPI *CloseHandleT)(HANDLE hObject);
 typedef DWORD (WINAPI *WaitForSingleObjectT)(HANDLE hHandle, DWORD dwMilliseconds);
