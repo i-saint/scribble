@@ -21,6 +21,8 @@
 #include <dbghelp.h>
 #include <psapi.h>
 #include <tlhelp32.h>
+#include <d3d9.h>
+#include <d3d11.h>
 #ifdef max
 #   undef max
 #   undef min
@@ -38,20 +40,27 @@
 
 #define rpsHookAPI __declspec(noinline)
 
+enum {
+    rpsE_IATOverride = 0x01,
+    rpsE_EATOverride = 0x02,
+    rpsE_IEATOverride = rpsE_IATOverride|rpsE_EATOverride,
+};
 struct rpsHookInfo
 {
     const char *dllname;
     const char *funcname;
-    uint32_t funcordinal;
     void *hookfunc;
     void **origfunc;
+    uint32_t funcordinal;
+    uint32_t flags;
 
-    rpsHookInfo(const char *dll=nullptr, const char *fname=nullptr, uint32_t ford=0, void *hook=nullptr, void **orig=nullptr)
+    rpsHookInfo(const char *dll=nullptr, const char *fname=nullptr, uint32_t ford=0, void *hook=nullptr, void **orig=nullptr, uint32_t f=rpsE_IATOverride)
         : dllname(dll)
         , funcname(fname)
-        , funcordinal(ford)
         , hookfunc(hook)
         , origfunc(orig)
+        , funcordinal(ford)
+        , flags(f)
     {
     }
 };
@@ -84,13 +93,25 @@ struct rpsHandleInfo
     rpsIModule *owner;
 };
 
+struct rpsConfigData
+{
+    typedef std::vector<rps_string, rps_allocator<rps_string> > StringList;
+    StringList serializable_dlls;
+    StringList disabled_modules;
+    uint16_t tcp_port;
+
+    rpsConfigData();
+};
+
+rpsAPI rpsConfigData& rpsGetConfig();
 rpsAPI void* rpsGetHeapBlock();
 rpsAPI HANDLE rpsCreateHandle(rpsIModule *owner, HANDLE win_handle);
 rpsAPI bool rpsReleaseHandle(HANDLE rps_handle);
 rpsAPI HANDLE rpsToWinHandle(HANDLE rps_handle);
 rpsAPI HANDLE rpsToRpsHandle(HANDLE win_handle);
 rpsAPI rpsHandleInfo* rpsGetHandleInfo(HANDLE rps_handle);
-
+rpsAPI bool rpsIsSerializableModule(HMODULE mod);
+rpsAPI bool rpsIsSerializableModule(const char *filename_or_path);
 
 
 class rpsMainModule
@@ -107,20 +128,12 @@ public:
             mode = m;
         }
     };
-    struct ModuleHookConfig
-    {
-    };
-    struct ThreadHookConfig
-    {
-    };
     typedef std::vector<rpsIModule*, rps_allocator<rpsIModule*> > Modules;
     typedef std::map<rps_string, rpsIModule*, std::less<rps_string>, rps_allocator<std::pair<rps_string, rpsIModule*> > > ModuleMap;
     typedef std::vector<rpsHookInfo*, rps_allocator<rpsHookInfo*> > Hooks;
     typedef std::map<rps_string, Hooks, std::less<rps_string>, rps_allocator<std::pair<rps_string, Hooks> > > FuncHookTable;
     typedef std::map<rps_string, FuncHookTable, std::less<rps_string>, rps_allocator<std::pair<rps_string, FuncHookTable> > > DLLHookTable;
     typedef std::vector<SerializeRequest, rps_allocator<SerializeRequest> > Requests;
-    typedef std::map<rps_string, ModuleHookConfig, std::less<rps_string>, rps_allocator<std::pair<rps_string, ModuleHookConfig> > > ModuleHookConfigs;
-    typedef std::map<DWORD, ThreadHookConfig, std::less<DWORD>, rps_allocator<std::pair<DWORD, ThreadHookConfig> > > ThreadHookConfigs;
 
     static void initialize();
     static rpsMainModule* getInstance();
@@ -128,7 +141,7 @@ public:
     void sendMessage(rpsMessage &m);
     void pushRequest(SerializeRequest &req);
     void waitForCompleteRequests();
-	void setHooks(HMODULE mod);
+    void setHooks(HMODULE mod);
 
     void* operator new(size_t s) { return rpsMalloc(s); }
     void  operator delete(void *p) { return rpsFree(p); }

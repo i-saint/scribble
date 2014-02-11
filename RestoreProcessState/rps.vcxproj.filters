@@ -27,6 +27,12 @@
     <ClCompile Include="Modules\rpsTimeModule.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\rpsD3D9.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\rpsD3D9Module.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rps.h" />
@@ -37,5 +43,8 @@
     <ClInclude Include="rpsInternal.h" />
     <ClInclude Include="rpsNetwork.h" />
     <ClInclude Include="rpsPCH.h" />
+    <ClInclude Include="Modules\rpsD3D9.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

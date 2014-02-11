@@ -21,6 +21,8 @@
 #include <dbghelp.h>
 #include <psapi.h>
 #include <tlhelp32.h>
+#include <d3d9.h>
+#include <d3d11.h>
 #ifdef max
 #   undef max
 #   undef min

@@ -172,6 +172,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Modules\rpsD3D9.cpp" />
+    <ClCompile Include="Modules\rpsD3D9Module.cpp" />
     <ClCompile Include="Modules\rpsFileModule.cpp" />
     <ClCompile Include="Modules\rpsMemoryModule.cpp" />
     <ClCompile Include="Modules\rpsSyncModule.cpp" />
@@ -190,6 +192,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Modules\rpsD3D9.h" />
     <ClInclude Include="rps.h" />
     <ClInclude Include="rpsCommunicator.h" />
     <ClInclude Include="rpsFoundation.h" />

@@ -307,8 +307,7 @@ void rpsMemoryModule::serialize(rpsArchive &ar)
     if(ar.isWriter()) {
         HMODULE mod = ::GetModuleHandleA(nullptr);
         rpsEnumerateModulesDetailed([&](rpsModuleInfo &modinfo){
-            // 単純化のためメインモジュールに限定
-            if(modinfo.base!=mod) { return; }
+            if(!rpsIsSerializableModule((HMODULE)modinfo.base)) { return; }
 
             char *pos = (char*)modinfo.base;
             char *end = pos + modinfo.size;

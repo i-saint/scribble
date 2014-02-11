@@ -1,7 +1,6 @@
 ﻿#ifndef rpsFuncTypes_h
 #define rpsFuncTypes_h
 
-
 typedef BOOL (WINAPI *CloseHandleT)(_In_  HANDLE hObject);
 
 // memory
@@ -97,5 +96,11 @@ typedef BOOL   (WINAPI *GetFileSizeExT)(HANDLE hFile, PLARGE_INTEGER lpFileSize)
 typedef BOOL (WINAPI *QueryPerformanceFrequencyT)( LARGE_INTEGER *lpFrequency );
 typedef BOOL (WINAPI *QueryPerformanceCounterT)( LARGE_INTEGER *lpPerformanceCount );
 typedef DWORD (*timeGetTimeT)(void);
+
+
+// d3d9
+typedef IDirect3D9* (WINAPI *Direct3DCreate9T)(UINT SDKVersion);
+typedef HRESULT (WINAPI *Direct3DCreate9ExT)(UINT SDKVersion, IDirect3D9Ex **ppD3D);
+
 
 #endif // rpsFuncTypes_h

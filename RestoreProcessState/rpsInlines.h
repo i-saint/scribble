@@ -308,5 +308,6 @@ inline rpsArchive & operator&(rpsArchive &ar, rpsTHandleRecords<T> &v)
 } // namespace
 
 #define rpsDefineHookInfo(Module, FuncName) rpsHookInfo(Module, #FuncName, 0, rps##FuncName, &(void*&)va##FuncName )
+#define rpsDefineHookInfo2(Module, FuncName, Flags) rpsHookInfo(Module, #FuncName, 0, rps##FuncName, &(void*&)va##FuncName, Flags )
 
 #endif // rpsInlines_h

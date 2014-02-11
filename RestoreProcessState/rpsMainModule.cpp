@@ -9,6 +9,7 @@ extern rpsIModule* rpsCreateSyncModule();
 extern rpsIModule* rpsCreateThreadModule();
 extern rpsIModule* rpsCreateFileModule();
 extern rpsIModule* rpsCreateTimeModule();
+extern rpsIModule* rpsCreateD3D9Module();
 
 
 static rpsModuleCreator g_mcreators[] = {
@@ -18,6 +19,7 @@ static rpsModuleCreator g_mcreators[] = {
     rpsCreateThreadModule,
     rpsCreateFileModule,
     rpsCreateTimeModule,
+    rpsCreateD3D9Module,
 
     nullptr,
 };
@@ -60,10 +62,10 @@ rpsHookAPI HMODULE WINAPI rpsLoadLibraryExW(LPWSTR lpFileName, HANDLE hFile, DWO
 }
 
 rpsHookInfo g_loadlibraryhooks[] = {
-    rpsDefineHookInfo("kernel32.dll", LoadLibraryA),
-    rpsDefineHookInfo("kernel32.dll", LoadLibraryW),
-    rpsDefineHookInfo("kernel32.dll", LoadLibraryExA),
-    rpsDefineHookInfo("kernel32.dll", LoadLibraryExW),
+    rpsDefineHookInfo2("kernel32.dll", LoadLibraryA, rpsE_IEATOverride),
+    rpsDefineHookInfo2("kernel32.dll", LoadLibraryW, rpsE_IEATOverride),
+    rpsDefineHookInfo2("kernel32.dll", LoadLibraryExA, rpsE_IEATOverride),
+    rpsDefineHookInfo2("kernel32.dll", LoadLibraryExW, rpsE_IEATOverride),
     rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };
 
@@ -93,8 +95,7 @@ rpsMainModule* rpsMainModule::getInstance()
 }
 
 
-// todo: 外部リスト化
-static bool rpsShouldHook(HMODULE mod)
+rpsAPI bool rpsIsSerializableModule(HMODULE mod)
 {
     static const HMODULE main_module = GetModuleHandleA(nullptr);
     if(mod==main_module) {
@@ -106,7 +107,12 @@ static bool rpsShouldHook(HMODULE mod)
     for(int i=0; path[i]!='\0'; ++i) {
         path[i] = tolower(path[i]);
     }
+    return rpsIsSerializableModule(path);
+}
 
+rpsAPI bool rpsIsSerializableModule(const char *path)
+{
+    // todo: 外部リスト化
     const char *whitelist[] = {
         "msvcr120.dll",
         "msvcr120d.dll",
@@ -118,16 +124,16 @@ static bool rpsShouldHook(HMODULE mod)
         "msvcr90d.dll",
         "msvcr80.dll",
         "msvcr80d.dll",
-        "msvcrt.dll",
+        //"msvcrt.dll",
         "wuvorbis.dll",
         "x3daudio1_7.dll",
     };
     for(int i=0; i<_countof(whitelist); ++i) {
         if(strstr(path, whitelist[i])) { return true; }
     }
-
     return false;
 }
+
 
 rpsMainModule::rpsMainModule()
     : m_tid(0)
@@ -176,20 +182,10 @@ rpsMainModule::rpsMainModule()
             });
         }
     });
-    // override import table
+    // override import & export address tables
     rpsEnumerateModules([&](HMODULE mod){
         setHooks(mod);
     });
-    // override export table
-    // (only for LoadLibrary*)
-    if(HMODULE mod = ::GetModuleHandleA("kernel32.dll")) {
-        rpsHookInfo *hinfo = g_loadlibraryhooks;
-        for(size_t hi=0; ; ++hi) {
-            if(!hinfo[hi].dllname) { break; }
-            rpsHookInfo *hook = &hinfo[hi];
-            rpsOverrideDLLExport(mod, hook->funcname, hook->hookfunc, nullptr);
-        }
-    }
 
     rpsLogInfo("rpsMainModule: initializing modules");
     rpsEach(m_modules, [&](rpsIModule *mod){
@@ -220,16 +216,39 @@ void rpsMainModule::waitForCompleteRequests()
 
 void rpsMainModule::setHooks( HMODULE mod )
 {
-    if(!rpsShouldHook(mod)) { return; }
+    char path[MAX_PATH+1];
+    char *filename = nullptr;
+    GetModuleFileNameA(mod, path, sizeof(path));
+    for(int i=0; path[i]!='\0'; ++i) {
+        path[i] = tolower(path[i]);
+        if(path[i]=='\\') {
+            filename = path+i+1;
+        }
+    }
+    if(strcmp(filename, "rps32.dll")==0 || strcmp(filename, "rps64.dll")==0) { return; }
 
-    rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
-        rpsEnumerateDLLImports(mod, hp.first.c_str(), [&](const char *name, void *&func){
-            FuncHookTable &htab = hp.second;
+    rpsEach(m_hooks, [&](DLLHookTable::value_type &dllname_hooks){
+        rpsEnumerateDLLImports(mod, dllname_hooks.first.c_str(), [&](const char *name, void *&func){
+            FuncHookTable &htab = dllname_hooks.second;
             auto it = htab.find(rps_string(name));
-            if(it!=htab.end()) {
+            if(it!=htab.end() && (it->second[0]->flags&rpsE_IATOverride)!=0) {
                 rpsForceWrite<void*>(func, it->second[0]->hookfunc);
             }
         });
+        if(dllname_hooks.first==filename) {
+            FuncHookTable &htab = dllname_hooks.second;
+            rpsEach(htab, [&](FuncHookTable::value_type &funcname_hooks){
+                if((funcname_hooks.second[0]->flags&rpsE_EATOverride)!=0) {
+                    void *proc = rpsOverrideDLLExport(mod, funcname_hooks.first.c_str(), funcname_hooks.second[0]->hookfunc, nullptr);
+                    if(*funcname_hooks.second[0]->origfunc==nullptr) {
+                        rpsREach(funcname_hooks.second, [&](rpsHookInfo *hook){
+                            *hook->origfunc = proc;
+                            proc = hook->hookfunc;
+                        });
+                    }
+                }
+            });
+        }
     });
 }
 
