@@ -7,5 +7,5 @@ int main()
     char *code = shellcode;
     (&code)[2] = code; // change return address to shellcode
 }
-// $ cl /Zi /GS- buffer_overflow.cpp && ./buffer_overflow
+// $ cl /Zi /GS- return_address_override.cpp && ./return_address_override
 // (message box is shown)
