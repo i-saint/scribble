@@ -112,6 +112,8 @@ rpsAPI HANDLE rpsToRpsHandle(HANDLE win_handle);
 rpsAPI rpsHandleInfo* rpsGetHandleInfo(HANDLE rps_handle);
 rpsAPI bool rpsIsSerializableModule(HMODULE mod);
 rpsAPI bool rpsIsSerializableModule(const char *filename_or_path);
+rpsAPI bool rpsIsIgnoredModule(const char *path);
+rpsAPI bool rpsIsIgnoredModule(const wchar_t *path);
 
 
 class rpsMainModule
@@ -137,6 +139,8 @@ public:
 
     static void initialize();
     static rpsMainModule* getInstance();
+
+	void callbackFromHost();
 
     void sendMessage(rpsMessage &m);
     void pushRequest(SerializeRequest &req);

@@ -35,11 +35,13 @@ timeGetTimeT                vatimeGetTime;
 
 rpsHookAPI BOOL WINAPI rpsQueryPerformanceCounter( LARGE_INTEGER *lpPerformanceCount )
 {
+    rpsMainModule::getInstance()->callbackFromHost();
     return rpsTimeModule::getInstance()->rpsQueryPerformanceCounterImpl(lpPerformanceCount);
 }
 
 rpsHookAPI DWORD rpstimeGetTime( void )
 {
+    rpsMainModule::getInstance()->callbackFromHost();
     return rpsTimeModule::getInstance()->rpstimeGetTimeImpl();
 }
 

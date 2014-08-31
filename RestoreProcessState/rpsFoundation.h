@@ -10,7 +10,9 @@ void rpsFree(void *addr);
 
 void rpsPrint(const char *format, ...);
 void rpsPrint(const wchar_t *format, ...);
-#define rpsLogInfo(...) rpsPrint(__VA_ARGS__)
+
+//#define rpsLogInfo(...) rpsPrint(__VA_ARGS__)
+#define rpsLogInfo(...)
 
 bool rpsIsValidMemory(void *p);
 bool rpsIsInsideRpsModule(void *p);

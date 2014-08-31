@@ -1,6 +1,95 @@
 ﻿#include "rpsPCH.h"
 #include "rpsInternal.h"
 #include "rpsCommunicator.h"
+#include <mmsystem.h>
+#pragma comment(lib,"winmm.lib")
+
+
+
+rpsAPI bool rpsIsSerializableModule(const char *path)
+{
+    return !rpsIsIgnoredModule(path);
+}
+
+rpsAPI bool rpsIsSerializableModule(HMODULE mod)
+{
+    static const HMODULE main_module = GetModuleHandleA(nullptr);
+    if (mod == main_module) {
+        return true;
+    }
+
+    char path[MAX_PATH + 1];
+    GetModuleFileNameA(mod, path, sizeof(path));
+    for (int i = 0; path[i] != '\0'; ++i) {
+        path[i] = tolower(path[i]);
+    }
+    return rpsIsSerializableModule(path);
+}
+
+template<size_t N>
+inline bool match(const char *str, const char *(&patterns)[N])
+{
+    for (int i = 0; i < N; ++i) {
+        if (strstr(str, patterns[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+rpsAPI bool rpsIsIgnoredModule(const char *path)
+{
+    rps_string ipath = path;
+    for (size_t i = 0; i < ipath.size(); ++i) {
+        ipath[i] = tolower(ipath[i]);
+    }
+
+    const char *ignorelist[] = {
+        "rps32.dll",
+        "rps64.dll",
+
+        "zlib1.dll",
+        "libpng15.dll",
+        "libvorbisfile.dll",
+        "libogg.dll",
+        "libvorbis.dll",
+        "openal32.dll",
+
+
+        "\\windows\\",
+    };
+    const char *whitelist[] = {
+        "msvcp",
+        "msvcr",
+
+        "ntdll.dll",
+        "kernel32.dll",
+        "kernelbase.dll",
+    };
+
+    if (match(ipath.c_str(), whitelist)) {
+        return false;
+    }
+    if (match(ipath.c_str(), ignorelist)) {
+        return true;
+    }
+    return false;
+}
+
+rpsAPI bool rpsIsIgnoredModule(const wchar_t *path)
+{
+    std::wstring tmp = path;
+
+    size_t len = wcstombs(nullptr, tmp.c_str(), 0);
+    if (len == size_t(-1)) { return false; }
+
+    std::string dst;
+    dst.resize(len);
+    wcstombs(&dst[0], tmp.c_str(), len);
+    return rpsIsIgnoredModule(dst.c_str());
+}
+
+
 
 
 extern rpsIModule* rpsCreateMemoryModule();
@@ -36,28 +125,36 @@ LoadLibraryExWT vaLoadLibraryExW;
 rpsHookAPI HMODULE WINAPI rpsLoadLibraryA(LPCSTR lpFileName)
 {
     HMODULE ret = vaLoadLibraryA(lpFileName);
-    rpsMainModule::getInstance()->setHooks(ret);
+    if (!rpsIsIgnoredModule(lpFileName)) {
+        rpsMainModule::getInstance()->setHooks(ret);
+    }
     return ret;
 }
 
 rpsHookAPI HMODULE WINAPI rpsLoadLibraryW(LPWSTR lpFileName)
 {
     HMODULE ret = vaLoadLibraryW(lpFileName);
-    rpsMainModule::getInstance()->setHooks(ret);
+    if (!rpsIsIgnoredModule(lpFileName)) {
+        rpsMainModule::getInstance()->setHooks(ret);
+    }
     return ret;
 }
 
 rpsHookAPI HMODULE WINAPI rpsLoadLibraryExA(LPCSTR lpFileName, HANDLE hFile, DWORD dwFlags)
 {
     HMODULE ret = vaLoadLibraryExA(lpFileName, hFile, dwFlags);
-    rpsMainModule::getInstance()->setHooks(ret);
+    if (!rpsIsIgnoredModule(lpFileName)) {
+        rpsMainModule::getInstance()->setHooks(ret);
+    }
     return ret;
 }
 
 rpsHookAPI HMODULE WINAPI rpsLoadLibraryExW(LPWSTR lpFileName, HANDLE hFile, DWORD dwFlags)
 {
     HMODULE ret = vaLoadLibraryExW(lpFileName, hFile, dwFlags);
-    rpsMainModule::getInstance()->setHooks(ret);
+    if (!rpsIsIgnoredModule(lpFileName)) {
+        rpsMainModule::getInstance()->setHooks(ret);
+    }
     return ret;
 }
 
@@ -94,45 +191,6 @@ rpsMainModule* rpsMainModule::getInstance()
     return g_inst;
 }
 
-
-rpsAPI bool rpsIsSerializableModule(HMODULE mod)
-{
-    static const HMODULE main_module = GetModuleHandleA(nullptr);
-    if(mod==main_module) {
-        return true;
-    }
-
-    char path[MAX_PATH+1];
-    GetModuleFileNameA(mod, path, sizeof(path));
-    for(int i=0; path[i]!='\0'; ++i) {
-        path[i] = tolower(path[i]);
-    }
-    return rpsIsSerializableModule(path);
-}
-
-rpsAPI bool rpsIsSerializableModule(const char *path)
-{
-    // todo: 外部リスト化
-    const char *whitelist[] = {
-        "msvcr120.dll",
-        "msvcr120d.dll",
-        "msvcr110.dll",
-        "msvcr110d.dll",
-        "msvcr100.dll",
-        "msvcr100d.dll",
-        "msvcr90.dll",
-        "msvcr90d.dll",
-        "msvcr80.dll",
-        "msvcr80d.dll",
-        //"msvcrt.dll",
-        "wuvorbis.dll",
-        "x3daudio1_7.dll",
-    };
-    for(int i=0; i<_countof(whitelist); ++i) {
-        if(strstr(path, whitelist[i])) { return true; }
-    }
-    return false;
-}
 
 
 rpsMainModule::rpsMainModule()
@@ -225,7 +283,9 @@ void rpsMainModule::setHooks( HMODULE mod )
             filename = path+i+1;
         }
     }
-    if(strcmp(filename, "rps32.dll")==0 || strcmp(filename, "rps64.dll")==0) { return; }
+
+
+    if (rpsIsIgnoredModule(path)) { return; }
 
     rpsEach(m_hooks, [&](DLLHookTable::value_type &dllname_hooks){
         rpsEnumerateDLLImports(mod, dllname_hooks.first.c_str(), [&](const char *name, void *&func){
@@ -275,33 +335,109 @@ void rpsMainModule::serializeImpl(const char *path, rpsArchive::Mode mode)
     }
 }
 
+
+static volatile bool s_ready_to_serialize;
+
+__declspec(noinline) void rpsMainModule::callbackFromHost()
+{
+    while (!m_requests.empty()) {
+        s_ready_to_serialize = true;
+    }
+    s_ready_to_serialize = false;
+}
+
 void rpsMainModule::mainloop()
 {
-    for(;;) {
-        if(!m_requests.empty()) {
-            rpsMutex::ScopedLock lock(m_mtx_requests);
-            rpsEach(m_requests, [&](SerializeRequest &req){
-                serializeImpl(req.path, req.mode);
-            });
-            m_requests.clear();
-        }
+    const int interval = 3000;
+    bool enable_record = false;
+    uint32_t time_prev = timeGetTime();
+    uint32_t time_prog = 0;
+    int last = -1;
+    int pos = -1;
+    char buf[256];
 
-        for(int i=0; i<10; ++i) {
-            if(::GetAsyncKeyState('1'+i)) {
-                char filename[64];
-                sprintf(filename, "rpsstate%c.bin", '1'+i);
-                if(::GetAsyncKeyState(VK_MENU)) {
-                    rpsMainModule::SerializeRequest req(filename, rpsArchive::Writer);
-                    pushRequest(req);
-                }
-                else if(::GetAsyncKeyState(VK_CONTROL)) {
-                    rpsMainModule::SerializeRequest req(filename, rpsArchive::Reader);
-                    pushRequest(req);
-                }
-                ::Sleep(200);
+    rpsPrint(
+        "ctrl + space: record on/off (off by default)\n"
+        "ctrl + left/right: load prev/next state\n\n");
+
+    for (;;) {
+        {
+            rpsMutex::ScopedLock lock(m_mtx_requests);
+            if (!m_requests.empty() && s_ready_to_serialize) {
+                rpsEach(m_requests, [&](SerializeRequest &req){
+                    serializeImpl(req.path, req.mode);
+                });
+                m_requests.clear();
             }
         }
-        ::Sleep(50);
+
+        //for(int i=0; i<10; ++i) {
+        //    if(::GetAsyncKeyState('1'+i)) {
+        //        char filename[64];
+        //        sprintf(filename, "%c.state", '1'+i);
+        //        if(::GetAsyncKeyState(VK_MENU)) {
+        //            rpsMainModule::SerializeRequest req(filename, rpsArchive::Writer);
+        //            pushRequest(req);
+        //        }
+        //        else if(::GetAsyncKeyState(VK_CONTROL)) {
+        //            rpsMainModule::SerializeRequest req(filename, rpsArchive::Reader);
+        //            pushRequest(req);
+        //        }
+        //        ::Sleep(200);
+        //    }
+        //}
+        //::Sleep(50);
+
+    
+
+        if (::GetAsyncKeyState(VK_CONTROL) && ::GetAsyncKeyState(VK_SPACE)) {
+            enable_record = !enable_record;
+            if (enable_record) {
+                rpsPrint("record start\n");
+            }
+            else {
+                rpsPrint("record stop\n");
+            }
+        }
+        if (enable_record) {
+            uint32_t time_now = timeGetTime();
+            time_prog += time_now - time_prev;
+            time_prev = time_now;
+            if (time_prog > interval) {
+                time_prog = 0;
+                sprintf(buf, "%d.state", ++pos);
+                last = std::max<int>(last, pos);
+                rpsMainModule::SerializeRequest req(buf, rpsArchive::Writer);
+                pushRequest(req);
+                rpsPrint("saved %d.state\n", pos);
+            }
+        }
+        {
+            bool needs_load = false;
+            int pos_prev = pos;
+            if (::GetAsyncKeyState(VK_CONTROL) && ::GetAsyncKeyState(VK_LEFT)) {
+                if (time_prog<1000) {
+                    --pos;
+                }
+                needs_load = true;
+            }
+            if (::GetAsyncKeyState(VK_CONTROL) && ::GetAsyncKeyState(VK_RIGHT)) {
+                ++pos;
+                needs_load = true;
+            }
+            if (needs_load && pos >= 0 && pos <= last) {
+                sprintf(buf, "%d.state", pos);
+                rpsMainModule::SerializeRequest req(buf, rpsArchive::Reader);
+                pushRequest(req);
+                ::Sleep(300);
+                time_prog = 0;
+                rpsPrint("loaded %d.state\n", pos);
+            }
+            else {
+                pos = pos_prev;
+            }
+        }
+        ::Sleep(100);
     }
 }
 

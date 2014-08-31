@@ -34,7 +34,7 @@ rpsHookAPI IDirect3D9* WINAPI rpsDirect3DCreate9(UINT SDKVersion)
 }
 
 rpsHookInfo g_hookinfo[] = {
-    rpsDefineHookInfo2("d3d9.dll", Direct3DCreate9, rpsE_IEATOverride),
+    //rpsDefineHookInfo2("d3d9.dll", Direct3DCreate9, rpsE_IEATOverride),
 
     rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };

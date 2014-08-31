@@ -25,7 +25,7 @@ bool InjectDLL(HANDLE hProcess, const char* dllname)
     ::VirtualProtectEx(hProcess, remote_addr, len, oldProtect, &oldProtect);
 
     hThread = ::CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)((void*)&LoadLibraryA), remote_addr, 0, NULL);
-    ::WaitForSingleObject(hThread, 5000); 
+    ::WaitForSingleObject(hThread, 3000); 
     ::VirtualFreeEx(hProcess, remote_addr, 0, MEM_RELEASE);
     return true;
 }
