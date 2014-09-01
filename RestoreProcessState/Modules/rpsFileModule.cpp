@@ -231,17 +231,17 @@ rpsHookAPI BOOL WINAPI rpsCloseHandle(HANDLE hObject)
 }
 
 rpsHookInfo g_hookinfo[] = {
-    rpsDefineHookInfo("kernel32.dll", CreateFileA),
-    rpsDefineHookInfo("kernel32.dll", CreateFileW),
-    rpsDefineHookInfo("kernel32.dll", CreateFile2),
-    rpsDefineHookInfo("kernel32.dll", WriteFile),
-    rpsDefineHookInfo("kernel32.dll", ReadFile),
-    rpsDefineHookInfo("kernel32.dll", SetFilePointer),
-    rpsDefineHookInfo("kernel32.dll", SetFilePointerEx),
-    rpsDefineHookInfo("kernel32.dll", GetFileType),
-    rpsDefineHookInfo("kernel32.dll", GetFileSize),
-    rpsDefineHookInfo("kernel32.dll", GetFileSizeEx),
-    rpsDefineHookInfo("kernel32.dll", CloseHandle),
+    //rpsDefineHookInfo("kernel32.dll", CreateFileA),
+    //rpsDefineHookInfo("kernel32.dll", CreateFileW),
+    //rpsDefineHookInfo("kernel32.dll", CreateFile2),
+    //rpsDefineHookInfo("kernel32.dll", WriteFile),
+    //rpsDefineHookInfo("kernel32.dll", ReadFile),
+    //rpsDefineHookInfo("kernel32.dll", SetFilePointer),
+    //rpsDefineHookInfo("kernel32.dll", SetFilePointerEx),
+    //rpsDefineHookInfo("kernel32.dll", GetFileType),
+    //rpsDefineHookInfo("kernel32.dll", GetFileSize),
+    //rpsDefineHookInfo("kernel32.dll", GetFileSizeEx),
+    //rpsDefineHookInfo("kernel32.dll", CloseHandle),
 
     rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };
