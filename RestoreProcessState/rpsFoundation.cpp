@@ -293,7 +293,7 @@ bool rpsArchive::open(const char *path_to_file, Mode mode)
     DWORD accrss = m_mode==Reader ? GENERIC_READ : GENERIC_WRITE;
     DWORD disposition = m_mode==Reader ? OPEN_EXISTING : CREATE_ALWAYS;
     m_file = vaCreateFileA(path_to_file, accrss, 0, nullptr, disposition, FILE_ATTRIBUTE_NORMAL, nullptr);
-    return m_file!=nullptr;
+    return m_file!=INVALID_HANDLE_VALUE;
 }
 
 void rpsArchive::close()

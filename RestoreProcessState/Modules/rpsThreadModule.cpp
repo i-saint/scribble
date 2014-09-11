@@ -84,7 +84,7 @@ rpsHookAPI BOOL WINAPI rpsCloseHandle(HANDLE hObject)
     if(rpsThreadRecord *rec=rpsGetThreadRecords()->findRecord(hObject)) {
         HANDLE win_handle = rpsToWinHandleC(hObject, vaCloseHandle);
         BOOL ret = vaCloseHandle(win_handle);
-        rpsLogInfo("rpsCloseHandle(%p): %u", win_handle, ret);
+        rpsLogInfo("rpsCloseHandle(%p): %u\n", win_handle, ret);
         if(ret) {
             rpsGetThreadRecords()->eraseRecord(hObject);
         }

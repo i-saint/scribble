@@ -134,19 +134,19 @@ rpsHookAPI SIZE_T WINAPI rpsHeapSize( HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem
 rpsHookAPI HGLOBAL WINAPI rpsGlobalAlloc(UINT uFlags, SIZE_T dwBytes)
 {
     HGLOBAL ret = vaGlobalAlloc(uFlags, dwBytes);
-    rpsLogInfo("rpsGlobalAlloc(0x%x, %u): 0x%p", uFlags, dwBytes, ret);
+    rpsLogInfo("rpsGlobalAlloc(0x%x, %u): 0x%p\n", uFlags, dwBytes, ret);
     return ret;
 }
 rpsHookAPI HGLOBAL WINAPI rpsGlobalReAlloc(HGLOBAL hMem, SIZE_T dwBytes, UINT uFlags)
 {
     HGLOBAL ret = vaGlobalReAlloc(hMem, dwBytes, uFlags);
-    rpsLogInfo("rpsGlobalReAlloc(0x%p, 0x%x, %u): 0x%p", hMem, uFlags, dwBytes, ret);
+    rpsLogInfo("rpsGlobalReAlloc(0x%p, 0x%x, %u): 0x%p\n", hMem, uFlags, dwBytes, ret);
     return ret;
 }
 rpsHookAPI HGLOBAL WINAPI rpsGlobalFree(HGLOBAL hMem)
 {
     HGLOBAL ret = vaGlobalFree(hMem);
-    rpsLogInfo("rpsGlobalFree(0x%p): 0x%p", hMem, ret);
+    rpsLogInfo("rpsGlobalFree(0x%p): 0x%p\n", hMem, ret);
     return ret;
 }
 rpsHookAPI SIZE_T  WINAPI rpsGlobalSize(HGLOBAL hMem)
@@ -291,7 +291,7 @@ void rpsMemoryModule::initialize()
     for(; !m_mem; m_size/=2) {
         m_mem = (char*)::VirtualAlloc(addr, m_size, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     }
-    rpsLogInfo("rpsMemoryModule: initialized with block size: 0x%x [0x%p]", m_size, m_mem);
+    rpsLogInfo("rpsMemoryModule: initialized with block size: 0x%x [0x%p]\n", m_size, m_mem);
     m_msp = create_mspace_with_base(m_mem, m_size, 1);
     m_pos = 1024;
 }
@@ -354,7 +354,7 @@ LPVOID rpsMemoryModule::rpsHeapAllocImpl(HANDLE hHeap, DWORD dwFlags, SIZE_T dwB
     rpsMutex::ScopedLock lock(m_mutex);
     void *ret = mspace_malloc(m_msp, dwBytes);
     m_pos = std::max<size_t>((size_t)ret-(size_t)m_mem+dwBytes, m_pos);
-    rpsLogInfo("rpsHeapAlloc: %u [0x%p]", dwBytes, ret);
+    rpsLogInfo("rpsHeapAlloc: %u [0x%p]\n", dwBytes, ret);
     return ret;
 }
 
@@ -363,7 +363,7 @@ LPVOID rpsMemoryModule::rpsHeapReAllocImpl(HANDLE hHeap, DWORD dwFlags, LPVOID l
     rpsMutex::ScopedLock lock(m_mutex);
     void *ret = mspace_realloc(m_msp, lpMem, dwBytes);
     m_pos = std::max<size_t>((size_t)ret-(size_t)m_mem+dwBytes, m_pos);
-    rpsLogInfo("rpsHeapReAlloc: %u [0x%p] old:[0x%p]", dwBytes, ret, lpMem);
+    rpsLogInfo("rpsHeapReAlloc: %u [0x%p] old:[0x%p]\n", dwBytes, ret, lpMem);
     return ret;
 }
 
@@ -376,7 +376,7 @@ BOOL rpsMemoryModule::rpsHeapFreeImpl(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
         mspace_free(m_msp, lpMem);
         ret = TRUE;
     }
-    rpsLogInfo("rpsHeapFree(0x%p): %d", lpMem, ret);
+    rpsLogInfo("rpsHeapFree(0x%p): %d\n", lpMem, ret);
     return ret;
 }
 
@@ -402,7 +402,7 @@ LPVOID rpsMemoryModule::rpsVirtualAllocImpl(LPVOID lpAddress, SIZE_T dwSize, DWO
     LPVOID ret = vaVirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
     rpsMemoryPageInfo pinfo = {ret, dwSize, flAllocationType, flProtect};
     m_pages[(size_t)ret] = pinfo;
-    rpsLogInfo("rpsVirtualAlloc: %u [0x%p]", dwSize, ret);
+    rpsLogInfo("rpsVirtualAlloc: %u [0x%p]\n", dwSize, ret);
     return ret;
 }
 
@@ -416,7 +416,7 @@ BOOL rpsMemoryModule::rpsVirtualFreeImpl(LPVOID lpAddress, SIZE_T dwSize, DWORD 
             m_pages.erase(it);
         }
     }
-    rpsLogInfo("rpsVirtualFree: [0x%p] %d", lpAddress, ret);
+    rpsLogInfo("rpsVirtualFree: [0x%p] %d\n", lpAddress, ret);
     return ret;
 }
 

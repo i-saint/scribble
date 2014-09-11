@@ -65,7 +65,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateFileA(
     )
 {
     HANDLE win_handle = vaCreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
-    rpsLogInfo("rpsCreateFileA(\"%s\", %x, %x, %p, %x, %x, %p): %p ",
+    rpsLogInfo("rpsCreateFileA(\"%s\", %x, %x, %p, %x, %x, %p): %p\n",
         lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile, win_handle);
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rps_wstring path = rpsL(lpFileName);
@@ -85,7 +85,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateFileW(
     )
 {
     HANDLE win_handle = vaCreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
-    rpsLogInfo("rpsCreateFileW(\"%s\", %x, %x, %p, %x, %x, %p): %p ",
+    rpsLogInfo("rpsCreateFileW(\"%s\", %x, %x, %p, %x, %x, %p): %p\n",
         lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile, win_handle);
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsFileRecord record = {lpFileName, rps_handle, win_handle, 0, dwDesiredAccess, dwShareMode, dwCreationDisposition, dwFlagsAndAttributes};
@@ -102,7 +102,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateFile2(
     )
 {
     HANDLE win_handle = vaCreateFile2(lpFileName, dwDesiredAccess, dwShareMode, dwCreationDisposition, pCreateExParams);
-    rpsLogInfo("rpsCreateFile2(\"%s\", %x, %x, %x, %p): %p",
+    rpsLogInfo("rpsCreateFile2(\"%s\", %x, %x, %x, %p): %p\n",
         lpFileName, dwDesiredAccess, dwShareMode, dwCreationDisposition, pCreateExParams, win_handle);
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rps_wstring path = rpsL(lpFileName);
@@ -122,7 +122,7 @@ rpsHookAPI BOOL WINAPI rpsWriteFile(
     if(rpsFileRecord *rec=rpsGetFileRecords()->findRecord(hFile)) {
         DWORD written = 0;
         BOOL ret = vaWriteFile(rpsToWinHandleC(hFile, vaWriteFile), lpBuffer, nNumberOfBytesToWrite, &written, lpOverlapped);
-        rpsLogInfo("rpsWriteFile(%p, %p, %u, %p, %p): %u",
+        rpsLogInfo("rpsWriteFile(%p, %p, %u, %p, %p): %u\n",
             hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped, ret);
         if(ret) {
             rec->pos += written;
@@ -148,7 +148,7 @@ rpsHookAPI BOOL WINAPI rpsReadFile(
     if(rpsFileRecord *rec=rpsGetFileRecords()->findRecord(hFile)) {
         DWORD read = 0;
         BOOL ret = vaReadFile(rpsToWinHandleC(hFile, vaReadFile), lpBuffer, nNumberOfBytesToRead, &read, lpOverlapped);
-        rpsLogInfo("rpsReadFile(%p, %p, %u, %p, %p): %u",
+        rpsLogInfo("rpsReadFile(%p, %p, %u, %p, %p): %u\n",
             hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped, ret);
         if(ret) {
             rec->pos += read;
@@ -196,21 +196,21 @@ rpsHookAPI BOOL WINAPI rpsSetFilePointerEx(
 rpsHookAPI DWORD WINAPI rpsGetFileType(HANDLE hFile)
 {
     DWORD ret = vaGetFileType(rpsToWinHandleC(hFile, vaGetFileType));
-    rpsLogInfo("rpsGetFileType(%p): %u", hFile, ret);
+    rpsLogInfo("rpsGetFileType(%p): %u\n", hFile, ret);
     return ret;
 }
 
 rpsHookAPI DWORD  WINAPI rpsGetFileSize(HANDLE hFile, LPDWORD lpFileSizeHigh)
 {
     DWORD ret = vaGetFileSize(rpsToWinHandleC(hFile, vaGetFileSize), lpFileSizeHigh);
-    rpsLogInfo("rpsGetFileSize(%p, %p): %u", hFile, lpFileSizeHigh, ret);
+    rpsLogInfo("rpsGetFileSize(%p, %p): %u\n", hFile, lpFileSizeHigh, ret);
     return ret;
 }
 
 rpsHookAPI BOOL   WINAPI rpsGetFileSizeEx(HANDLE hFile, PLARGE_INTEGER lpFileSize)
 {
     DWORD ret = vaGetFileSizeEx(rpsToWinHandleC(hFile, vaGetFileSize), lpFileSize);
-    rpsLogInfo("rpsGetFileSizeEx(%p, %p): %u", hFile, lpFileSize, ret);
+    rpsLogInfo("rpsGetFileSizeEx(%p, %p): %u\n", hFile, lpFileSize, ret);
     return ret;
 }
 
@@ -219,7 +219,7 @@ rpsHookAPI BOOL WINAPI rpsCloseHandle(HANDLE hObject)
     if(rpsFileRecord *rec=rpsGetFileRecords()->findRecord(hObject)) {
         HANDLE win_handle = rpsToWinHandleC(hObject, vaCloseHandle);
         BOOL ret = vaCloseHandle(win_handle);
-        rpsLogInfo("rpsCloseHandle(%p): %u", win_handle, ret);
+        rpsLogInfo("rpsCloseHandle(%p): %u\n", win_handle, ret);
         if(ret) {
             rpsGetFileRecords()->eraseRecord(hObject);
         }
@@ -231,17 +231,17 @@ rpsHookAPI BOOL WINAPI rpsCloseHandle(HANDLE hObject)
 }
 
 rpsHookInfo g_hookinfo[] = {
-    //rpsDefineHookInfo("kernel32.dll", CreateFileA),
-    //rpsDefineHookInfo("kernel32.dll", CreateFileW),
-    //rpsDefineHookInfo("kernel32.dll", CreateFile2),
-    //rpsDefineHookInfo("kernel32.dll", WriteFile),
-    //rpsDefineHookInfo("kernel32.dll", ReadFile),
-    //rpsDefineHookInfo("kernel32.dll", SetFilePointer),
-    //rpsDefineHookInfo("kernel32.dll", SetFilePointerEx),
-    //rpsDefineHookInfo("kernel32.dll", GetFileType),
-    //rpsDefineHookInfo("kernel32.dll", GetFileSize),
-    //rpsDefineHookInfo("kernel32.dll", GetFileSizeEx),
-    //rpsDefineHookInfo("kernel32.dll", CloseHandle),
+    rpsDefineHookInfo("kernel32.dll", CreateFileA),
+    rpsDefineHookInfo("kernel32.dll", CreateFileW),
+    rpsDefineHookInfo("kernel32.dll", CreateFile2),
+    rpsDefineHookInfo("kernel32.dll", WriteFile),
+    rpsDefineHookInfo("kernel32.dll", ReadFile),
+    rpsDefineHookInfo("kernel32.dll", SetFilePointer),
+    rpsDefineHookInfo("kernel32.dll", SetFilePointerEx),
+    rpsDefineHookInfo("kernel32.dll", GetFileType),
+    rpsDefineHookInfo("kernel32.dll", GetFileSize),
+    rpsDefineHookInfo("kernel32.dll", GetFileSizeEx),
+    rpsDefineHookInfo("kernel32.dll", CloseHandle),
 
     rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };

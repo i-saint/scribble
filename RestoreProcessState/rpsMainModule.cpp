@@ -196,12 +196,12 @@ rpsMainModule* rpsMainModule::getInstance()
 rpsMainModule::rpsMainModule()
     : m_tid(0)
 {
-    rpsLogInfo("rpsMainModule::rpsMainModule()");
+    rpsLogInfo("rpsMainModule::rpsMainModule()\n");
     g_inst = this;
 
     ::CreateThread(nullptr, 0, rpsMainThread, this, 0, &m_tid);
 
-    rpsLogInfo("rpsMainModule: creating modules");
+    rpsLogInfo("rpsMainModule: creating modules\n");
     rpsModuleCreator *ctab = rpsGetModuleCreators();
     for(size_t mi=0; ; ++mi) {
         if(!ctab[mi]) { break; }
@@ -225,7 +225,7 @@ rpsMainModule::rpsMainModule()
         }
     }
 
-    rpsLogInfo("rpsMainModule: setting hook functions");
+    rpsLogInfo("rpsMainModule: setting hook functions\n");
     // gather original functions
     rpsEach(m_hooks, [&](DLLHookTable::value_type &hp){
         if(HMODULE mod=::GetModuleHandleA(hp.first.c_str())) {
@@ -245,12 +245,12 @@ rpsMainModule::rpsMainModule()
         setHooks(mod);
     });
 
-    rpsLogInfo("rpsMainModule: initializing modules");
+    rpsLogInfo("rpsMainModule: initializing modules\n");
     rpsEach(m_modules, [&](rpsIModule *mod){
         mod->initialize();
     });
 
-    rpsLogInfo("rpsMainModule: running communicator");
+    rpsLogInfo("rpsMainModule: running communicator\n");
     m_communicator = new rpsCommunicator();
     m_communicator->run(rpsDefaultPort);
 }
@@ -328,10 +328,10 @@ void rpsMainModule::serializeImpl(const char *path, rpsArchive::Mode mode)
         serializeImpl(ar);
     }
     if(ar.isWriter()) {
-        rpsLogInfo("rps: save completed %s", path);
+        rpsLogInfo("rps: save completed %s\n", path);
     }
     else {
-        rpsLogInfo("rps: load completed %s", path);
+        rpsLogInfo("rps: load completed %s\n", path);
     }
 }
 
@@ -453,7 +453,7 @@ void rpsMainModule::sendMessage( rpsMessage &m )
 rpsAPI void rpsInitialize()
 {
     if(g_inst) { return; }
-    rpsLogInfo("rpsInitialize()");
+    rpsLogInfo("rpsInitialize()\n");
     rpsInitializeFoundation();
     rpsExecExclusive([](){
         rpsMainModule::initialize();
@@ -464,14 +464,14 @@ rpsAPI void rpsSaveState(const char *path_to_outfile)
 {
     rpsMainModule::SerializeRequest req(path_to_outfile, rpsArchive::Writer);
     rpsMainModule::getInstance()->pushRequest(req);
-    rpsMainModule::getInstance()->waitForCompleteRequests();
+	rpsMainModule::getInstance()->callbackFromHost();
 }
 
 rpsAPI void rpsLoadState(const char *path_to_infile)
 {
     rpsMainModule::SerializeRequest req (path_to_infile, rpsArchive::Reader);
     rpsMainModule::getInstance()->pushRequest(req);
-    rpsMainModule::getInstance()->waitForCompleteRequests();
+	rpsMainModule::getInstance()->callbackFromHost();
 }
 
 rpsAPI void rpsSendMessage(rpsMessage &mes)

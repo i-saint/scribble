@@ -148,18 +148,22 @@ rpsHookAPI HANDLE WINAPI rpsCreateEventExW(LPSECURITY_ATTRIBUTES lpEventAttribut
 {
     HANDLE win_handle = vaCreateEventExW(lpEventAttributes, lpName, dwFlags, dwDesiredAccess);
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
-    rpsEventRecord record = {rps_handle, win_handle, dwFlags, dwDesiredAccess, lpName};
+    rpsEventRecord record = {rps_handle, win_handle, dwFlags, dwDesiredAccess};
+	if (lpName)
+		record.name = lpName;
     rpsGetEventRecords()->addRecord(rps_handle, record);
-    rpsLogInfo("rpsCreateEventExW() win:%p rps:%p", win_handle, rps_handle);
+    rpsLogInfo("rpsCreateEventExW() win:%p rps:%p\n", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateEventExA(LPSECURITY_ATTRIBUTES lpEventAttributes, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess)
 {
     HANDLE win_handle = vaCreateEventExA(lpEventAttributes, lpName, dwFlags, dwDesiredAccess);
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
-    rpsEventRecord record = {rps_handle, win_handle, dwFlags, dwDesiredAccess, rpsL(lpName)};
+    rpsEventRecord record = {rps_handle, win_handle, dwFlags, dwDesiredAccess};
+	if (lpName)
+		record.name = rpsL(lpName);
     rpsGetEventRecords()->addRecord(rps_handle, record);
-    rpsLogInfo("rpsCreateEventExA() win:%p rps:%p", win_handle, rps_handle);
+    rpsLogInfo("rpsCreateEventExA() win:%p rps:%p\n", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateEventW(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCWSTR lpName)
@@ -208,7 +212,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateMutexExW(LPSECURITY_ATTRIBUTES lpMutexAttribut
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsEventRecord record = {rps_handle, win_handle, dwFlags, dwDesiredAccess, lpName};
     rpsGetEventRecords()->addRecord(rps_handle, record);
-    rpsLogInfo("rpsCreateMutexExW() win:%p rps:%p", win_handle, rps_handle);
+    rpsLogInfo("rpsCreateMutexExW() win:%p rps:%p\n", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateMutexExA(LPSECURITY_ATTRIBUTES lpMutexAttributes, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess)
@@ -217,7 +221,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateMutexExA(LPSECURITY_ATTRIBUTES lpMutexAttribut
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsEventRecord record = {rps_handle, win_handle, dwFlags, dwDesiredAccess, rpsL(lpName)};
     rpsGetEventRecords()->addRecord(rps_handle, record);
-    rpsLogInfo("rpsCreateMutexExA() win:%p rps:%p", win_handle, rps_handle);
+    rpsLogInfo("rpsCreateMutexExA() win:%p rps:%p\n", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateMutexW(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCWSTR lpName)
@@ -256,7 +260,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateSemaphoreExW(LPSECURITY_ATTRIBUTES lpSemaphore
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsSemaphoreRecord record = {rps_handle, win_handle, lInitialCount, lMaximumCount, dwFlags, dwDesiredAccess, lpName};
     rpsGetSemaphoreRecords()->addRecord(rps_handle, record);
-    rpsLogInfo("rpsCreateSemaphoreExW() win:%p rps:%p", win_handle, rps_handle);
+    rpsLogInfo("rpsCreateSemaphoreExW() win:%p rps:%p\n", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateSemaphoreExA(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess)
@@ -265,7 +269,7 @@ rpsHookAPI HANDLE WINAPI rpsCreateSemaphoreExA(LPSECURITY_ATTRIBUTES lpSemaphore
     HANDLE rps_handle = rpsCreateHandle(rpsCurrentModule::getInstance(), win_handle);
     rpsSemaphoreRecord record = {rps_handle, win_handle, lInitialCount, lMaximumCount, dwFlags, dwDesiredAccess, rpsL(lpName)};
     rpsGetSemaphoreRecords()->addRecord(rps_handle, record);
-    rpsLogInfo("rpsCreateSemaphoreExA() win:%p rps:%p", win_handle, rps_handle);
+    rpsLogInfo("rpsCreateSemaphoreExA() win:%p rps:%p\n", win_handle, rps_handle);
     return rps_handle;
 }
 rpsHookAPI HANDLE WINAPI rpsCreateSemaphoreW(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCWSTR lpName)
@@ -321,41 +325,41 @@ rpsHookAPI BOOL WINAPI rpsCloseHandle(HANDLE hObject)
 }
 
 rpsHookInfo g_hookinfo[] = {
-    //rpsDefineHookInfo("kernel32.dll", InitializeCriticalSection),
-    //rpsDefineHookInfo("kernel32.dll", DeleteCriticalSection),
-    //rpsDefineHookInfo("kernel32.dll", EnterCriticalSection),
-    //rpsDefineHookInfo("kernel32.dll", InitializeCriticalSectionAndSpinCount),
-    //rpsDefineHookInfo("kernel32.dll", LeaveCriticalSection),
-    //rpsDefineHookInfo("kernel32.dll", SetCriticalSectionSpinCount),
-    //rpsDefineHookInfo("kernel32.dll", TryEnterCriticalSection),
+    rpsDefineHookInfo("kernel32.dll", InitializeCriticalSection),
+    rpsDefineHookInfo("kernel32.dll", DeleteCriticalSection),
+    rpsDefineHookInfo("kernel32.dll", EnterCriticalSection),
+    rpsDefineHookInfo("kernel32.dll", InitializeCriticalSectionAndSpinCount),
+    rpsDefineHookInfo("kernel32.dll", LeaveCriticalSection),
+    rpsDefineHookInfo("kernel32.dll", SetCriticalSectionSpinCount),
+    rpsDefineHookInfo("kernel32.dll", TryEnterCriticalSection),
 
-    //rpsDefineHookInfo("kernel32.dll", CreateEventA),
-    //rpsDefineHookInfo("kernel32.dll", CreateEventW),
-    //rpsDefineHookInfo("kernel32.dll", CreateEventExA),
-    //rpsDefineHookInfo("kernel32.dll", CreateEventExW),
-    //rpsDefineHookInfo("kernel32.dll", OpenEventA),
-    //rpsDefineHookInfo("kernel32.dll", OpenEventW),
-    //rpsDefineHookInfo("kernel32.dll", PulseEvent),
-    //rpsDefineHookInfo("kernel32.dll", ResetEvent),
-    //rpsDefineHookInfo("kernel32.dll", SetEvent),
+    rpsDefineHookInfo("kernel32.dll", CreateEventA),
+    rpsDefineHookInfo("kernel32.dll", CreateEventW),
+    rpsDefineHookInfo("kernel32.dll", CreateEventExA),
+    rpsDefineHookInfo("kernel32.dll", CreateEventExW),
+    rpsDefineHookInfo("kernel32.dll", OpenEventA),
+    rpsDefineHookInfo("kernel32.dll", OpenEventW),
+    rpsDefineHookInfo("kernel32.dll", PulseEvent),
+    rpsDefineHookInfo("kernel32.dll", ResetEvent),
+    rpsDefineHookInfo("kernel32.dll", SetEvent),
 
-    //rpsDefineHookInfo("kernel32.dll", CreateMutexA),
-    //rpsDefineHookInfo("kernel32.dll", CreateMutexW),
-    //rpsDefineHookInfo("kernel32.dll", CreateMutexExA),
-    //rpsDefineHookInfo("kernel32.dll", CreateMutexExW),
-    //rpsDefineHookInfo("kernel32.dll", OpenMutexA),
-    //rpsDefineHookInfo("kernel32.dll", OpenMutexW),
-    //rpsDefineHookInfo("kernel32.dll", ReleaseMutex),
+    rpsDefineHookInfo("kernel32.dll", CreateMutexA),
+    rpsDefineHookInfo("kernel32.dll", CreateMutexW),
+    rpsDefineHookInfo("kernel32.dll", CreateMutexExA),
+    rpsDefineHookInfo("kernel32.dll", CreateMutexExW),
+    rpsDefineHookInfo("kernel32.dll", OpenMutexA),
+    rpsDefineHookInfo("kernel32.dll", OpenMutexW),
+    rpsDefineHookInfo("kernel32.dll", ReleaseMutex),
 
-    //rpsDefineHookInfo("kernel32.dll", CreateSemaphoreExW),
-    //rpsDefineHookInfo("kernel32.dll", CreateSemaphoreExA),
-    //rpsDefineHookInfo("kernel32.dll", CreateSemaphoreW),
-    //rpsDefineHookInfo("kernel32.dll", CreateSemaphoreA),
-    //rpsDefineHookInfo("kernel32.dll", OpenSemaphoreW),
-    //rpsDefineHookInfo("kernel32.dll", OpenSemaphoreA),
-    //rpsDefineHookInfo("kernel32.dll", ReleaseSemaphore),
+    rpsDefineHookInfo("kernel32.dll", CreateSemaphoreExW),
+    rpsDefineHookInfo("kernel32.dll", CreateSemaphoreExA),
+    rpsDefineHookInfo("kernel32.dll", CreateSemaphoreW),
+    rpsDefineHookInfo("kernel32.dll", CreateSemaphoreA),
+    rpsDefineHookInfo("kernel32.dll", OpenSemaphoreW),
+    rpsDefineHookInfo("kernel32.dll", OpenSemaphoreA),
+    rpsDefineHookInfo("kernel32.dll", ReleaseSemaphore),
 
-    //rpsDefineHookInfo("kernel32.dll", CloseHandle),
+    rpsDefineHookInfo("kernel32.dll", CloseHandle),
 
     rpsHookInfo(nullptr, nullptr, 0, nullptr, nullptr),
 };
@@ -393,7 +397,7 @@ void rpsEventRecords::serialize(rpsArchive &ar)
 {
     if(ar.isReader()) {
         rpsEach(m_records, [](Pair &rec){
-            vaCloseHandle(&rec.second.win_handle);
+			vaCloseHandle(rec.second.win_handle);
         });
     }
     ar & m_records;
