@@ -2,5 +2,5 @@
 
 __declspec(dllexport) void DLLFunction()
 {
-	printf("DLLFunction() mod2\n");
+	printf("DLLFunction()\n");
 }
