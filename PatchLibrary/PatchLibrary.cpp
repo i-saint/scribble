@@ -94,7 +94,7 @@ bool DLL::loadFile( const char *path )
         // dll をメモリに map
         void *data = nullptr;
         size_t datasize = 0;
-        if(!dpMapFile(path, data, datasize, malloc)) {
+        if(!plMapFile(path, data, datasize, malloc)) {
             printf("file not found %s\n", path);
             return false;
         }
@@ -106,15 +106,15 @@ bool DLL::loadFile( const char *path )
             m_dll_path = path;
             m_base_path.clear();
             std::string ext;
-            dpSeparateFileExt(path, &m_base_path, &ext);
+            plSeparateFileExt(path, &m_base_path, &ext);
             m_base_path+=rev;
             m_base_path+=".";
             m_base_path+=ext;
-            if(!dpFileExists(m_base_path.c_str())) { break; }
+            if(!plFileExists(m_base_path.c_str())) { break; }
         }
 
         // pdb へのパスと GUID を更新
-        if(CV_INFO_PDB70 *cv=dpGetPDBInfoFromModule(data, true)) {
+        if(CV_INFO_PDB70 *cv=plGetPDBInfoFromModule(data, true)) {
             char *pdb = (char*)cv->PdbFileName;
             pdb_base = pdb;
             strncpy(pdb+pdb_base.size()-3, rev, 3);
@@ -123,7 +123,7 @@ bool DLL::loadFile( const char *path )
             uuid = cv->Signature;
         }
         // dll を一時ファイルにコピー
-        dpWriteFile(m_base_path.c_str(), data, datasize);
+        plWriteFile(m_base_path.c_str(), data, datasize);
         free(data);
     }
 
@@ -131,11 +131,11 @@ bool DLL::loadFile( const char *path )
         // pdb を GUID を更新してコピー
         void *data = nullptr;
         size_t datasize = 0;
-        if(dpMapFile(pdb_base.c_str(), data, datasize, malloc)) {
-            if(PDBStream70 *sig = dpGetPDBSignature(data)) {
+        if(plMapFile(pdb_base.c_str(), data, datasize, malloc)) {
+            if(PDBStream70 *sig = plGetPDBSignature(data)) {
                 sig->sig70 = uuid;
             }
-            dpWriteFile(m_pdb_path.c_str(), data, datasize);
+            plWriteFile(m_pdb_path.c_str(), data, datasize);
             free(data);
         }
     }
@@ -154,7 +154,7 @@ bool DLL::loadFile( const char *path )
 bool DLL::loadMemory(HMODULE data)
 {
     m_module = (HMODULE)data;
-    dpEnumerateDLLExports(m_module, [&](const char *name, void *addr){
+    plEnumerateDLLExports(m_module, [&](const char *name, void *addr){
         Symbol sym = {name, addr, {0}};
         memcpy(sym.code, addr, 8);
         m_symbols.push_back(sym);
@@ -175,11 +175,11 @@ bool DLL::unload()
         ret = true;
     }
     if(!m_dll_path.empty()) {
-        dpDeleteFile(m_dll_path.c_str());
+        plDeleteFile(m_dll_path.c_str());
         m_dll_path.clear();
     }
     if(!m_pdb_path.empty()) {
-        dpDeleteFile(m_pdb_path.c_str());
+        plDeleteFile(m_pdb_path.c_str());
         m_pdb_path.clear();
     }
     m_base_path.clear();
@@ -188,7 +188,7 @@ bool DLL::unload()
 
 void DLL::patch(DLL *patch)
 {
-    dpEach(m_symbols, [&](const Symbol &sym){
+    plEach(m_symbols, [&](const Symbol &sym){
         if(Symbol *s = patch->findSymbol(sym.name)) {
             BYTE *from = (BYTE*)sym.addr;
             BYTE *to = (BYTE*)s->addr;
@@ -209,7 +209,7 @@ void DLL::patch(DLL *patch)
                 assert(0);
             }
             else {
-                dpAddJumpInstruction(from, to);
+                plAddJumpInstruction(from, to);
                 ::FlushInstructionCache(proc, from, 8);
             }
 
@@ -220,7 +220,7 @@ void DLL::patch(DLL *patch)
 
 void DLL::unpatch()
 {
-    dpEach(m_symbols, [&](const Symbol &sym){
+    plEach(m_symbols, [&](const Symbol &sym){
         DWORD old;
         ::VirtualProtect(sym.addr, 8, PAGE_EXECUTE_READWRITE, &old);
         memcpy(sym.addr, sym.code, 5);
@@ -236,15 +236,15 @@ PatchLibraryImpl::PatchLibraryImpl()
 
 PatchLibraryImpl::~PatchLibraryImpl()
 {
-    dpEach(m_patch_dlls, [&](DLLCont::value_type &p){ delete p.second; });
+    plEach(m_patch_dlls, [&](DLLCont::value_type &p){ delete p.second; });
     m_patch_dlls.clear();
 }
 
 HMODULE PatchLibraryImpl::loadAndPatch( const char *path )
 {
     std::string dir, file;
-    dpSeparateDirFile(path, &dir, &file);
-    dpEach(file, [](char &c){ c=::tolower(c); });
+    plSeparateDirFile(path, &dir, &file);
+    plEach(file, [](char &c){ c=::tolower(c); });
 
     DLL *&host_dll = m_host_dlls[file];
     if(!host_dll) {
@@ -269,7 +269,7 @@ HMODULE PatchLibraryImpl::loadAndPatch( const char *path )
 
 BOOL PatchLibraryImpl::unpatchAndUnload( HMODULE mod )
 {
-    auto i = dpFind(m_patch_dlls, [&](DLLCont::value_type &p){ return p.second->getHandle()==mod; });
+    auto i = plFind(m_patch_dlls, [&](DLLCont::value_type &p){ return p.second->getHandle()==mod; });
     if(i!=m_patch_dlls.end()) {
         delete i->second;
         m_patch_dlls.erase(i);

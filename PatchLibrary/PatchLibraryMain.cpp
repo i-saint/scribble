@@ -1,6 +1,5 @@
 #include "plCommunicator.h"
 
-#define plDefaultPort 21357
 plCommunicator *g_communicator;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)

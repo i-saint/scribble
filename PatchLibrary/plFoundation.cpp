@@ -3,7 +3,7 @@
 
 // 位置指定版 VirtualAlloc()
 // location より大きいアドレスの最寄りの位置にメモリを確保する。
-void* dpAllocateForward(size_t size, void *location)
+void* plAllocateForward(size_t size, void *location)
 {
     if(size==0) { return NULL; }
     static size_t base = (size_t)location;
@@ -21,7 +21,7 @@ void* dpAllocateForward(size_t size, void *location)
 
 // 位置指定版 VirtualAlloc()
 // location より小さいアドレスの最寄りの位置にメモリを確保する。
-void* dpAllocateBackward(size_t size, void *location)
+void* plAllocateBackward(size_t size, void *location)
 {
     if(size==0) { return NULL; }
     static size_t base = (size_t)location;
@@ -34,17 +34,17 @@ void* dpAllocateBackward(size_t size, void *location)
     return ret;
 }
 
-void dpDeallocate(void *location, size_t size)
+void plDeallocate(void *location, size_t size)
 {
     ::VirtualFree(location, size, MEM_RELEASE);
 }
 
-bool dpCopyFile(const char *srcpath, const char *dstpath)
+bool plCopyFile(const char *srcpath, const char *dstpath)
 {
     return ::CopyFileA(srcpath, dstpath, FALSE)==TRUE;
 }
 
-bool dpWriteFile(const char *path, const void *data, size_t size)
+bool plWriteFile(const char *path, const void *data, size_t size)
 {
     if(FILE *f=fopen(path, "wb")) {
         fwrite((const char*)data, 1, size, f);
@@ -54,17 +54,17 @@ bool dpWriteFile(const char *path, const void *data, size_t size)
     return false;
 }
 
-bool dpDeleteFile(const char *path)
+bool plDeleteFile(const char *path)
 {
     return ::DeleteFileA(path)==TRUE;
 }
 
-bool dpFileExists( const char *path )
+bool plFileExists( const char *path )
 {
     return ::GetFileAttributesA(path)!=INVALID_FILE_ATTRIBUTES;
 }
 
-size_t dpSeparateDirFile(const char *path, std::string *dir, std::string *file)
+size_t plSeparateDirFile(const char *path, std::string *dir, std::string *file)
 {
     size_t f_len=0;
     size_t l = strlen(path);
@@ -76,7 +76,7 @@ size_t dpSeparateDirFile(const char *path, std::string *dir, std::string *file)
     return f_len;
 }
 
-size_t dpSeparateFileExt(const char *filename, std::string *file, std::string *ext)
+size_t plSeparateFileExt(const char *filename, std::string *file, std::string *ext)
 {
     size_t dir_len=0;
     size_t l = strlen(filename);
@@ -88,7 +88,7 @@ size_t dpSeparateFileExt(const char *filename, std::string *file, std::string *e
     return dir_len;
 }
 
-class dpTrampolineAllocator::Page
+class plTrampolineAllocator::Page
 {
 public:
     struct Block {
@@ -109,10 +109,10 @@ private:
     Block *m_freelist;
 };
 
-dpTrampolineAllocator::Page::Page(void *base)
+plTrampolineAllocator::Page::Page(void *base)
     : m_data(nullptr), m_freelist(nullptr)
 {
-    m_data = dpAllocateBackward(page_size, base);
+    m_data = plAllocateBackward(page_size, base);
     m_freelist = (Block*)m_data;
     size_t n = page_size / block_size;
     for(size_t i=0; i<n-1; ++i) {
@@ -121,12 +121,12 @@ dpTrampolineAllocator::Page::Page(void *base)
     m_freelist[n-1].next = nullptr;
 }
 
-dpTrampolineAllocator::Page::~Page()
+plTrampolineAllocator::Page::~Page()
 {
-    dpDeallocate(m_data, page_size);
+    plDeallocate(m_data, page_size);
 }
 
-void* dpTrampolineAllocator::Page::allocate()
+void* plTrampolineAllocator::Page::allocate()
 {
     void *ret = nullptr;
     if(m_freelist) {
@@ -136,7 +136,7 @@ void* dpTrampolineAllocator::Page::allocate()
     return ret;
 }
 
-bool dpTrampolineAllocator::Page::deallocate(void *v)
+bool plTrampolineAllocator::Page::deallocate(void *v)
 {
     if(v==nullptr) { return false; }
     bool ret = false;
@@ -149,14 +149,14 @@ bool dpTrampolineAllocator::Page::deallocate(void *v)
     return ret;
 }
 
-bool dpTrampolineAllocator::Page::isInsideMemory(void *p) const
+bool plTrampolineAllocator::Page::isInsideMemory(void *p) const
 {
     size_t loc = (size_t)p;
     size_t base = (size_t)m_data;
     return loc>=base && loc<base+page_size;
 }
 
-bool dpTrampolineAllocator::Page::isInsideJumpRange( void *p ) const
+bool plTrampolineAllocator::Page::isInsideJumpRange( void *p ) const
 {
     size_t loc = (size_t)p;
     size_t base = (size_t)m_data;
@@ -164,17 +164,17 @@ bool dpTrampolineAllocator::Page::isInsideJumpRange( void *p ) const
     return dist < 0x7fff0000;
 }
 
-dpTrampolineAllocator::dpTrampolineAllocator()
+plTrampolineAllocator::plTrampolineAllocator()
 {
 }
 
-dpTrampolineAllocator::~dpTrampolineAllocator()
+plTrampolineAllocator::~plTrampolineAllocator()
 {
-    dpEach(m_pages, [](Page *p){ delete p; });
+    plEach(m_pages, [](Page *p){ delete p; });
     m_pages.clear();
 }
 
-void* dpTrampolineAllocator::allocate(void *location)
+void* plTrampolineAllocator::allocate(void *location)
 {
     void *ret = nullptr;
     if(Page *page=findCandidatePage(location)) {
@@ -187,7 +187,7 @@ void* dpTrampolineAllocator::allocate(void *location)
     return ret;
 }
 
-bool dpTrampolineAllocator::deallocate(void *v)
+bool plTrampolineAllocator::deallocate(void *v)
 {
     if(Page *page=findOwnerPage(v)) {
         return page->deallocate(v);
@@ -195,26 +195,26 @@ bool dpTrampolineAllocator::deallocate(void *v)
     return false;
 }
 
-dpTrampolineAllocator::Page* dpTrampolineAllocator::createPage(void *location)
+plTrampolineAllocator::Page* plTrampolineAllocator::createPage(void *location)
 {
     Page *p = new Page(location);
     m_pages.push_back(p);
     return p;
 }
 
-dpTrampolineAllocator::Page* dpTrampolineAllocator::findOwnerPage(void *location)
+plTrampolineAllocator::Page* plTrampolineAllocator::findOwnerPage(void *location)
 {
-    auto p = dpFind(m_pages, [=](const Page *p){ return p->isInsideMemory(location); });
+    auto p = plFind(m_pages, [=](const Page *p){ return p->isInsideMemory(location); });
     return p==m_pages.end() ? nullptr : *p;
 }
 
-dpTrampolineAllocator::Page* dpTrampolineAllocator::findCandidatePage(void *location)
+plTrampolineAllocator::Page* plTrampolineAllocator::findCandidatePage(void *location)
 {
-    auto p = dpFind(m_pages, [=](const Page *p){ return p->isInsideJumpRange(location); });
+    auto p = plFind(m_pages, [=](const Page *p){ return p->isInsideJumpRange(location); });
     return p==m_pages.end() ? nullptr : *p;
 }
 
-BYTE* dpAddJumpInstruction(BYTE* from, BYTE* to)
+BYTE* plAddJumpInstruction(BYTE* from, BYTE* to)
 {
     // 距離が 32bit に収まる範囲であれば、0xe9 RVA
     // そうでない場合、0xff 0x25 [メモリアドレス] + 対象アドレス
@@ -247,7 +247,7 @@ BYTE* dpAddJumpInstruction(BYTE* from, BYTE* to)
 // fill_gap: .dll ファイルをそのままメモリに移した場合はこれを true にする必要があります。
 // LoadLibrary() で正しくロードしたものは section の再配置が行われ、元ファイルとはデータの配置にズレが生じます。
 // fill_gap==true の場合このズレを補正します。
-CV_INFO_PDB70* dpGetPDBInfoFromModule(void *pModule, bool fill_gap)
+CV_INFO_PDB70* plGetPDBInfoFromModule(void *pModule, bool fill_gap)
 {
     if(!pModule) { return nullptr; }
 
@@ -284,7 +284,7 @@ CV_INFO_PDB70* dpGetPDBInfoFromModule(void *pModule, bool fill_gap)
 }
 
 // pdb ファイルから Age & GUID 情報を抽出します
-PDBStream70* dpGetPDBSignature(void *mapped_pdb_file)
+PDBStream70* plGetPDBSignature(void *mapped_pdb_file)
 {
     // thanks to https://code.google.com/p/pdbparser/
 

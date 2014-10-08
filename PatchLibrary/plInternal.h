@@ -22,17 +22,18 @@
 #include <cstdint>
 
 #define rpsPrintError(...)
+#define plDefaultPort 21357
 
 typedef std::string plString;
 
-class dpTrampolineAllocator
+class plTrampolineAllocator
 {
 public:
     static const size_t page_size = 1024*64;
     static const size_t block_size = 32;
 
-    dpTrampolineAllocator();
-    ~dpTrampolineAllocator();
+    plTrampolineAllocator();
+    ~plTrampolineAllocator();
     void* allocate(void *location);
     bool deallocate(void *v);
 
@@ -46,23 +47,23 @@ private:
     Page* findCandidatePage(void *location);
 };
 
-template<class Container, class F> inline void dpEach(Container &cont, const F &f);
-template<class Container, class F> inline auto dpFind(Container &cont, const F &f) -> decltype(cont.begin());
-template<class F> inline void dpEnumerateDLLExports(HMODULE module, const F &f);
-template<class F> inline void dpEnumerateDLLImports(HMODULE module, const char *dllname, const F &f);
-template<class F> inline void dpEnumerateDLLImportsInEveryModule(const char *dllname, const F &f);
-template<class F> inline bool dpMapFile(const char *path, void *&o_data, size_t &o_size, const F &alloc);
+template<class Container, class F> inline void plEach(Container &cont, const F &f);
+template<class Container, class F> inline auto plFind(Container &cont, const F &f) -> decltype(cont.begin());
+template<class F> inline void plEnumerateDLLExports(HMODULE module, const F &f);
+template<class F> inline void plEnumerateDLLImports(HMODULE module, const char *dllname, const F &f);
+template<class F> inline void plEnumerateDLLImportsInEveryModule(const char *dllname, const F &f);
+template<class F> inline bool plMapFile(const char *path, void *&o_data, size_t &o_size, const F &alloc);
 
-void*  dpAllocateForward(size_t size, void *location);
-void*  dpAllocateBackward(size_t size, void *location);
-void   dpDeallocate(void *location, size_t size);
-bool   dpCopyFile(const char *srcpath, const char *dstpath);
-bool   dpWriteFile(const char *path, const void *data, size_t size);
-bool   dpDeleteFile(const char *path);
-bool   dpFileExists( const char *path );
-size_t dpSeparateDirFile(const char *path, std::string *dir, std::string *file);
-size_t dpSeparateFileExt(const char *filename, std::string *file, std::string *ext);
-BYTE*  dpAddJumpInstruction(BYTE* from, BYTE* to);
+void*  plAllocateForward(size_t size, void *location);
+void*  plAllocateBackward(size_t size, void *location);
+void   plDeallocate(void *location, size_t size);
+bool   plCopyFile(const char *srcpath, const char *dstpath);
+bool   plWriteFile(const char *path, const void *data, size_t size);
+bool   plDeleteFile(const char *path);
+bool   plFileExists( const char *path );
+size_t plSeparateDirFile(const char *path, std::string *dir, std::string *file);
+size_t plSeparateFileExt(const char *filename, std::string *file, std::string *ext);
+BYTE*  plAddJumpInstruction(BYTE* from, BYTE* to);
 
 
 struct CV_INFO_PDB70
@@ -79,25 +80,25 @@ struct PDBStream70
     DWORD age;
     GUID sig70;
 };
-CV_INFO_PDB70* dpGetPDBInfoFromModule(void *pModule, bool fill_gap);
-PDBStream70* dpGetPDBSignature(void *mapped_pdb_file);
+CV_INFO_PDB70* plGetPDBInfoFromModule(void *pModule, bool fill_gap);
+PDBStream70* plGetPDBSignature(void *mapped_pdb_file);
 
 
 template<class Container, class F>
-inline void dpEach(Container &cont, const F &f)
+inline void plEach(Container &cont, const F &f)
 {
     std::for_each(cont.begin(), cont.end(), f);
 }
 
 template<class Container, class F>
-inline auto dpFind(Container &cont, const F &f) -> decltype(cont.begin())
+inline auto plFind(Container &cont, const F &f) -> decltype(cont.begin())
 {
     return std::find_if(cont.begin(), cont.end(), f);
 }
 
 // F: functor(const char *name, void *sym)
 template<class F>
-inline void dpEnumerateDLLExports(HMODULE module, const F &f)
+inline void plEnumerateDLLExports(HMODULE module, const F &f)
 {
     if(module==NULL) { return; }
 
@@ -123,7 +124,7 @@ inline void dpEnumerateDLLExports(HMODULE module, const F &f)
 // dllname: 特定の dll からの import のみを巡回したい場合指定。大文字小文字区別しません。 NULL の場合全ての dll からの import を巡回。
 // F: functor (const char *funcname, void *&funcptr)
 template<class F>
-inline void dpEnumerateDLLImports(HMODULE module, const char *dllname, const F &f)
+inline void plEnumerateDLLImports(HMODULE module, const char *dllname, const F &f)
 {
     if(module==NULL) { return; }
 
@@ -160,7 +161,7 @@ inline void dpEnumerateDLLImports(HMODULE module, const char *dllname, const F &
 }
 
 template<class F>
-inline void dpEnumerateDLLImportsInEveryModule(const char *dllname, const F &f)
+inline void plEnumerateDLLImportsInEveryModule(const char *dllname, const F &f)
 {
     std::vector<HMODULE> modules;
     DWORD num_modules;
@@ -168,13 +169,13 @@ inline void dpEnumerateDLLImportsInEveryModule(const char *dllname, const F &f)
     modules.resize(num_modules/sizeof(HMODULE));
     ::EnumProcessModules(::GetCurrentProcess(), &modules[0], num_modules, &num_modules);
     for(size_t i=0; i<modules.size(); ++i) {
-        dpEnumerateDLLImports<F>(modules[i], dllname, f);
+        plEnumerateDLLImports<F>(modules[i], dllname, f);
     }
 }
 
 // F: [](size_t size) -> void* : alloc func
 template<class F>
-inline bool dpMapFile(const char *path, void *&o_data, size_t &o_size, const F &alloc)
+inline bool plMapFile(const char *path, void *&o_data, size_t &o_size, const F &alloc)
 {
     o_data = NULL;
     o_size = 0;
