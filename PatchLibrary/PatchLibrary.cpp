@@ -7,6 +7,7 @@ struct Symbol
 {
     const char *name;
     void *addr;
+    void *trampoline;
     char code[8];
 
     bool operator<(const Symbol &other) const  { return strcmp(name, other.name)<0; }
@@ -53,18 +54,20 @@ class PatchLibraryImpl
 public:
     typedef std::map<std::string, DLL*> DLLCont;
 
-    PatchLibraryImpl();
-    ~PatchLibraryImpl();
+    static PatchLibraryImpl* getInstance();
     HMODULE loadAndPatch(const char *path);
     BOOL unpatchAndUnload(HMODULE mod);
 
+    plTrampolineAllocator& getTrampolineAllocator() { return m_talloc; }
+
 private:
+    PatchLibraryImpl();
+    ~PatchLibraryImpl();
+
     DLLCont m_host_dlls;
     DLLCont m_patch_dlls;
+    plTrampolineAllocator m_talloc;
 };
-
-
-
 
 
 
@@ -76,7 +79,7 @@ DLL::DLL()
 
 DLL::~DLL()
 {
-    //unload();
+    unload();
 }
 
 bool DLL::loadFile( const char *path )
@@ -155,7 +158,7 @@ bool DLL::loadMemory(HMODULE data)
 {
     m_module = (HMODULE)data;
     plEnumerateDLLExports(m_module, [&](const char *name, void *addr){
-        Symbol sym = {name, addr, {0}};
+        Symbol sym = {name, addr, nullptr, {0}};
         memcpy(sym.code, addr, 8);
         m_symbols.push_back(sym);
     });
@@ -188,7 +191,8 @@ bool DLL::unload()
 
 void DLL::patch(DLL *patch)
 {
-    plEach(m_symbols, [&](const Symbol &sym){
+    plTrampolineAllocator &talloc = PatchLibraryImpl::getInstance()->getTrampolineAllocator();
+    plEach(m_symbols, [&](Symbol &sym){
         if(Symbol *s = patch->findSymbol(sym.name)) {
             BYTE *from = (BYTE*)sym.addr;
             BYTE *to = (BYTE*)s->addr;
@@ -197,16 +201,15 @@ void DLL::patch(DLL *patch)
             ::VirtualProtect(sym.addr, 8, PAGE_EXECUTE_READWRITE, &old);
 
             // 距離が 32bit に収まらない場合、長距離 jmp で飛ぶコードを挟む。
-            // (長距離 jmp は 14byte 必要なので直接書き込もうとすると容量が足りない可能性が出てくる)
+            // (長距離 jmp は 14byte 必要なので、元の関数に直接書き込むとプログラムを破壊する危険性がややある)
             DWORD_PTR dwDistance = to < from ? from-to : to-from;
             if(dwDistance > 0x7fff0000) {
-                //BYTE *trampoline = (BYTE*)m_talloc.allocate(from);
-                //dpAddJumpInstruction(trampoline, to);
-                //dpAddJumpInstruction(from, trampoline);
-                //::FlushInstructionCache(proc, trampoline, 32);
-                //::FlushInstructionCache(proc, from, 32);
-                //pi.trampoline = trampoline;
-                assert(0);
+                BYTE *trampoline = (BYTE*)talloc.allocate(from);
+                plAddJumpInstruction(trampoline, to);
+                plAddJumpInstruction(from, trampoline);
+                ::FlushInstructionCache(proc, trampoline, 32);
+                ::FlushInstructionCache(proc, from, 32);
+                sym.trampoline = trampoline;
             }
             else {
                 plAddJumpInstruction(from, to);
@@ -257,13 +260,13 @@ HMODULE PatchLibraryImpl::loadAndPatch( const char *path )
     }
 
     DLL *&patch_dll = m_patch_dlls[file];
-    if(patch_dll) {
-        delete patch_dll;
-        patch_dll = nullptr;
-    }
+    DLL *old_dll = patch_dll;
     patch_dll = new DLL();
     patch_dll->loadFile(path);
     host_dll->patch(patch_dll);
+    if (old_dll) {
+        delete old_dll;
+    }
     return patch_dll->getHandle();
 }
 
@@ -279,7 +282,11 @@ BOOL PatchLibraryImpl::unpatchAndUnload( HMODULE mod )
 }
 
 
-PatchLibraryImpl g_impl;
+PatchLibraryImpl* PatchLibraryImpl::getInstance()
+{
+    static PatchLibraryImpl *s_inst = new PatchLibraryImpl();
+    return s_inst;
+}
 
 } // namespace
 
@@ -287,7 +294,7 @@ PatchLibraryImpl g_impl;
 
 HMODULE WINAPI PatchLibraryA(const char *path)
 {
-    return g_impl.loadAndPatch(path);
+    return PatchLibraryImpl::getInstance()->loadAndPatch(path);
 }
 
 HMODULE WINAPI PatchLibraryW(const wchar_t *wpath)
@@ -304,5 +311,5 @@ HMODULE WINAPI PatchLibraryW(const wchar_t *wpath)
 
 BOOL WINAPI UnpatchLibrary(HMODULE mod)
 {
-    return g_impl.unpatchAndUnload(mod);
+    return PatchLibraryImpl::getInstance()->unpatchAndUnload(mod);
 }

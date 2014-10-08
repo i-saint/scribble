@@ -100,7 +100,7 @@ bool InjectDLL(DWORD pid, const char* dllname)
 {
     bool result = false;
     HANDLE process = ::OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
-    if (process != nullptr) {
+    if (process != INVALID_HANDLE_VALUE) {
         result = InjectDLL(process, dllname);
         ::CloseHandle(process);
     }
@@ -117,6 +117,9 @@ int main(int argc, char *argv[])
 
     DWORD target_pid = 0;
     plString patch_fullpath;
+    plString host = "127.0.0.1";
+    uint16_t port = plDefaultPort;
+
     for (int i = 1; i < argc; ++i) {
         if (strncmp(argv[i], "/target:", 8)==0) {
             const char *name = argv[i]+8;
@@ -129,6 +132,20 @@ int main(int argc, char *argv[])
         }
         else if (strncmp(argv[i], "/patch:", 7) == 0) {
             patch_fullpath = argv[i] + 7;
+        }
+        else if (strncmp(argv[i], "/host:", 6) == 0) {
+            char *h = argv[i] + 6;
+            for (int i = 0;; ++i) {
+                if (h[i] == '\0') {
+                    break;
+                }
+                else if (h[i]==':') {
+                    h[i] = '\0';
+                    port = atoi(h+(i+1));
+                    break;
+                }
+            }
+            host = h;
         }
     }
     if (target_pid==0 || patch_fullpath.empty()) {
@@ -146,12 +163,9 @@ int main(int argc, char *argv[])
     {
         plInitializeNetwork();
 
-        const char *host = "127.0.0.1";
-        uint16_t port = plDefaultPort;
         plString command = "patch " + patch_fullpath;
-
         plProtocolSocket sock;
-        if (sock.open(host, port)) {
+        if (sock.open(host.c_str(), port)) {
             sock.write(command.c_str(), command.size());
         }
     }

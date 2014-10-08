@@ -169,7 +169,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>..\bin\PatchLibraryBridge32.exe /target:TestMain32.exe /patch:$(TargetPath)</Command>
+      <Command>..\bin\PatchLibraryBridge64.exe /target:TestMain64.exe /patch:$(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
