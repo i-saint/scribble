@@ -1,11 +1,29 @@
-﻿#include <windows.h>
+﻿#ifndef plInternal_h
+#define plInternal_h
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif // WIN32_LEAN_AND_MEAN
+#define _CRT_SECURE_NO_WARNINGS
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+
+#include <windows.h>
+#include <ws2tcpip.h>
+#include <winsock2.h>
+
 #include <string>
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <functional>
+#include <thread>
 #include <ctime>
 #include <cassert>
+#include <cstdint>
 
+#define rpsPrintError(...)
+
+typedef std::string plString;
 
 class dpTrampolineAllocator
 {
@@ -173,3 +191,5 @@ inline bool dpMapFile(const char *path, void *&o_data, size_t &o_size, const F &
     }
     return false;
 }
+
+#endif // plInternal_h

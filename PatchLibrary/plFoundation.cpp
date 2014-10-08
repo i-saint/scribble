@@ -1,4 +1,4 @@
-﻿#include "PatchLibrary_Internal.h"
+﻿#include "plInternal.h"
 
 
 // 位置指定版 VirtualAlloc()
