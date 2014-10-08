@@ -16,12 +16,11 @@
 #include <map>
 #include <algorithm>
 #include <functional>
-#include <thread>
 #include <ctime>
 #include <cassert>
 #include <cstdint>
 
-#define rpsPrintError(...)
+#define rpsPrintError(...) printf(__VA_ARGS__)
 #define plDefaultPort 21357
 
 typedef std::string plString;

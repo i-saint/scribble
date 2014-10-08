@@ -17,7 +17,6 @@ private:
 
     bool        m_running;
     uint16_t    m_port;
-    std::thread *m_thread;
 };
 
 #endif // plCommunicator_h

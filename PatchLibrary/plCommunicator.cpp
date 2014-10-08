@@ -3,10 +3,26 @@
 #include "plCommunicator.h"
 #include "PatchLibrary.h"
 
+
+DWORD __stdcall plRunThread_(LPVOID proc_)
+{
+    typedef std::function<void()> functor;
+    auto *proc = (functor*)proc_;
+    (*proc)();
+    delete proc;
+    return 0;
+}
+
+void plRunThread(const std::function<void()> &proc)
+{
+    typedef std::function<void()> functor;
+    functor *fp = new functor(proc);
+    ::CreateThread(nullptr, 0, &plRunThread_, fp, 0, nullptr);
+}
+
 plCommunicator::plCommunicator()
     : m_running(false)
     , m_port(0)
-    , m_thread(nullptr)
 {
 }
 
@@ -21,7 +37,7 @@ bool plCommunicator::run(uint16_t port)
 
     m_port = port;
     m_running = true;
-    m_thread = new std::thread([&](){
+    plRunThread([&](){
         bool r = plRunTCPServer(m_port, [&](plTCPSocket &client){
             plProtocolSocket s(client.getHandle(), false);
             return onAccept(s);

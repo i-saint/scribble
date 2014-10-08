@@ -43,12 +43,12 @@ DWORD FindProcess(const char *name)
 {
     DWORD result = 0;
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if(hSnapshot) {
+    if (hSnapshot != INVALID_HANDLE_VALUE) {
         PROCESSENTRY32 pe32;
         pe32.dwSize = sizeof(PROCESSENTRY32);
         if (Process32First(hSnapshot, &pe32)) {
             do {
-                if (strstr(pe32.szExeFile, name)==0) {
+                if (strstr(pe32.szExeFile, name)!=nullptr) {
                     result = pe32.th32ProcessID;
                 }
             } while (Process32Next(hSnapshot, &pe32));
@@ -62,12 +62,12 @@ bool IsAlreadyInjected(DWORD pid, const char* dllname)
 {
     bool result = false;
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, pid);
-    if (hSnapshot) {
+    if (hSnapshot != INVALID_HANDLE_VALUE) {
         MODULEENTRY32 me32;
         me32.dwSize = sizeof(MODULEENTRY32);
         Module32First(hSnapshot, &me32);
         do {
-            if (strstr(me32.szModule, dllname)==0) {
+            if (strstr(me32.szModule, dllname)!=nullptr) {
                 result = true;
             }
         } while (Module32Next(hSnapshot, &me32));
