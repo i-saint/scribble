@@ -10,6 +10,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{8D4BACDF-59D0-436A-9F76-2D3FD36D976C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestDLL", "Test\TestDLL.vcxproj", "{254CAA60-357A-4238-8E20-4C7819BF63CC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{45CAFE1A-2ED4-44CA-9E3B-CA285A51F152} = {45CAFE1A-2ED4-44CA-9E3B-CA285A51F152}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestMain", "Test\TestMain.vcxproj", "{E74D5195-2FFC-4960-8491-527BDB0D3E6B}"
 	ProjectSection(ProjectDependencies) = postProject

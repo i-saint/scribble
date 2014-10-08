@@ -76,7 +76,7 @@ DLL::DLL()
 
 DLL::~DLL()
 {
-    unload();
+    //unload();
 }
 
 bool DLL::loadFile( const char *path )
