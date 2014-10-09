@@ -11,8 +11,8 @@ public:
 
     mioObject findField(const char *name);
     mioMethod findMethod(const char *name);
-    void eachField(std::function<void(mioObject&)>);
-    void eachMethod(std::function<void(mioMethod&)>);
+    void eachField(const std::function<void(mioObject&)> &f);
+    void eachMethod(const std::function<void(mioMethod&)> &f);
 
 protected:
     mioObject m_mobj;

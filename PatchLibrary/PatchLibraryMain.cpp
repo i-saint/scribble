@@ -1,4 +1,4 @@
-#include "plCommunicator.h"
+﻿#include "plCommunicator.h"
 
 plCommunicator *g_communicator;
 

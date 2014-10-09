@@ -6,10 +6,10 @@ typedef CppBehavior super;
 public:
     TestCppBehavior(MonoObject *o);
     virtual ~TestCppBehavior();
-    void Start();
-    void Update();
+    void start();
+    void update();
 
-    int FuncWithParams(int param);
+    int funcWithParams(int param);
 private:
     int m_data;
 };
@@ -19,9 +19,9 @@ private:
 #define mioCurrentClass TestCppBehavior
 mioExportCtor()
 mioExportDtor()
-mioExportMethod(Start)
-mioExportMethod(Update)
-//mioExportMethod(FuncWithParams)
+mioExportMethod(start)
+mioExportMethod(update)
+//mioExportMethod(funcWithParams)
 #undef mioCurrentClass TestCppBehavior
 
 
@@ -29,26 +29,29 @@ mioExportMethod(Update)
 TestCppBehavior::TestCppBehavior(MonoObject *o)
 : super(o)
 {
-    printf("TestCppObject::TestCppObject()\n");
+    mioDebugPrint("TestCppObject::TestCppObject()\n");
 }
 
 TestCppBehavior::~TestCppBehavior()
 {
-    printf("TestCppObject:~TestCppObject()\n");
+    mioDebugPrint("TestCppObject:~TestCppObject()\n");
 }
 
-void TestCppBehavior::Start()
+void TestCppBehavior::start()
 {
-    printf("TestCppObject::Start()\n");
+    mioDebugPrint("TestCppObject::start()\n");
 }
 
-void TestCppBehavior::Update()
+void TestCppBehavior::update()
 {
-    printf("TestCppObject::Update()\n");
+    mioDebugPrint("TestCppObject::update()\n");
+    if (mioMethod method = findMethod("ThisFunctionWillBeCalledFromCpp")) {
+        method.call(m_mobj, nullptr);
+    }
 }
 
-int TestCppBehavior::FuncWithParams(int param)
+int TestCppBehavior::funcWithParams(int param)
 {
-    printf("%d TestCppObject::FuncWithParams(%d)\n", m_data, param);
+    //mioDebugPrint("%d TestCppObject::FuncWithParams(%d)\n", m_data, param);
     return m_data;
 }

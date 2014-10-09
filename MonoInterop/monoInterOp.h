@@ -1,5 +1,37 @@
 ﻿#include "monoAPI.h"
 
+#ifdef WIN32
+#include <windows.h>
+#define mioDebugPrint OutputDebugStringA
+#else
+#define mioDebugPrint printf
+#endif // WIN32
+
+
+class mioObject;
+class mioType;
+class mioMethod;
+class mioField;
+class mioProperty;
+
+class mioFields
+{
+public:
+    mioField operator[](const char*) const;
+};
+
+class mioProperties
+{
+public:
+    mioProperty operator[](const char*) const;
+};
+
+class mioMethods
+{
+public:
+    mioMethod operator[](const char*) const;
+};
+
 
 class mioObject
 {
@@ -9,8 +41,6 @@ public:
     operator bool() const { return mobj!=nullptr; }
     const char* getName() const;
 
-    template<class T> T& getValue() { return *(T*)o; }
-    template<class T> void setValue(const T &v) { *(T*)o = v; }
 
     MonoObject *mobj;
 };
@@ -33,7 +63,8 @@ public:
     operator bool() const { return mmethod != nullptr; }
     const char* getName() const;
 
-    mioObject call(mioObject obj, mioObject **args);
+    int getParamCount() const;
+    mioObject call(mioObject obj, void **args);
 
     MonoMethod *mmethod;
 };
