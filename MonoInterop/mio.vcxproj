@@ -19,12 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CppBehavior.cpp" />
+    <ClCompile Include="CppBehaviour.cpp" />
     <ClCompile Include="monoInterOp.cpp" />
-    <ClCompile Include="TestCppBehavior.cpp" />
+    <ClCompile Include="TestCppBehaviour.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CppBehavior.h" />
+    <ClInclude Include="CppBehaviour.h" />
     <ClInclude Include="monoAPI.h" />
     <ClInclude Include="monoInterOp.h" />
   </ItemGroup>

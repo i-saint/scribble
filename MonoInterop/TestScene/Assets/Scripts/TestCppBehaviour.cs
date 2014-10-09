@@ -11,10 +11,10 @@ public class mio
     public static extern void mioInitialize();
 }
 
-public class TestCppBehavior : MonoBehaviour
+public class TestCppBehaviour : MonoBehaviour
 {
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    public extern IntPtr ctor(MonoBehaviour obj);
+    public extern IntPtr ctor();
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     public extern void dtor(IntPtr o);
@@ -31,7 +31,7 @@ public class TestCppBehavior : MonoBehaviour
     void OnEnable()
     {
         mio.mioInitialize();
-        cppobj = ctor(this);
+        cppobj = ctor();
     }
 
     void OnDisable()
