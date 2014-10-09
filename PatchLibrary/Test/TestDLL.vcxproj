@@ -65,25 +65,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)32</TargetName>
-    <OutDir>bin\debug\$(BuildID)\</OutDir>
+    <OutDir>bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)64</TargetName>
-    <OutDir>bin\debug\$(BuildID)\</OutDir>
+    <OutDir>bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)32</TargetName>
-    <OutDir>bin\</OutDir>
+    <OutDir>bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)64</TargetName>
-    <OutDir>bin\</OutDir>
+    <OutDir>bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -105,7 +105,7 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>..\bin\PatchLibraryBridge32.exe /target:TestMain32.exe /patch:$(OutDir)$(TargetName)$(TargetExt)</Command>
+      <Command>..\bin\$(Configuration)\PatchLibraryBridge32.exe /target:TestMain32.exe /patch:$(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -126,7 +126,7 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>..\bin\PatchLibraryBridge32.exe /target:TestMain32.exe /patch:$(OutDir)$(TargetName)$(TargetExt)</Command>
+      <Command>..\bin\$(Configuration)\PatchLibraryBridge64.exe /target:TestMain64.exe /patch:$(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -148,7 +148,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>..\bin\PatchLibraryBridge32.exe /target:TestMain32.exe /patch:$(TargetPath)</Command>
+      <Command>..\bin\$(Configuration)\PatchLibraryBridge32.exe /target:TestMain32.exe /patch:$(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -169,7 +169,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>..\bin\PatchLibraryBridge64.exe /target:TestMain64.exe /patch:$(TargetPath)</Command>
+      <Command>..\bin\$(Configuration)\PatchLibraryBridge64.exe /target:TestMain64.exe /patch:$(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
