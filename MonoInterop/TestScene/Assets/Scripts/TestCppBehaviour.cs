@@ -14,7 +14,7 @@ public class mio
 public class TestCppBehaviour : MonoBehaviour
 {
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    public extern IntPtr ctor();
+    public extern IntPtr ctor(MonoBehaviour obj);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     public extern void dtor(IntPtr o);
@@ -26,12 +26,25 @@ public class TestCppBehaviour : MonoBehaviour
     public extern void update();
 
 
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    public extern int memfn1(int a1);
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    public extern int memfn2(int a1, int a2);
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    public extern int cmemfn1(int a1);
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    public extern int cmemfn2(int a1, int a2);
+
+
     IntPtr cppobj;
 
     void OnEnable()
     {
         mio.mioInitialize();
-        cppobj = ctor();
+        cppobj = ctor(this);
     }
 
     void OnDisable()
@@ -43,10 +56,14 @@ public class TestCppBehaviour : MonoBehaviour
     {
         start();
     }
-    
+
     void Update()
     {
         update();
+        memfn1(1);
+        memfn2(1, 2);
+        cmemfn1(1);
+        cmemfn2(1, 2);
     }
 
     void ThisFunctionWillBeCalledFromCpp()

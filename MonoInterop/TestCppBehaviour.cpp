@@ -1,4 +1,4 @@
-#include "CppBehaviour.h"
+﻿#include "CppBehaviour.h"
 
 class TestCppBehaviour : public CppBehaviour
 {
@@ -9,25 +9,30 @@ public:
     void start();
     void update();
 
-    int funcWithParams(int param);
+    int memfn1(int a1);
+    int memfn2(int a1, int a2);
+    int cmemfn1(int a1) const;
+    int cmemfn2(int a1, int a2) const;
 private:
-    int m_data;
+    int m_frame;
 };
 
 
 
 #define mioCurrentClass TestCppBehaviour
-mioExportCtor()
-mioExportDtor()
+mioExportClass()
 mioExportMethod(start)
 mioExportMethod(update)
-//mioExportMethod(funcWithParams)
+mioExportMethod(memfn1)
+mioExportMethod(memfn2)
+mioExportMethod(cmemfn1)
+mioExportMethod(cmemfn2)
 #undef mioCurrentClass
 
 
 
 TestCppBehaviour::TestCppBehaviour(MonoObject *o)
-: super(o)
+: super(o), m_frame(0)
 {
     mioDebugPrint("TestCppBehaviour::TestCppBehaviour()\n");
 }
@@ -44,14 +49,34 @@ void TestCppBehaviour::start()
 
 void TestCppBehaviour::update()
 {
-    mioDebugPrint("TestCppBehaviour::update()\n");
-    if (mioMethod method = findMethod("ThisFunctionWillBeCalledFromCpp")) {
-        method.invoke(m_mobj, nullptr);
+    if (++m_frame % 60 == 0) {
+        mioDebugPrint("TestCppBehaviour::update()\n");
+        if (mioMethod method = findMethod("ThisFunctionWillBeCalledFromCpp")) {
+            method.invoke(m_mobj, nullptr);
+        }
     }
 }
 
-int TestCppBehaviour::funcWithParams(int param)
+int TestCppBehaviour::memfn1(int a1)
 {
-    //mioDebugPrint("%d TestCppBehaviour::FuncWithParams(%d)\n", m_data, param);
-    return m_data;
+    mioDebugPrint("TestCppBehaviour::memfn1(%d) : %d\n", a1, m_frame);
+    return m_frame;
+}
+
+int TestCppBehaviour::memfn2(int a1, int a2)
+{
+    mioDebugPrint("TestCppBehaviour::memfn2(%d, %d) : %d\n", a1, a2, m_frame);
+    return m_frame;
+}
+
+int TestCppBehaviour::cmemfn1(int a1) const
+{
+    mioDebugPrint("TestCppBehaviour::cmemfn1(%d) : %d\n", a1, m_frame);
+    return m_frame;
+}
+
+int TestCppBehaviour::cmemfn2(int a1, int a2) const
+{
+    mioDebugPrint("TestCppBehaviour::cmemfn2(%d, %d) : %d\n", a1, a2, m_frame);
+    return m_frame;
 }

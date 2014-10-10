@@ -20,13 +20,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CppBehaviour.cpp" />
-    <ClCompile Include="monoInterOp.cpp" />
+    <ClCompile Include="mioTypes.cpp" />
+    <ClCompile Include="mioUtils.cpp" />
     <ClCompile Include="TestCppBehaviour.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CppBehaviour.h" />
+    <ClInclude Include="mioFunctionBinder.h" />
+    <ClInclude Include="mioObjectTranslator.h" />
+    <ClInclude Include="mioUtils.h" />
     <ClInclude Include="monoAPI.h" />
-    <ClInclude Include="monoInterOp.h" />
+    <ClInclude Include="mioTypes.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{45CAFE1A-2ED4-44CA-9E3B-CA285A51F151}</ProjectGuid>
