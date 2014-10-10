@@ -6,6 +6,7 @@
 #include <type_traits>
 #define mioUnRefConst(T) typename std::remove_const<typename std::remove_reference<T>::type>::type
 
+#pragma region mio_function_binder_detail
 
 template<class R>
 struct mioFB_Fn0
@@ -69,6 +70,7 @@ struct mioFB_ConstMemFn0<void, C>
         return nullptr;
     }
 };
+
 
 
 template<class R, class A0>
@@ -145,6 +147,7 @@ struct mioFB_ConstMemFn1 < void, C, A0 >
         return nullptr;
     }
 };
+
 
 
 template<class R, class A0, class A1>
@@ -236,8 +239,224 @@ struct mioFB_ConstMemFn2 < void, C, A0, A1 >
 
 
 
-template<class R>
-inline mioObject mioCSCall(R(*f)(), va_list args)
+template<class R, class A0, class A1, class A2>
+struct mioFB_Fn3
+{
+    typedef R(*F)(A0, A1, A2);
+    mioObject invoke(F f, va_list args)
+    {
+        typedef mioUnRefConst(R) RV;
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        return mioToCsObject<RV>(f(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2)));
+    }
+};
+template<class A0, class A1, class A2>
+struct mioFB_Fn3 < void, A0, A1, A2 >
+{
+    typedef void(*F)(A0, A1, A2);
+    mioObject invoke(F f, va_list args)
+    {
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        f(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2));
+        return nullptr;
+    }
+};
+
+template<class R, class C, class A0, class A1, class A2>
+struct mioFB_MemFn3
+{
+    typedef R(C::*F)(A0, A1, A2);
+    mioObject invoke(F f, C &o, va_list args)
+    {
+        typedef mioUnRefConst(R) RV;
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        return mioToCsObject<RV>((o.*f)(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2)));
+    }
+};
+template<class C, class A0, class A1, class A2>
+struct mioFB_MemFn3 < void, C, A0, A1, A2 >
+{
+    typedef void (C::*F)(A0, A1, A2);
+    mioObject invoke(F f, C &o, va_list args)
+    {
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        (o.*f)(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2));
+        return nullptr;
+    }
+};
+
+template<class R, class C, class A0, class A1, class A2>
+struct mioFB_ConstMemFn3
+{
+    typedef R(C::*F)(A0, A1, A2) const;
+    mioObject invoke(F f, const C &o, va_list args)
+    {
+        typedef mioUnRefConst(R) RV;
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        return mioToCsObject<RV>((o.*f)(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2)));
+    }
+};
+template<class C, class A0, class A1, class A2>
+struct mioFB_ConstMemFn3 < void, C, A0, A1, A2 >
+{
+    typedef void (C::*F)(A0, A1, A2) const;
+    mioObject invoke(F f, const C &o, va_list args)
+    {
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        (o.*f)(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2));
+        return nullptr;
+    }
+};
+
+
+
+template<class R, class A0, class A1, class A2, class A3>
+struct mioFB_Fn4
+{
+    typedef R(*F)(A0, A1, A2, A3);
+    mioObject invoke(F f, va_list args)
+    {
+        typedef mioUnRefConst(R) RV;
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        typedef mioUnRefConst(A3) A3V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        mioObject a3 = va_arg(args, MonoObject*);
+        return mioToCsObject<RV>(f(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2), mioToCppObject<A3V>(a3)));
+    }
+};
+template<class A0, class A1, class A2, class A3>
+struct mioFB_Fn4 < void, A0, A1, A2, A3 >
+{
+    typedef void(*F)(A0, A1, A2, A3);
+    mioObject invoke(F f, va_list args)
+    {
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        typedef mioUnRefConst(A3) A3V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        mioObject a3 = va_arg(args, MonoObject*);
+        f(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2), mioToCppObject<A3V>(a3));
+        return nullptr;
+    }
+};
+
+template<class R, class C, class A0, class A1, class A2, class A3>
+struct mioFB_MemFn4
+{
+    typedef R(C::*F)(A0, A1, A2, A3);
+    mioObject invoke(F f, C &o, va_list args)
+    {
+        typedef mioUnRefConst(R) RV;
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        typedef mioUnRefConst(A3) A3V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        mioObject a3 = va_arg(args, MonoObject*);
+        return mioToCsObject<RV>((o.*f)(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2), mioToCppObject<A3V>(a3)));
+    }
+};
+template<class C, class A0, class A1, class A2, class A3>
+struct mioFB_MemFn4 < void, C, A0, A1, A2, A3 >
+{
+    typedef void (C::*F)(A0, A1, A2, A3);
+    mioObject invoke(F f, C &o, va_list args)
+    {
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        typedef mioUnRefConst(A3) A3V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        mioObject a3 = va_arg(args, MonoObject*);
+        (o.*f)(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2), mioToCppObject<A3V>(a3));
+        return nullptr;
+    }
+};
+
+template<class R, class C, class A0, class A1, class A2, class A3>
+struct mioFB_ConstMemFn4
+{
+    typedef R(C::*F)(A0, A1, A2, A3) const;
+    mioObject invoke(F f, const C &o, va_list args)
+    {
+        typedef mioUnRefConst(R) RV;
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        typedef mioUnRefConst(A3) A3V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        mioObject a3 = va_arg(args, MonoObject*);
+        return mioToCsObject<RV>((o.*f)(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2), mioToCppObject<A3V>(a3)));
+    }
+};
+template<class C, class A0, class A1, class A2, class A3>
+struct mioFB_ConstMemFn4 < void, C, A0, A1, A2, A3 >
+{
+    typedef void (C::*F)(A0, A1, A2, A3) const;
+    mioObject invoke(F f, const C &o, va_list args)
+    {
+        typedef mioUnRefConst(A0) A0V;
+        typedef mioUnRefConst(A1) A1V;
+        typedef mioUnRefConst(A2) A2V;
+        typedef mioUnRefConst(A3) A3V;
+        mioObject a0 = va_arg(args, MonoObject*);
+        mioObject a1 = va_arg(args, MonoObject*);
+        mioObject a2 = va_arg(args, MonoObject*);
+        mioObject a3 = va_arg(args, MonoObject*);
+        (o.*f)(mioToCppObject<A0V>(a0), mioToCppObject<A1V>(a1), mioToCppObject<A2V>(a2), mioToCppObject<A3V>(a3));
+        return nullptr;
+    }
+};
+
+
+
+
+
+template<class R, class C>
+inline mioObject mioCSCall(R(*f)(), C &o, va_list args)
 {
     return mioFB_Fn0<R>().invoke(f, args);
 }
@@ -252,8 +471,9 @@ inline mioObject mioCSCall(R(C::*f)() const, const C &o, va_list args)
     return mioFB_ConstMemFn0<R, C>().invoke(f, o, args);
 }
 
-template<class R, class A0>
-inline mioObject mioCSCall(R(*f)(A0), va_list args)
+
+template<class R, class C, class A0>
+inline mioObject mioCSCall(R(*f)(A0), C &o, va_list args)
 {
     return mioFB_Fn1<R, A0>().invoke(f, args);
 }
@@ -268,10 +488,11 @@ inline mioObject mioCSCall(R(C::*f)(A0) const, const C &o, va_list args)
     return mioFB_ConstMemFn1<R, C, A0>().invoke(f, o, args);
 }
 
-template<class R, class A0, class A1>
-inline mioObject mioCSCall(R(*f)(A0, A1), va_list args)
+
+template<class R, class C, class A0, class A1>
+inline mioObject mioCSCall(R(*f)(A0, A1), C &o, va_list args)
 {
-    return mioFB_Fn2<R, A0>().invoke(f, args);
+    return mioFB_Fn2<R, A0, A1>().invoke(f, args);
 }
 template<class R, class C, class A0, class A1>
 inline mioObject mioCSCall(R(C::*f)(A0, A1), C &o, va_list args)
@@ -285,7 +506,42 @@ inline mioObject mioCSCall(R(C::*f)(A0, A1) const, const C &o, va_list args)
 }
 
 
+template<class R, class C, class A0, class A1, class A2>
+inline mioObject mioCSCall(R(*f)(A0, A1, A2), C &o, va_list args)
+{
+    return mioFB_Fn3<R, A0, A1, A2>().invoke(f, args);
+}
+template<class R, class C, class A0, class A1, class A2>
+inline mioObject mioCSCall(R(C::*f)(A0, A1, A2), C &o, va_list args)
+{
+    return mioFB_MemFn3<R, C, A0, A1, A2>().invoke(f, o, args);
+}
+template<class R, class C, class A0, class A1, class A2>
+inline mioObject mioCSCall(R(C::*f)(A0, A1, A2) const, const C &o, va_list args)
+{
+    return mioFB_ConstMemFn3<R, C, A0, A1, A2>().invoke(f, o, args);
+}
 
+
+template<class R, class C, class A0, class A1, class A2, class A3>
+inline mioObject mioCSCall(R(*f)(A0, A1, A2, A3), C &o, va_list args)
+{
+    return mioFB_Fn4<R, A0, A1, A2, A3>().invoke(f, args);
+}
+template<class R, class C, class A0, class A1, class A2, class A3>
+inline mioObject mioCSCall(R(C::*f)(A0, A1, A2, A3), C &o, va_list args)
+{
+    return mioFB_MemFn4<R, C, A0, A1, A2, A3>().invoke(f, o, args);
+}
+template<class R, class C, class A0, class A1, class A2, class A3>
+inline mioObject mioCSCall(R(C::*f)(A0, A1, A2, A3) const, const C &o, va_list args)
+{
+    return mioFB_ConstMemFn4<R, C, A0, A1, A2, A3>().invoke(f, o, args);
+}
+
+
+
+#pragma endregion
 
 
 void mioAddMethod(const char *name, void *addr);
@@ -317,12 +573,10 @@ struct mioAddMethodHelper
         mioP(mioCurrentClass) *inst = nullptr;\
         mioObject mo(o);\
         mo.findField("cppobj").getValue(mo, inst);\
-        if(inst) {\
-            va_list args;\
-            va_start(args, o);\
-            ret = mioCSCall(&mioP(mioCurrentClass)##::##MethodName, *inst, args);\
-            va_end(args);\
-                        }\
+        va_list args;\
+        va_start(args, o);\
+        ret = mioCSCall(&mioP(mioCurrentClass)##::##MethodName, *inst, args);\
+        va_end(args);\
         return ret;\
     }\
     mioAddMethodHelper mioP(mioCurrentClass)##_##MethodName##_(mioS(mioCurrentClass) "::" #MethodName, &mioP(mioCurrentClass)##_##MethodName);
