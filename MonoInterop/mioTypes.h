@@ -38,6 +38,7 @@ public:
     const char* getName() const;
 
     mioType getType() const;
+    int getOffset() const;
     template<class T> void getValue(mioObject obj, T &o) const { getValueImpl(obj, &o); }
     template<class T> void setValue(mioObject obj, const T &o) { setValueImpl(obj, &o); }
 
@@ -71,6 +72,7 @@ public:
 
     int getParamCount() const;
     mioType getReturnType() const;
+    void eachArgTypes(const std::function<void(mioType&)>&) const;
     
     mioObject invoke(mioObject obj, void **args);
 
@@ -89,18 +91,16 @@ public:
 
     mioField    findField(const char *name) const;
     mioProperty findProperty(const char *name) const;
-    mioMethod   findMethod(const char *name, int num_args=-1) const;
+    mioMethod   findMethod(const char *name, int num_args=-1) const; // num_args: -1=don't care
+
+    // enumerate members (not include parent class members)
     void eachFields(const std::function<void(mioField&)> &f);
     void eachProperties(const std::function<void(mioProperty&)> &f);
     void eachMethods(const std::function<void(mioMethod&)> &f);
-
     // include parent classes
-    mioField    findFieldUpwards(const char *name) const;
-    mioProperty findPropertyUpwards(const char *name) const;
-    mioMethod   findMethodUpwards(const char *name, int num_args = -1) const;
-    void eachFieldsUpwards(const std::function<void(mioField&)> &f);
-    void eachPropertiesUpwards(const std::function<void(mioProperty&)> &f);
-    void eachMethodsUpwards(const std::function<void(mioMethod&)> &f);
+    void eachFieldsUpwards(const std::function<void(mioField&, mioClass&)> &f);
+    void eachPropertiesUpwards(const std::function<void(mioProperty&, mioClass&)> &f);
+    void eachMethodsUpwards(const std::function<void(mioMethod&, mioClass&)> &f);
 
     MonoClass *mclass;
 };

@@ -46,6 +46,7 @@ MONO_API MonoClass*             mono_type_get_class(MonoType *type);
 
 MONO_API const char*            mono_field_get_name(MonoClassField *field);
 MONO_API MonoType*              mono_field_get_type(MonoClassField *field);
+MONO_API guint32                mono_field_get_offset(MonoClassField *field);
 MONO_API void                   mono_field_get_value(MonoObject *obj, MonoClassField *field, void *value);
 MONO_API void                   mono_field_set_value(MonoObject *obj, MonoClassField *field, void *value);
 
@@ -60,6 +61,10 @@ MONO_API MonoMethod*            mono_method_desc_search_in_image(MonoMethodDesc 
 MONO_API MonoMethodSignature*   mono_method_signature(MonoMethod *m);
 MONO_API MonoObject*            mono_runtime_invoke(MonoMethod *method, void *obj, void **params, MonoObject **exc);
 
+MONO_API guint32                mono_signature_get_param_count(MonoMethodSignature *sig);
+MONO_API MonoType*              mono_signature_get_return_type(MonoMethodSignature *sig);
+MONO_API MonoType*              mono_signature_get_params(MonoMethodSignature *sig, gpointer *iter);
+
 MONO_API MonoClass*             mono_class_from_name(MonoImage *image, const char *namespaceString, const char *classnameString);
 MONO_API const char*            mono_class_get_name(MonoClass *klass);
 MONO_API MonoType*              mono_class_get_type(MonoClass *klass);
@@ -73,8 +78,6 @@ MONO_API MonoProperty*          mono_class_get_property_from_name(MonoClass *kla
 MONO_API MonoEvent*             mono_class_get_events(MonoClass* klass, gpointer *iter);
 MONO_API MonoClass*             mono_class_get_interfaces(MonoClass* klass, gpointer *iter);
 MONO_API MonoClass*             mono_class_get_nested_types(MonoClass* klass, gpointer *iter);
-
-MONO_API guint32                mono_signature_get_param_count(MonoMethodSignature *sig);
 
 MONO_API MonoDomain*            mono_object_get_domain(MonoObject *obj);
 MONO_API MonoClass*             mono_object_get_class(MonoObject *obj);

@@ -1,4 +1,6 @@
 ﻿#include "CppBehaviour.h"
+#include <string>
+#include <vector>
 
 struct Vector3
 {
@@ -31,8 +33,10 @@ public:
     static int smemfn2(int a1, int a2);
     static int smemfn3(int a1, int a2, int a3);
     static int smemfn4(int a1, int a2, int a3, int a4);
+
 private:
     int m_frame;
+    Vector3 *m_v3v;
 };
 
 
@@ -58,23 +62,58 @@ mioExportMethod(smemfn4)
 
 
 TestCppBehaviour::TestCppBehaviour(MonoObject *o)
-: super(o), m_frame(0)
+: super(o)
+, m_frame(0)
+, m_v3v(mioGetFieldValuePtr<Vector3>(o, "v3value"))
 {
     mioDebugPrint("TestCppBehaviour::TestCppBehaviour()\n");
 
     mioDebugPrint("methods:\n");
-    this_cs.getClass().eachMethodsUpwards([&](mioMethod &m){
-        mioDebugPrint("    %s\n", m.getName());
+    this_cs.getClass().eachMethodsUpwards([&](mioMethod &m, mioClass &c){
+        std::vector<mioType> args;
+        m.eachArgTypes([&](mioType &t){ args.push_back(t); });
+        mioDebugPrint("    %s::%s(", c.getName(), m.getName());
+        for (size_t i = 0; i < args.size(); ++i) {
+            mioDebugPrint("%s", args[i].getName());
+            if (i != args.size() - 1) {
+                mioDebugPrint(", ");
+            }
+        }
+        mioDebugPrint(") : %s\n", m.getReturnType().getName());
     });
 
     mioDebugPrint("properties:\n");
-    this_cs.getClass().eachPropertiesUpwards([&](mioProperty &m){
-        mioDebugPrint("    %s\n", m.getName());
+    this_cs.getClass().eachPropertiesUpwards([&](mioProperty &m, mioClass &c){
+        mioDebugPrint("    %s::%s\n", c.getName(), m.getName());
+        if (mioMethod getter = m.getGetter()) {
+            std::vector<mioType> args;
+            getter.eachArgTypes([&](mioType &t){ args.push_back(t); });
+            mioDebugPrint("        getter(");
+            for (size_t i = 0; i < args.size(); ++i) {
+                mioDebugPrint("%s", args[i].getName());
+                if (i != args.size() - 1) {
+                    mioDebugPrint(", ");
+                }
+            }
+            mioDebugPrint(") : %s\n", getter.getReturnType().getName());
+        }
+        if (mioMethod setter = m.getSetter()) {
+            std::vector<mioType> args;
+            setter.eachArgTypes([&](mioType &t){ args.push_back(t); });
+            mioDebugPrint("        setter(");
+            for (size_t i = 0; i < args.size(); ++i) {
+                mioDebugPrint("%s", args[i].getName());
+                if (i != args.size() - 1) {
+                    mioDebugPrint(", ");
+                }
+            }
+            mioDebugPrint(") : %s\n", setter.getReturnType().getName());
+        }
     });
 
     mioDebugPrint("fields:\n");
-    this_cs.getClass().eachFieldsUpwards([&](mioField &m){
-        mioDebugPrint("    %s\n", m.getName());
+    this_cs.getClass().eachFieldsUpwards([&](mioField &m, mioClass &c){
+        mioDebugPrint("    %s::%s : %s\n", c.getName(), m.getName(), m.getType().getName());
     });
 }
 
@@ -96,10 +135,11 @@ void TestCppBehaviour::Update()
             method.invoke(this_cs, nullptr);
         }
 
-        if (mioField v3f = findField("v3value")) {
-            Vector3 v3v;
-            v3f.getValue(this_cs, v3v);
-            mioDebugPrint("    v3value: %.2f, %.2f, %.2f\n", v3v.x, v3v.y, v3v.z);
+        {
+            mioDebugPrint("    v3value: %.2f, %.2f, %.2f\n", m_v3v->x, m_v3v->y, m_v3v->z);
+            m_v3v->x += 1.0f;
+            m_v3v->y += 2.0f;
+            m_v3v->z += 3.0f;
         }
     }
 }

@@ -28,6 +28,16 @@ const char* mioField::getName() const
     return mono_field_get_name(mfield);
 }
 
+mioType mioField::getType() const
+{
+    return mono_field_get_type(mfield);
+}
+
+int mioField::getOffset() const
+{
+    return mono_field_get_offset(mfield);
+}
+
 void mioField::getValueImpl(mioObject obj, void *p) const
 {
     if (!mfield) { return; }
@@ -80,6 +90,24 @@ int mioMethod::getParamCount() const
     return mono_signature_get_param_count(sig);
 }
 
+mioType mioMethod::getReturnType() const
+{
+    if (!mmethod) { return nullptr; }
+    MonoMethodSignature *sig = mono_method_signature(mmethod);
+    return mono_signature_get_return_type(sig);
+}
+
+void mioMethod::eachArgTypes(const std::function<void(mioType&)>& f) const
+{
+    if (!mmethod) { return; }
+    MonoMethodSignature *sig = mono_method_signature(mmethod);
+    MonoType *mt = nullptr;
+    gpointer iter = nullptr;
+    while (mt = mono_signature_get_params(sig, &iter)) {
+        mioType miot = mt;
+        f(miot);
+    }
+}
 
 
 const char* mioClass::getName() const
@@ -142,34 +170,46 @@ void mioClass::eachMethods(const std::function<void(mioMethod&)> &f)
     }
 }
 
-void mioClass::eachFieldsUpwards(const std::function<void(mioField&)> &f)
+void mioClass::eachFieldsUpwards(const std::function<void(mioField&, mioClass&)> &f)
 {
-    eachFields(f);
-    mioClass parent = getParent();
+    mioClass c = mclass;
     do {
-        parent.eachFields(f);
-        parent = parent.getParent();
-    } while (parent);
+        MonoClassField *field;
+        gpointer iter = nullptr;
+        while (field = mono_class_get_fields(c, &iter)) {
+            mioField m = field;
+            f(m, c);
+        }
+        c = c.getParent();
+    } while (c);
 }
 
-void mioClass::eachPropertiesUpwards(const std::function<void(mioProperty&)> &f)
+void mioClass::eachPropertiesUpwards(const std::function<void(mioProperty&, mioClass&)> &f)
 {
-    eachProperties(f);
-    mioClass parent = getParent();
+    mioClass c = mclass;
     do {
-        parent.eachProperties(f);
-        parent = parent.getParent();
-    } while (parent);
+        MonoProperty *prop;
+        gpointer iter = nullptr;
+        while (prop = mono_class_get_properties(c, &iter)) {
+            mioProperty m = prop;
+            f(m, c);
+        }
+        c = c.getParent();
+    } while (c);
 }
 
-void mioClass::eachMethodsUpwards(const std::function<void(mioMethod&)> &f)
+void mioClass::eachMethodsUpwards(const std::function<void(mioMethod&, mioClass&)> &f)
 {
-    eachMethods(f);
-    mioClass parent = getParent();
+    mioClass c = mclass;
     do {
-        parent.eachMethods(f);
-        parent = parent.getParent();
-    } while (parent);
+        MonoMethod *method;
+        gpointer iter = nullptr;
+        while (method = mono_class_get_methods(c, &iter)) {
+            mioMethod m = method;
+            f(m, c);
+        }
+        c = c.getParent();
+    } while (c);
 }
 
 

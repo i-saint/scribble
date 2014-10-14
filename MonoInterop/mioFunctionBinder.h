@@ -571,6 +571,25 @@ inline void mioSetCppThis(mioObject o, T *_this)
 }
 
 
+
+
+
+template<class T>
+inline T* mioGetFieldValuePtr(mioObject parent, const char *field_name)
+{
+    int offset = parent.findField(field_name).getOffset();
+    return (T*)((size_t&)parent + offset);
+}
+
+template<class T>
+inline T* mioGetFieldValuePtr(mioObject parent, mioField field)
+{
+    int offset = field.getOffset();
+    return (T*)((size_t&)parent + offset);
+}
+
+
+
 #define mioS2(...) #__VA_ARGS__
 #define mioS(...) mioS2(__VA_ARGS__)
 #define mioP(...) __VA_ARGS__
