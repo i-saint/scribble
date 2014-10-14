@@ -15,6 +15,11 @@ const char* mioType::getName() const
     return mono_type_get_name(mtype);
 }
 
+mioClass mioType::getClass() const
+{
+    return mono_type_get_class(mtype);
+}
+
 
 
 const char* mioField::getName() const
@@ -101,10 +106,76 @@ mioProperty mioClass::findProperty(const char *name) const
     return mono_class_get_property_from_name(mclass, name);
 }
 
-mioMethod mioClass::findMethod(const char *name) const
+mioMethod mioClass::findMethod(const char *name, int num_args) const
 {
     if (!mclass) { return nullptr; }
-    return mono_class_get_method_from_name(mclass, name, -1);
+    return mono_class_get_method_from_name(mclass, name, num_args);
+}
+
+void mioClass::eachFields(const std::function<void(mioField&)> &f)
+{
+    MonoClassField *field;
+    gpointer iter = nullptr;
+    while ((field = mono_class_get_fields(mclass, &iter))) {
+        mioField mf = field;
+        f(mf);
+    }
+}
+
+void mioClass::eachProperties(const std::function<void(mioProperty&)> &f)
+{
+    MonoProperty *prop;
+    gpointer iter = nullptr;
+    while ((prop = mono_class_get_properties(mclass, &iter))) {
+        mioProperty mp = prop;
+        f(mp);
+    }
+}
+
+void mioClass::eachMethods(const std::function<void(mioMethod&)> &f)
+{
+    MonoMethod *method;
+    gpointer iter = nullptr;
+    while ((method = mono_class_get_methods(mclass, &iter))) {
+        mioMethod mm = method;
+        f(mm);
+    }
+}
+
+void mioClass::eachFieldsUpwards(const std::function<void(mioField&)> &f)
+{
+    eachFields(f);
+    mioClass parent = getParent();
+    do {
+        parent.eachFields(f);
+        parent = parent.getParent();
+    } while (parent);
+}
+
+void mioClass::eachPropertiesUpwards(const std::function<void(mioProperty&)> &f)
+{
+    eachProperties(f);
+    mioClass parent = getParent();
+    do {
+        parent.eachProperties(f);
+        parent = parent.getParent();
+    } while (parent);
+}
+
+void mioClass::eachMethodsUpwards(const std::function<void(mioMethod&)> &f)
+{
+    eachMethods(f);
+    mioClass parent = getParent();
+    do {
+        parent.eachMethods(f);
+        parent = parent.getParent();
+    } while (parent);
+}
+
+
+mioClass mioClass::getParent() const
+{
+    return mono_class_get_parent(mclass);
 }
 
 

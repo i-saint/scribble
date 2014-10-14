@@ -11,6 +11,7 @@
 
 class mioObject;
 class mioType;
+class mioClass;
 class mioMethod;
 class mioField;
 class mioProperty;
@@ -23,6 +24,7 @@ public:
     operator MonoType*() const { return mtype; }
     operator bool() const { return mtype != nullptr; }
     const char* getName() const;
+    mioClass getClass() const;
 
     MonoType *mtype;
 };
@@ -68,6 +70,8 @@ public:
     const char* getName() const;
 
     int getParamCount() const;
+    mioType getReturnType() const;
+    
     mioObject invoke(mioObject obj, void **args);
 
     MonoMethod *mmethod;
@@ -81,10 +85,22 @@ public:
     operator bool() const { return mclass != nullptr; }
     const char* getName() const;
     mioType     getType() const;
+    mioClass    getParent() const;
 
     mioField    findField(const char *name) const;
     mioProperty findProperty(const char *name) const;
-    mioMethod   findMethod(const char *name) const;
+    mioMethod   findMethod(const char *name, int num_args=-1) const;
+    void eachFields(const std::function<void(mioField&)> &f);
+    void eachProperties(const std::function<void(mioProperty&)> &f);
+    void eachMethods(const std::function<void(mioMethod&)> &f);
+
+    // include parent classes
+    mioField    findFieldUpwards(const char *name) const;
+    mioProperty findPropertyUpwards(const char *name) const;
+    mioMethod   findMethodUpwards(const char *name, int num_args = -1) const;
+    void eachFieldsUpwards(const std::function<void(mioField&)> &f);
+    void eachPropertiesUpwards(const std::function<void(mioProperty&)> &f);
+    void eachMethodsUpwards(const std::function<void(mioMethod&)> &f);
 
     MonoClass *mclass;
 };

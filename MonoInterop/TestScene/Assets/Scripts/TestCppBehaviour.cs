@@ -11,19 +11,26 @@ public class mio
     public static extern void mioInitialize();
 }
 
-public class TestCppBehaviour : MonoBehaviour
+public class CppBehaviour : MonoBehaviour
+{
+    internal IntPtr this_cpp;
+
+    public CppBehaviour()
+    {
+        mio.mioInitialize();
+    }
+
+    ~CppBehaviour()
+    {}
+}
+
+public class TestCppBehaviour : CppBehaviour
 {
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    public extern IntPtr ctor(MonoBehaviour obj);
+    public extern void ctor();
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    public extern void dtor(IntPtr o);
-
-    [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    public extern void start();
-
-    [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    public extern void update();
+    public extern void dtor();
 
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
@@ -65,28 +72,31 @@ public class TestCppBehaviour : MonoBehaviour
     public extern int smemfn4(int a1, int a2, int a3, int a4);
 
 
-    IntPtr cppobj;
+
+    Vector3 v3value;
 
     void OnEnable()
     {
-        mio.mioInitialize();
-        cppobj = ctor(this);
+        ctor();
+        v3value = new Vector3(1.0f, 2.0f, 3.0f);
     }
 
     void OnDisable()
     {
-        dtor(cppobj);
+        dtor();
     }
 
-    void Start()
-    {
-        start();
-    }
 
-    void Update()
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    public extern void Start();
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    public extern void Update();
+
+    void ThisFunctionWillBeCalledFromCpp()
     {
-        update();
-        memfn1(1);
+        Debug.Log("ThisFunctionWillBeCalledFromCpp()");
+         memfn1(1);
         memfn2(1, 2);
         memfn3(1, 2, 3);
         memfn4(1, 2, 3, 4);
@@ -98,10 +108,5 @@ public class TestCppBehaviour : MonoBehaviour
         smemfn2(1, 2);
         smemfn3(1, 2, 3);
         smemfn4(1, 2, 3, 4);
-    }
-
-    void ThisFunctionWillBeCalledFromCpp()
-    {
-        Debug.Log("ThisFunctionWillBeCalledFromCpp()");
-    }
+   }
 }

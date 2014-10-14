@@ -32,6 +32,7 @@ typedef void* MonoObject;
 typedef void* MonoMethod;
 typedef void* MonoMethodDesc;
 typedef void* MonoMethodSignature;
+typedef void* MonoEvent;
 typedef void* MonoString;
 
 MONO_API MonoDomain*    mono_domain_get();
@@ -41,6 +42,7 @@ MONO_API MonoString*    mono_string_new(MonoDomain *domain, const char *text);
 MONO_API void           mono_add_internal_call(const char *name, gconstpointer method);
 
 MONO_API const char*            mono_type_get_name(MonoType *type);
+MONO_API MonoClass*             mono_type_get_class(MonoType *type);
 
 MONO_API const char*            mono_field_get_name(MonoClassField *field);
 MONO_API MonoType*              mono_field_get_type(MonoClassField *field);
@@ -61,10 +63,16 @@ MONO_API MonoObject*            mono_runtime_invoke(MonoMethod *method, void *ob
 MONO_API MonoClass*             mono_class_from_name(MonoImage *image, const char *namespaceString, const char *classnameString);
 MONO_API const char*            mono_class_get_name(MonoClass *klass);
 MONO_API MonoType*              mono_class_get_type(MonoClass *klass);
+MONO_API MonoClass*             mono_class_get_parent(MonoClass *klass);
 MONO_API MonoMethod*            mono_class_get_methods(MonoClass*, gpointer* iter);
 MONO_API MonoMethod*            mono_class_get_method_from_name(MonoClass *klass, const char *name, int param_count);
+MONO_API MonoClassField*        mono_class_get_fields(MonoClass* klass, gpointer *iter);
 MONO_API MonoClassField*        mono_class_get_field_from_name(MonoClass *klass, const char *name);
+MONO_API MonoProperty*          mono_class_get_properties(MonoClass* klass, gpointer *iter);
 MONO_API MonoProperty*          mono_class_get_property_from_name(MonoClass *klass, const char *name);
+MONO_API MonoEvent*             mono_class_get_events(MonoClass* klass, gpointer *iter);
+MONO_API MonoClass*             mono_class_get_interfaces(MonoClass* klass, gpointer *iter);
+MONO_API MonoClass*             mono_class_get_nested_types(MonoClass* klass, gpointer *iter);
 
 MONO_API guint32                mono_signature_get_param_count(MonoMethodSignature *sig);
 

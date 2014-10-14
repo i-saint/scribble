@@ -13,5 +13,5 @@ public:
     mioMethod findMethod(const char *name);
 
 protected:
-    mioObject m_mobj;
+    mioObject this_cs;
 };

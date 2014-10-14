@@ -456,87 +456,87 @@ struct mioFB_ConstMemFn4 < void, C, A0, A1, A2, A3 >
 
 
 template<class R, class C>
-inline mioObject mioCSCall(R(*f)(), C &o, va_list args)
+inline mioObject mioCSCall(R(*f)(), C *o, va_list args)
 {
     return mioFB_Fn0<R>().invoke(f, args);
 }
 template<class R, class C>
-inline mioObject mioCSCall(R(C::*f)(), C &o, va_list args)
+inline mioObject mioCSCall(R(C::*f)(), C *o, va_list args)
 {
-    return mioFB_MemFn0<R, C>().invoke(f, o, args);
+    return mioFB_MemFn0<R, C>().invoke(f, *o, args);
 }
 template<class R, class C>
-inline mioObject mioCSCall(R(C::*f)() const, const C &o, va_list args)
+inline mioObject mioCSCall(R(C::*f)() const, const C o, va_list args)
 {
-    return mioFB_ConstMemFn0<R, C>().invoke(f, o, args);
+    return mioFB_ConstMemFn0<R, C>().invoke(f, *o, args);
 }
 
 
 template<class R, class C, class A0>
-inline mioObject mioCSCall(R(*f)(A0), C &o, va_list args)
+inline mioObject mioCSCall(R(*f)(A0), C *o, va_list args)
 {
     return mioFB_Fn1<R, A0>().invoke(f, args);
 }
 template<class R, class C, class A0>
-inline mioObject mioCSCall(R(C::*f)(A0), C &o, va_list args)
+inline mioObject mioCSCall(R(C::*f)(A0), C *o, va_list args)
 {
-    return mioFB_MemFn1<R, C, A0>().invoke(f, o, args);
+    return mioFB_MemFn1<R, C, A0>().invoke(f, *o, args);
 }
 template<class R, class C, class A0>
-inline mioObject mioCSCall(R(C::*f)(A0) const, const C &o, va_list args)
+inline mioObject mioCSCall(R(C::*f)(A0) const, const C *o, va_list args)
 {
-    return mioFB_ConstMemFn1<R, C, A0>().invoke(f, o, args);
+    return mioFB_ConstMemFn1<R, C, A0>().invoke(f, *o, args);
 }
 
 
 template<class R, class C, class A0, class A1>
-inline mioObject mioCSCall(R(*f)(A0, A1), C &o, va_list args)
+inline mioObject mioCSCall(R(*f)(A0, A1), C *o, va_list args)
 {
     return mioFB_Fn2<R, A0, A1>().invoke(f, args);
 }
 template<class R, class C, class A0, class A1>
-inline mioObject mioCSCall(R(C::*f)(A0, A1), C &o, va_list args)
+inline mioObject mioCSCall(R(C::*f)(A0, A1), C *o, va_list args)
 {
-    return mioFB_MemFn2<R, C, A0, A1>().invoke(f, o, args);
+    return mioFB_MemFn2<R, C, A0, A1>().invoke(f, *o, args);
 }
 template<class R, class C, class A0, class A1>
-inline mioObject mioCSCall(R(C::*f)(A0, A1) const, const C &o, va_list args)
+inline mioObject mioCSCall(R(C::*f)(A0, A1) const, const C *o, va_list args)
 {
-    return mioFB_ConstMemFn2<R, C, A0, A1>().invoke(f, o, args);
+    return mioFB_ConstMemFn2<R, C, A0, A1>().invoke(f, *o, args);
 }
 
 
 template<class R, class C, class A0, class A1, class A2>
-inline mioObject mioCSCall(R(*f)(A0, A1, A2), C &o, va_list args)
+inline mioObject mioCSCall(R(*f)(A0, A1, A2), C *o, va_list args)
 {
     return mioFB_Fn3<R, A0, A1, A2>().invoke(f, args);
 }
 template<class R, class C, class A0, class A1, class A2>
-inline mioObject mioCSCall(R(C::*f)(A0, A1, A2), C &o, va_list args)
+inline mioObject mioCSCall(R(C::*f)(A0, A1, A2), C *o, va_list args)
 {
-    return mioFB_MemFn3<R, C, A0, A1, A2>().invoke(f, o, args);
+    return mioFB_MemFn3<R, C, A0, A1, A2>().invoke(f, *o, args);
 }
 template<class R, class C, class A0, class A1, class A2>
-inline mioObject mioCSCall(R(C::*f)(A0, A1, A2) const, const C &o, va_list args)
+inline mioObject mioCSCall(R(C::*f)(A0, A1, A2) const, const C *o, va_list args)
 {
-    return mioFB_ConstMemFn3<R, C, A0, A1, A2>().invoke(f, o, args);
+    return mioFB_ConstMemFn3<R, C, A0, A1, A2>().invoke(f, *o, args);
 }
 
 
 template<class R, class C, class A0, class A1, class A2, class A3>
-inline mioObject mioCSCall(R(*f)(A0, A1, A2, A3), C &o, va_list args)
+inline mioObject mioCSCall(R(*f)(A0, A1, A2, A3), C *o, va_list args)
 {
     return mioFB_Fn4<R, A0, A1, A2, A3>().invoke(f, args);
 }
 template<class R, class C, class A0, class A1, class A2, class A3>
-inline mioObject mioCSCall(R(C::*f)(A0, A1, A2, A3), C &o, va_list args)
+inline mioObject mioCSCall(R(C::*f)(A0, A1, A2, A3), C *o, va_list args)
 {
-    return mioFB_MemFn4<R, C, A0, A1, A2, A3>().invoke(f, o, args);
+    return mioFB_MemFn4<R, C, A0, A1, A2, A3>().invoke(f, *o, args);
 }
 template<class R, class C, class A0, class A1, class A2, class A3>
-inline mioObject mioCSCall(R(C::*f)(A0, A1, A2, A3) const, const C &o, va_list args)
+inline mioObject mioCSCall(R(C::*f)(A0, A1, A2, A3) const, const C *o, va_list args)
 {
-    return mioFB_ConstMemFn4<R, C, A0, A1, A2, A3>().invoke(f, o, args);
+    return mioFB_ConstMemFn4<R, C, A0, A1, A2, A3>().invoke(f, *o, args);
 }
 
 
@@ -550,18 +550,41 @@ struct mioAddMethodHelper
     mioAddMethodHelper(const char *name, void *addr) { mioAddMethod(name, addr); }
 };
 
+
+template<class T>
+inline mioField mioGetCppThisField(mioObject o)
+{
+    static mioField s_field = o.findField("this_cpp");
+    return s_field;
+}
+template<class T>
+inline T* mioGetCppThis(mioObject o)
+{
+    T *ret = nullptr;
+    mioGetCppThisField<T>(o).getValue<T*>(o, ret);
+    return ret;
+}
+template<class T>
+inline void mioSetCppThis(mioObject o, T *_this)
+{
+    mioGetCppThisField<T>(o).setValue<T*>(o, _this);
+}
+
+
 #define mioS2(...) #__VA_ARGS__
 #define mioS(...) mioS2(__VA_ARGS__)
 #define mioP(...) __VA_ARGS__
 
 #define mioExportClass()\
-    mioExport MonoObject mioP(mioCurrentClass)##_ctor(MonoObject *o)\
+    mioExport void mioP(mioCurrentClass)##_ctor(MonoObject *o)\
     {\
-        return new mioP(mioCurrentClass)(o);\
+        typedef mioP(mioCurrentClass) this_t;\
+        mioSetCppThis<this_t>(o, new this_t(o));\
     }\
-    mioExport void mioP(mioCurrentClass)##_dtor(MonoObject *mo, mioP(mioCurrentClass) *o)\
+    mioExport void mioP(mioCurrentClass)##_dtor(MonoObject *o)\
     {\
-        delete o;\
+        typedef mioP(mioCurrentClass) this_t;\
+        delete mioGetCppThis<this_t>(o);\
     }\
     mioAddMethodHelper mioP(mioCurrentClass)##_ctor_(mioS(mioCurrentClass) "::ctor", &mioP(mioCurrentClass)##_ctor);\
     mioAddMethodHelper mioP(mioCurrentClass)##_dtor_(mioS(mioCurrentClass) "::dtor", &mioP(mioCurrentClass)##_dtor);
@@ -569,13 +592,11 @@ struct mioAddMethodHelper
 #define mioExportMethod(MethodName)\
     mioExport MonoObject mioP(mioCurrentClass)##_##MethodName(MonoObject *o, ...)\
     {\
+        typedef mioP(mioCurrentClass) this_t;\
         mioObject ret = nullptr;\
-        mioP(mioCurrentClass) *inst = nullptr;\
-        mioObject mo(o);\
-        mo.findField("cppobj").getValue(mo, inst);\
         va_list args;\
         va_start(args, o);\
-        ret = mioCSCall(&mioP(mioCurrentClass)##::##MethodName, *inst, args);\
+        ret = mioCSCall(&this_t::##MethodName, mioGetCppThis<this_t>(o), args);\
         va_end(args);\
         return ret;\
     }\

@@ -1,13 +1,23 @@
 ﻿#include "CppBehaviour.h"
 
+struct Vector3
+{
+    union {
+        struct { float x, y, z; };
+        float v[3];
+    };
+};
+
+
+
 class TestCppBehaviour : public CppBehaviour
 {
 typedef CppBehaviour super;
 public:
     TestCppBehaviour(MonoObject *o);
     virtual ~TestCppBehaviour();
-    void start();
-    void update();
+    void Start();
+    void Update();
 
     int memfn1(int a1);
     int memfn2(int a1, int a2);
@@ -29,8 +39,8 @@ private:
 
 #define mioCurrentClass TestCppBehaviour
 mioExportClass()
-mioExportMethod(start)
-mioExportMethod(update)
+mioExportMethod(Start)
+mioExportMethod(Update)
 mioExportMethod(memfn1)
 mioExportMethod(memfn2)
 mioExportMethod(memfn3)
@@ -51,6 +61,21 @@ TestCppBehaviour::TestCppBehaviour(MonoObject *o)
 : super(o), m_frame(0)
 {
     mioDebugPrint("TestCppBehaviour::TestCppBehaviour()\n");
+
+    mioDebugPrint("methods:\n");
+    this_cs.getClass().eachMethodsUpwards([&](mioMethod &m){
+        mioDebugPrint("    %s\n", m.getName());
+    });
+
+    mioDebugPrint("properties:\n");
+    this_cs.getClass().eachPropertiesUpwards([&](mioProperty &m){
+        mioDebugPrint("    %s\n", m.getName());
+    });
+
+    mioDebugPrint("fields:\n");
+    this_cs.getClass().eachFieldsUpwards([&](mioField &m){
+        mioDebugPrint("    %s\n", m.getName());
+    });
 }
 
 TestCppBehaviour::~TestCppBehaviour()
@@ -58,17 +83,23 @@ TestCppBehaviour::~TestCppBehaviour()
     mioDebugPrint("TestCppBehaviour:~TestCppBehaviour()\n");
 }
 
-void TestCppBehaviour::start()
+void TestCppBehaviour::Start()
 {
-    mioDebugPrint("TestCppBehaviour::start()\n");
+    mioDebugPrint("TestCppBehaviour::Start()\n");
 }
 
-void TestCppBehaviour::update()
+void TestCppBehaviour::Update()
 {
     if (++m_frame % 60 == 0) {
-        mioDebugPrint("TestCppBehaviour::update()\n");
+        mioDebugPrint("TestCppBehaviour::Update()\n");
         if (mioMethod method = findMethod("ThisFunctionWillBeCalledFromCpp")) {
-            method.invoke(m_mobj, nullptr);
+            method.invoke(this_cs, nullptr);
+        }
+
+        if (mioField v3f = findField("v3value")) {
+            Vector3 v3v;
+            v3f.getValue(this_cs, v3v);
+            mioDebugPrint("    v3value: %.2f, %.2f, %.2f\n", v3v.x, v3v.y, v3v.z);
         }
     }
 }
