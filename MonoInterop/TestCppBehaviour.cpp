@@ -60,6 +60,18 @@ mioExportMethod(smemfn4)
 #undef mioCurrentClass
 
 
+inline std::string StringizeArgTypes(mioMethod mt)
+{
+    std::string ret;
+    bool first = true;
+    mt.eachArgTypes([&](mioType &t){
+        if (!first) { ret += ", "; }
+        first = false;
+        ret += t.getName();
+    });
+    return ret;
+}
+
 
 TestCppBehaviour::TestCppBehaviour(MonoObject *o)
 : super(o)
@@ -70,44 +82,17 @@ TestCppBehaviour::TestCppBehaviour(MonoObject *o)
 
     mioDebugPrint("methods:\n");
     this_cs.getClass().eachMethodsUpwards([&](mioMethod &m, mioClass &c){
-        std::vector<mioType> args;
-        m.eachArgTypes([&](mioType &t){ args.push_back(t); });
-        mioDebugPrint("    %s::%s(", c.getName(), m.getName());
-        for (size_t i = 0; i < args.size(); ++i) {
-            mioDebugPrint("%s", args[i].getName());
-            if (i != args.size() - 1) {
-                mioDebugPrint(", ");
-            }
-        }
-        mioDebugPrint(") : %s\n", m.getReturnType().getName());
+        mioDebugPrint("    %s::%s(%s) : %s\n", c.getName(), m.getName(), StringizeArgTypes(m).c_str(), m.getReturnType().getName());
     });
 
     mioDebugPrint("properties:\n");
     this_cs.getClass().eachPropertiesUpwards([&](mioProperty &m, mioClass &c){
         mioDebugPrint("    %s::%s\n", c.getName(), m.getName());
         if (mioMethod getter = m.getGetter()) {
-            std::vector<mioType> args;
-            getter.eachArgTypes([&](mioType &t){ args.push_back(t); });
-            mioDebugPrint("        getter(");
-            for (size_t i = 0; i < args.size(); ++i) {
-                mioDebugPrint("%s", args[i].getName());
-                if (i != args.size() - 1) {
-                    mioDebugPrint(", ");
-                }
-            }
-            mioDebugPrint(") : %s\n", getter.getReturnType().getName());
+            mioDebugPrint("        getter(%s) : %s\n", StringizeArgTypes(getter).c_str(), getter.getReturnType().getName());
         }
         if (mioMethod setter = m.getSetter()) {
-            std::vector<mioType> args;
-            setter.eachArgTypes([&](mioType &t){ args.push_back(t); });
-            mioDebugPrint("        setter(");
-            for (size_t i = 0; i < args.size(); ++i) {
-                mioDebugPrint("%s", args[i].getName());
-                if (i != args.size() - 1) {
-                    mioDebugPrint(", ");
-                }
-            }
-            mioDebugPrint(") : %s\n", setter.getReturnType().getName());
+            mioDebugPrint("        setter(%s) : %s\n", StringizeArgTypes(setter).c_str(), setter.getReturnType().getName());
         }
     });
 
