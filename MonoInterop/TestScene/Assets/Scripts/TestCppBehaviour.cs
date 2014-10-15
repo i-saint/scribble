@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 public class mio
 {
-    [DllImport("mio32")]
+    [DllImport("mio")]
     public static extern void mioInitialize();
 }
 
@@ -17,6 +17,7 @@ public class CppBehaviour : MonoBehaviour
 
     public CppBehaviour()
     {
+        Debug.Log("CppBehaviour::CppBehaviour()");
         mio.mioInitialize();
     }
 

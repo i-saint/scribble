@@ -75,27 +75,31 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>$(ProjectName)32</TargetName>
-    <OutDir>bin\$(Configuration)\</OutDir>
+    <TargetName>$(ProjectName)</TargetName>
+    <OutDir>bin\$(Configuration)_$(Platform)\</OutDir>
     <IntDir>$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);lib\x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>$(ProjectName)64</TargetName>
-    <OutDir>bin\$(Configuration)\</OutDir>
+    <TargetName>$(ProjectName)</TargetName>
+    <OutDir>bin\$(Configuration)_$(Platform)\</OutDir>
     <IntDir>$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);lib\x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>$(ProjectName)32</TargetName>
-    <OutDir>bin\$(Configuration)\</OutDir>
+    <TargetName>$(ProjectName)</TargetName>
+    <OutDir>bin\$(Configuration)_$(Platform)\</OutDir>
     <IntDir>$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);lib\x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>$(ProjectName)64</TargetName>
-    <OutDir>bin\$(Configuration)\</OutDir>
+    <TargetName>$(ProjectName)</TargetName>
+    <OutDir>bin\$(Configuration)_$(Platform)\</OutDir>
     <IntDir>$(ProjectName)\$(Configuration)_$(Platform)\</IntDir>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);lib\x64</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -136,6 +140,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <PostBuildEvent>
+      <Command>PatchLibraryBridge64.exe /target:Unity.exe /patch:$(TargetPath)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -176,6 +183,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <PostBuildEvent>
+      <Command>PatchLibraryBridge64.exe /target:Unity.exe /patch:$(TargetPath)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
