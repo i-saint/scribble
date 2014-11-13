@@ -3,8 +3,7 @@ Shader "CustumGUI/GUI_Hex"
 {
 	Properties
 	{
-		[PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
-		_Aspect ("Aspect", Float) = 2.0
+		_Aspect ("Aspect", Float) = 1.0
 		_Color ("Tint", Color) = (1,1,1,1)
 
 		_StencilComp ("Stencil Comparison", Float) = 8
