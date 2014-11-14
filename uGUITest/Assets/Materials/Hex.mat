@@ -49,6 +49,10 @@ Material:
         first:
           name: _Aspect
         second: 1
+      data:
+        first:
+          name: _PatternFade
+        second: 0
     m_Colors:
       data:
         first:

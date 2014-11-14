@@ -13,6 +13,8 @@ Shader "CustumGUI/GUI_Hex"
 		_StencilReadMask ("Stencil Read Mask", Float) = 255
 
 		_ColorMask ("Color Mask", Float) = 15
+
+		_PatternFade ("Pattern Fade", Float) = 0.0
 	}
 
 	SubShader
@@ -67,6 +69,7 @@ Shader "CustumGUI/GUI_Hex"
 
 			fixed4 _Color;
 			float _Aspect;
+			float _PatternFade;
 
 			v2f vert(appdata_t IN)
 			{
@@ -103,6 +106,7 @@ Shader "CustumGUI/GUI_Hex"
 				float2 grid = float2(0.692, 0.4) * scale;
 				float radius = 0.22 * scale;
 
+
 				float2 pos = IN.texcoord1 * float2(_Aspect, 1.0) + float2(0.0, 0.3)*_Time.y*scale;
 				float2 p1 = cmod(pos, grid) - grid*0.5;
 				float2 p2 = cmod(pos+grid*0.5, grid) - grid*0.5;
@@ -110,6 +114,11 @@ Shader "CustumGUI/GUI_Hex"
 				float d2 = hex(p2, radius);
 				float d = min(d1, d2);
 				float ditch = max((-cmod(pos.y+_Time.y*200.0, 500.0)+500.0) * 0.01 - 4.0, 0.0);
+
+				float2 pi1 = floor((pos)/grid);
+				float2 pi2 = floor((pos+grid*0.5)/grid);
+				float pindex = d1 < d2 ? pi1.x*0.9+pi1.y*50.4 : pi2.x*1.2+pi2.y*60.3;
+
 				if(color.a < 0.5) {
 					if(d > 0.0) {
 						color.a -= 0.2*(1.0-ditch*1.5);
@@ -118,7 +127,13 @@ Shader "CustumGUI/GUI_Hex"
 					else if(d > -1.0) {
 						color.rgb += 0.3;
 					}
+					color.a *= min(cmod(pos.y, 5.0)-1.0, 1.0);
 				}
+
+				float pf = max(1.0 + min(cmod(pindex, 1.0) - _PatternFade, 0.0) * 10.0f, 0.0) * min(color.a*10.0, 1.0);
+				color.a *= pf;
+				//color.rgb += (cmod(_Time.y, 0.033)*10.0);
+
 
 				return color;
 			}
