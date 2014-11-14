@@ -2952,7 +2952,7 @@ Canvas:
   m_GameObject: {fileID: 557638307}
   m_Enabled: 1
   serializedVersion: 2
-  m_RenderMode: 1
+  m_RenderMode: 0
   m_Camera: {fileID: 1079458419}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
@@ -4460,7 +4460,7 @@ MonoBehaviour:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 920952687}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c5b01eb497714c1449cb2df46eb5ac6f, type: 3}
   m_Name: 
@@ -5620,6 +5620,7 @@ GameObject:
   m_Component:
   - 4: {fileID: 1111030990}
   - 114: {fileID: 1111030989}
+  - 95: {fileID: 1111030991}
   m_Layer: 0
   m_Name: ApplicationManager
   m_TagString: Untagged
@@ -5638,6 +5639,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7696221f0cbbc764498b26fbbf4228af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hex: {fileID: 2100000, guid: bb4305ea799f319469f6a9ba8ecfbd3a, type: 2}
+  fader: 0
 --- !u!4 &1111030990
 Transform:
   m_ObjectHideFlags: 0
@@ -5650,6 +5653,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 4
+--- !u!95 &1111030991
+Animator:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1111030988}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: d96acf67df9f73b4ea0822442ecf37aa, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 1
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
 --- !u!1 &1113131453
 GameObject:
   m_ObjectHideFlags: 0

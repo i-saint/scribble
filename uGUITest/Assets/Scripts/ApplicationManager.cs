@@ -2,7 +2,8 @@
 using System.Collections;
 
 public class ApplicationManager : MonoBehaviour {
-	
+	public Material hex;
+	public float fader = 0.0f;
 
 	public void Quit () 
 	{
@@ -11,5 +12,10 @@ public class ApplicationManager : MonoBehaviour {
 		#else
 		Application.Quit();
 		#endif
+	}
+	
+	void Update()
+	{
+		hex.SetFloat("_PatternFade", fader);
 	}
 }

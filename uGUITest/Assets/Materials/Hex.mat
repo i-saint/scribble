@@ -52,7 +52,7 @@ Material:
       data:
         first:
           name: _PatternFade
-        second: 0
+        second: 1
     m_Colors:
       data:
         first:
