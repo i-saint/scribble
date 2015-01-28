@@ -13,6 +13,9 @@ namespace Assets.Scripts
 {
     public partial class TestForm : Form
     {
+        TextBox m_drag_target;
+        int m_prev_mouse_x;
+
         public TestForm()
         {
             InitializeComponent();
@@ -78,6 +81,30 @@ namespace Assets.Scripts
             {
 
             }
+        }
+        
+
+        private void BeginDrag(object sender, MouseEventArgs e)
+        {
+            m_drag_target = sender as TextBox;
+            m_prev_mouse_x = e.Location.X;
+        }
+
+        private void Drag(object sender, MouseEventArgs e)
+        {
+            if (m_drag_target != null)
+            {
+                float v = float.Parse(m_drag_target.Text);
+                v += (float)(e.Location.X - m_prev_mouse_x) * 0.1f;
+                m_drag_target.Text = v.ToString();
+            }
+            m_prev_mouse_x = e.Location.X;
+        }
+
+        private void EndDrag(object sender, MouseEventArgs e)
+        {
+            m_drag_target = null;
+            m_prev_mouse_x = e.Location.X;
         }
 
     }

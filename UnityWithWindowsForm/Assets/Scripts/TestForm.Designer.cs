@@ -64,6 +64,9 @@
             this.tb_position_x.Size = new System.Drawing.Size(60, 20);
             this.tb_position_x.TabIndex = 2;
             this.tb_position_x.Text = "0";
+            this.tb_position_x.MouseDown += new System.Windows.Forms.MouseEventHandler(this.BeginDrag);
+            this.tb_position_x.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Drag);
+            this.tb_position_x.MouseUp += new System.Windows.Forms.MouseEventHandler(this.EndDrag);
             this.tb_position_x.TextChanged += new System.EventHandler(this.OnPositionTextChange);
             // 
             // tb_position_y
@@ -73,6 +76,9 @@
             this.tb_position_y.Size = new System.Drawing.Size(60, 20);
             this.tb_position_y.TabIndex = 3;
             this.tb_position_y.Text = "0";
+            this.tb_position_y.MouseDown += new System.Windows.Forms.MouseEventHandler(this.BeginDrag);
+            this.tb_position_y.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Drag);
+            this.tb_position_y.MouseUp += new System.Windows.Forms.MouseEventHandler(this.EndDrag);
             this.tb_position_y.TextChanged += new System.EventHandler(this.OnPositionTextChange);
             // 
             // tb_position_z
@@ -82,6 +88,9 @@
             this.tb_position_z.Size = new System.Drawing.Size(60, 20);
             this.tb_position_z.TabIndex = 4;
             this.tb_position_z.Text = "0";
+            this.tb_position_z.MouseDown += new System.Windows.Forms.MouseEventHandler(this.BeginDrag);
+            this.tb_position_z.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Drag);
+            this.tb_position_z.MouseUp += new System.Windows.Forms.MouseEventHandler(this.EndDrag);
             this.tb_position_z.TextChanged += new System.EventHandler(this.OnPositionTextChange);
             // 
             // tb_scale_z
@@ -91,6 +100,9 @@
             this.tb_scale_z.Size = new System.Drawing.Size(60, 20);
             this.tb_scale_z.TabIndex = 7;
             this.tb_scale_z.Text = "1";
+            this.tb_scale_z.MouseDown += new System.Windows.Forms.MouseEventHandler(this.BeginDrag);
+            this.tb_scale_z.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Drag);
+            this.tb_scale_z.MouseUp += new System.Windows.Forms.MouseEventHandler(this.EndDrag);
             this.tb_scale_z.TextChanged += new System.EventHandler(this.OnScaleTextChange);
             // 
             // tb_scale_y
@@ -100,6 +112,9 @@
             this.tb_scale_y.Size = new System.Drawing.Size(60, 20);
             this.tb_scale_y.TabIndex = 6;
             this.tb_scale_y.Text = "1";
+            this.tb_scale_y.MouseDown += new System.Windows.Forms.MouseEventHandler(this.BeginDrag);
+            this.tb_scale_y.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Drag);
+            this.tb_scale_y.MouseUp += new System.Windows.Forms.MouseEventHandler(this.EndDrag);
             this.tb_scale_y.TextChanged += new System.EventHandler(this.OnScaleTextChange);
             // 
             // tb_scale_x
@@ -109,6 +124,9 @@
             this.tb_scale_x.Size = new System.Drawing.Size(60, 20);
             this.tb_scale_x.TabIndex = 5;
             this.tb_scale_x.Text = "1";
+            this.tb_scale_x.MouseDown += new System.Windows.Forms.MouseEventHandler(this.BeginDrag);
+            this.tb_scale_x.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Drag);
+            this.tb_scale_x.MouseUp += new System.Windows.Forms.MouseEventHandler(this.EndDrag);
             this.tb_scale_x.TextChanged += new System.EventHandler(this.OnScaleTextChange);
             // 
             // bu_create_cube
