@@ -5,7 +5,17 @@ using System.Windows.Forms;
 public class FormTest : MonoBehaviour
 {
     Assets.Scripts.TestForm m_form;
-    
+
+    void OnDestroy()
+    {
+        if (m_form != null)
+        {
+            m_form.Close();
+            m_form = null;
+        }
+    }
+
+
     void Update()
     {
         if (m_form != null && m_form.IsDisposed)
