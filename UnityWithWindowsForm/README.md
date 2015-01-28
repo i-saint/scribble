@@ -8,3 +8,5 @@ Visual Studio のフォームデザイナで作った GUI を Unity で使う例
 
 あとはごく普通に Visual Studio で GUI を作ってそれを new して Show() するだけで表示できます。GUI から Unity の機能にアクセスすることも可能です。  
 Unity がプロジェクトファイルを再生成するとフォームデザイナの情報が失われてしまうので、専用のプロジェクトを別に作っておいた方がいいでしょう。  
+
+![screenshot](Screenshots/form.gif)
