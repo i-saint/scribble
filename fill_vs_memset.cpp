@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
         Fill(&data[0], data.size(), i);
     }
     elapsed = std::chrono::system_clock::now() - start;
-    printf("FillZero: %.4f\n", elapsed.count());
+    printf("Fill: %.4f\n", elapsed.count());
 
 
     start = std::chrono::system_clock::now();
@@ -49,19 +49,19 @@ int main(int argc, char *argv[])
         Memset(&data[0], data.size(), i);
     }
     elapsed = std::chrono::system_clock::now() - start;
-    printf("MemsetZero: %.4f\n", elapsed.count());
+    printf("Memset: %.4f\n", elapsed.count());
 }
 
 /*
 
 $ cl /nologo /O2 /EHsc fill_vs_memset.cpp && ./fill_vs_memset
 fill_vs_memset.cpp
-FillZero: 5.6404
-MemsetZero: 0.8655
+Fill: 5.3456
+Memset: 0.8350
 
 $ g++ -O2 -std=gnu++11 fill_vs_memset.cpp && ./a
-FillZero: 4.7962
-MemsetZero: 0.8197
+Fill: 4.8300
+Memset: 0.8497
 
 
 assembly output on Visual Studio 2015 Update1
