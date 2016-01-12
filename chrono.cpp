@@ -35,9 +35,9 @@ uint64_t WinAPI_QPC()
 // equivalant to std::chrono::system_clock::now() as nanoseconds
 uint64_t WinAPI_GSTAFT()
 {
+    // copied from CRT source (time.c)
     FILETIME ft;
     ::GetSystemTimeAsFileTime(&ft);
-
     const int64_t EPOCH_BIAS = 116444736000000000i64;
     return ((int64_t&)ft - EPOCH_BIAS) * 100;
 }
