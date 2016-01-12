@@ -19,7 +19,7 @@ uint64_t StdChrono_SystemClock()
     return duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
 }
 
-// equivalant to std::chrono::steady_clock::now() as nanoseconds
+// equivalant to std::chrono::steady_clock::now() as nanoseconds (on Visual Studio 2015)
 uint64_t WinAPI_QPC()
 {
     static LARGE_INTEGER g_freq = { 0, 0 };
