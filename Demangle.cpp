@@ -19,7 +19,7 @@ bool Demangle_NameOnly(const char *mangled, char *demangled, size_t buflen)
 int main(int argc, char *argv[])
 {
     bool name_only = false;
-    char demabgled[MAX_SYM_NAME];
+    char demangled[MAX_SYM_NAME];
 
     for (int i = 1; i < argc; ++i) {
         if (strncmp(argv[i], "/n", 2) == 0) {
@@ -27,12 +27,12 @@ int main(int argc, char *argv[])
         }
         else {
             if (name_only) {
-                Demangle_NameOnly(argv[i], demabgled, sizeof(demabgled));
+                Demangle_NameOnly(argv[i], demangled, sizeof(demangled));
             }
             else {
-                Demangle_Signatured(argv[i], demabgled, sizeof(demabgled));
+                Demangle_Signatured(argv[i], demangled, sizeof(demangled));
             }
-            printf("%s\n", demabgled);
+            printf("%s\n", demangled);
         }
     }
 }
