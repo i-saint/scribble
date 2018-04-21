@@ -53,7 +53,13 @@ int main(int argc, char *argv[])
 }
 
 /*
+Visual Studio 2017 (Microsoft (R) C/C++ Optimizing Compiler Version 19.13.26131.1 for x64):
+$ cl /nologo /O2 /EHsc fill_vs_memset.cpp && ./fill_vs_memset
+fill_vs_memset.cpp
+Fill: 0.8563
+Memset: 0.8489
 
+Visual Studio 2015:
 $ cl /nologo /O2 /EHsc fill_vs_memset.cpp && ./fill_vs_memset
 fill_vs_memset.cpp
 Fill: 5.3456
@@ -64,7 +70,22 @@ Fill: 4.8300
 Memset: 0.8497
 
 
-assembly output on Visual Studio 2015 Update1
+assembly output from Visual Studio 2017 (Microsoft (R) C/C++ Optimizing Compiler Version 19.13.26131.1 for x64)
+
+?Fill@@YAXPEAD_KE@Z (void __cdecl Fill(char *,unsigned __int64,unsigned char)):
+  0000000000000000: 48 8B C2           mov         rax,rdx
+  0000000000000003: 41 0F B6 D0        movzx       edx,r8b
+  0000000000000007: 4C 8B C0           mov         r8,rax
+  000000000000000A: E9 00 00 00 00     jmp         memset
+
+?Memset@@YAXPEAD_KE@Z (void __cdecl Memset(char *,unsigned __int64,unsigned char)):
+  0000000000000000: 48 8B C2           mov         rax,rdx
+  0000000000000003: 41 0F B6 D0        movzx       edx,r8b
+  0000000000000007: 4C 8B C0           mov         r8,rax
+  000000000000000A: E9 00 00 00 00     jmp         memset
+  
+
+assembly output from Visual Studio 2015 Update1
 
 ?Fill@@YAXPEAD_KE@Z (void __cdecl Fill(char *,unsigned __int64,unsigned char)):
 0000000000000000: 48 8D 04 11        lea         rax,[rcx+rdx]
