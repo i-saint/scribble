@@ -1,0 +1,16 @@
+{
+  "name": "My Chrome scripts",
+  "version": "1.0",
+  "manifest_version": 2,
+  "permissions": [
+    "tabs",
+    "downloads",
+    "https://hitomi.la/*"
+  ],
+  "background": {
+    "scripts": [ "background.js" ]
+  },
+  "web_accessible_resources": [
+    "hitomi.js"
+  ]
+}
