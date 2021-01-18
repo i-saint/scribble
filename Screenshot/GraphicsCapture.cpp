@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Screenshot.h"
-#include "Externals/stb_image_write.h"
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.System.h>
@@ -24,6 +23,7 @@ class GraphicsCapture
 public:
     using Callback = std::function<void(ID3D11Texture2D*, int w, int h)>;
 
+    GraphicsCapture();
     ~GraphicsCapture();
     bool start(HWND hwnd, bool free_threaded, const Callback& callback);
     void stop();
@@ -48,6 +48,21 @@ private:
     Callback m_callback;
 };
 
+GraphicsCapture::GraphicsCapture()
+{
+    // create device
+    UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    flags |= D3D11_CREATE_DEVICE_DEBUG;
+
+    ::D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flags, nullptr, 0, D3D11_SDK_VERSION, m_device.put(), nullptr, nullptr);
+    m_device->GetImmediateContext(m_context.put());
+
+    auto dxgi = m_device.as<IDXGIDevice>();
+    com_ptr<::IInspectable> device_rt;
+    ::CreateDirect3D11DeviceFromDXGIDevice(dxgi.get(), device_rt.put());
+    m_device_rt = device_rt.as<IDirect3DDevice>();
+}
+
 GraphicsCapture::~GraphicsCapture()
 {
     stop();
@@ -58,29 +73,21 @@ bool GraphicsCapture::start(HWND hwnd, bool free_threaded, const Callback& callb
     stop();
     m_callback = callback;
 
-    UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-#if 1
-    flags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-    ::D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flags, nullptr, 0, D3D11_SDK_VERSION, m_device.put(), nullptr, nullptr);
-    m_device->GetImmediateContext(m_context.put());
-
-    auto dxgi = m_device.as<IDXGIDevice>();
-    com_ptr<::IInspectable> device_rt;
-    ::CreateDirect3D11DeviceFromDXGIDevice(dxgi.get(), device_rt.put());
-    m_device_rt = device_rt.as<IDirect3DDevice>();
-
+    // create capture item
     auto factory = get_activation_factory<GraphicsCaptureItem>();
     auto interop = factory.as<IGraphicsCaptureItemInterop>();
     interop->CreateForWindow(hwnd, guid_of<ABI::Windows::Graphics::Capture::IGraphicsCaptureItem>(), put_abi(m_capture_item));
 
     if (m_capture_item) {
+        // create frame pool
         auto size = m_capture_item.Size();
         if (free_threaded)
             m_frame_pool = Direct3D11CaptureFramePool::CreateFreeThreaded(m_device_rt, DirectXPixelFormat::R8G8B8A8UIntNormalized, 1, size);
         else
             m_frame_pool = Direct3D11CaptureFramePool::Create(m_device_rt, DirectXPixelFormat::R8G8B8A8UIntNormalized, 1, size);
         m_frame_arrived = m_frame_pool.FrameArrived(auto_revoke, { this, &GraphicsCapture::onFrameArrived });
+
+        // capture start
         m_capture_session = m_frame_pool.CreateCaptureSession(m_capture_item);
         m_capture_session.StartCapture();
         return true;
@@ -98,8 +105,6 @@ void GraphicsCapture::onFrameArrived(winrt::Windows::Graphics::Capture::Direct3D
     com_ptr<ID3D11Texture2D> surface;
     frame.Surface().as<::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>()->GetInterface(guid_of<ID3D11Texture2D>(), surface.put_void());
     m_callback(surface.get(), size.Width, size.Height);
-
-    frame.Close();
 }
 
 void GraphicsCapture::stop()
@@ -110,29 +115,58 @@ void GraphicsCapture::stop()
         m_frame_pool.Close();
         m_frame_pool = nullptr;
     }
+    m_capture_item = nullptr;
 }
 
 
 void TestGraphicsCapture()
 {
     GraphicsCapture capture;
-
     HWND target = ::GetForegroundWindow();
-    bool arrived = false;
-    auto task = [&](ID3D11Texture2D* surface, int w, int h) {
-        ReadTexture(capture.getDevice(), surface, w, h, [&](void *data, int stride) {
-            stbi_write_png("TestGraphicsCapture.png", w, h, 4, data, stride);
-            });
-        arrived = true;
-    };
 
-    if (capture.start(target, false, task)) {
-        MSG msg;
-        while (!arrived) {
-            ::GetMessage(&msg, nullptr, 0, 0);
-            ::TranslateMessage(&msg);
-            ::DispatchMessage(&msg);
+    // single threaded
+    {
+        bool arrived = false;
+
+        // called from DispatchMessage()
+        auto callback = [&](ID3D11Texture2D* surface, int w, int h) {
+            ReadTexture(capture.getDevice(), surface, w, h, [&](void* data, int stride) {
+                stbi_write_png("GraphicsCapture.png", w, h, 4, data, stride);
+                });
+            arrived = true;
+        };
+
+        if (capture.start(target, false, callback)) {
+            MSG msg;
+            while (!arrived) {
+                ::GetMessage(&msg, nullptr, 0, 0);
+                ::TranslateMessage(&msg);
+                ::DispatchMessage(&msg);
+            }
+
+            capture.stop();
         }
-        capture.stop();
+    }
+
+    // free threaded
+    {
+        std::mutex mutex;
+        std::condition_variable cond;
+
+        // called from capture thread
+        auto callback = [&](ID3D11Texture2D* surface, int w, int h) {
+            ReadTexture(capture.getDevice(), surface, w, h, [&](void* data, int stride) {
+                stbi_write_png("GraphicsCapture_FreeThreaded.png", w, h, 4, data, stride);
+                });
+            cond.notify_one();
+        };
+
+        std::unique_lock<std::mutex> lock(mutex);
+        if (capture.start(target, true, callback)) {
+            cond.wait(lock);
+
+            // stop() must be called from the thread created GraphicsCapture
+            capture.stop();
+        }
     }
 }
