@@ -16,9 +16,11 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Screenshot.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9D1A9D96-7FFF-431A-BEFC-1D9DC317A736}</ProjectGuid>

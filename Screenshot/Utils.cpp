@@ -1,0 +1,60 @@
+#include "pch.h"
+#include "Screenshot.h"
+
+#include <winrt/Windows.Foundation.h>
+using namespace winrt;
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "Externals/stb_image_write.h"
+
+
+bool ReadTexture(ID3D11Device* device, ID3D11Texture2D* tex, int width, int height, const std::function<void(void*, int)>& callback)
+{
+    com_ptr<ID3D11DeviceContext> ctx;
+    device->GetImmediateContext(ctx.put());
+
+    // create query
+    com_ptr<ID3D11Query> query_event;
+    {
+        D3D11_QUERY_DESC qdesc = { D3D11_QUERY_EVENT , 0 };
+        device->CreateQuery(&qdesc, query_event.put());
+    }
+
+    // create staging texture
+    com_ptr<ID3D11Texture2D> staging;
+    {
+        D3D11_TEXTURE2D_DESC tmp;
+        tex->GetDesc(&tmp);
+        D3D11_TEXTURE2D_DESC desc{ (UINT)width, (UINT)height, 1, 1, tmp.Format, { 1, 0 }, D3D11_USAGE_STAGING, 0, D3D11_CPU_ACCESS_READ, 0 };
+        device->CreateTexture2D(&desc, nullptr, staging.put());
+    }
+
+    // dispatch copy
+    {
+        D3D11_BOX box{};
+        box.right = width;
+        box.bottom = height;
+        box.back = 1;
+        ctx->CopySubresourceRegion(staging.get(), 0, 0, 0, 0, tex, 0, &box);
+        ctx->End(query_event.get());
+        ctx->Flush();
+    }
+
+    // wait for copy to complete
+    int wait_count = 0;
+    while (ctx->GetData(query_event.get(), nullptr, 0, 0) == S_FALSE) {
+        ++wait_count; // just for debug
+    }
+
+    // map
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    if (SUCCEEDED(ctx->Map(staging.get(), 0, D3D11_MAP_READ, 0, &mapped))) {
+        D3D11_TEXTURE2D_DESC desc{};
+        staging->GetDesc(&desc);
+
+        callback(mapped.pData, mapped.RowPitch);
+        ctx->Unmap(staging.get(), 0);
+        return true;
+    }
+    return false;
+}

@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "Screenshot.h"
+#include "Externals/stb_image_write.h"
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.System.h>
@@ -20,9 +22,13 @@ using namespace winrt::Windows::Graphics::Capture;
 class GraphicsCapture
 {
 public:
+    using Callback = std::function<void(ID3D11Texture2D*, int w, int h)>;
+
     ~GraphicsCapture();
-    bool start(HWND hwnd, bool free_threaded, const std::function<void(ID3D11Texture2D*)>& callback);
+    bool start(HWND hwnd, bool free_threaded, const Callback& callback);
     void stop();
+
+    ID3D11Device* getDevice() { return m_device.get(); }
 
 private:
     void onFrameArrived(
@@ -39,7 +45,7 @@ private:
     GraphicsCaptureSession m_capture_session{ nullptr };
     Direct3D11CaptureFramePool::FrameArrived_revoker m_frame_arrived;
 
-    std::function<void(ID3D11Texture2D*)> m_callback;
+    Callback m_callback;
 };
 
 GraphicsCapture::~GraphicsCapture()
@@ -47,12 +53,13 @@ GraphicsCapture::~GraphicsCapture()
     stop();
 }
 
-bool GraphicsCapture::start(HWND hwnd, bool free_threaded, const std::function<void(ID3D11Texture2D*)>& callback)
+bool GraphicsCapture::start(HWND hwnd, bool free_threaded, const Callback& callback)
 {
+    stop();
     m_callback = callback;
 
     UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-#ifdef mrDebug
+#if 1
     flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
     ::D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flags, nullptr, 0, D3D11_SDK_VERSION, m_device.put(), nullptr, nullptr);
@@ -70,11 +77,9 @@ bool GraphicsCapture::start(HWND hwnd, bool free_threaded, const std::function<v
     if (m_capture_item) {
         auto size = m_capture_item.Size();
         if (free_threaded)
-            m_frame_pool = Direct3D11CaptureFramePool::CreateFreeThreaded(
-                m_device_rt, DirectXPixelFormat::B8G8R8A8UIntNormalized, 1, size);
+            m_frame_pool = Direct3D11CaptureFramePool::CreateFreeThreaded(m_device_rt, DirectXPixelFormat::R8G8B8A8UIntNormalized, 1, size);
         else
-            m_frame_pool = Direct3D11CaptureFramePool::Create(
-                m_device_rt, DirectXPixelFormat::B8G8R8A8UIntNormalized, 1, size);
+            m_frame_pool = Direct3D11CaptureFramePool::Create(m_device_rt, DirectXPixelFormat::R8G8B8A8UIntNormalized, 1, size);
         m_frame_arrived = m_frame_pool.FrameArrived(auto_revoke, { this, &GraphicsCapture::onFrameArrived });
         m_capture_session = m_frame_pool.CreateCaptureSession(m_capture_item);
         m_capture_session.StartCapture();
@@ -92,7 +97,7 @@ void GraphicsCapture::onFrameArrived(winrt::Windows::Graphics::Capture::Direct3D
 
     com_ptr<ID3D11Texture2D> surface;
     frame.Surface().as<::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>()->GetInterface(guid_of<ID3D11Texture2D>(), surface.put_void());
-    m_callback(surface.get());
+    m_callback(surface.get(), size.Width, size.Height);
 
     frame.Close();
 }
@@ -107,23 +112,26 @@ void GraphicsCapture::stop()
     }
 }
 
+
 void TestGraphicsCapture()
 {
     GraphicsCapture capture;
 
     HWND target = ::GetForegroundWindow();
     bool arrived = false;
-    auto task = [&](ID3D11Texture2D* surface) {
+    auto task = [&](ID3D11Texture2D* surface, int w, int h) {
+        ReadTexture(capture.getDevice(), surface, w, h, [&](void *data, int stride) {
+            stbi_write_png("TestGraphicsCapture.png", w, h, 4, data, stride);
+            });
         arrived = true;
     };
 
     if (capture.start(target, false, task)) {
         MSG msg;
         while (!arrived) {
-            while (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-                ::TranslateMessage(&msg);
-                ::DispatchMessage(&msg);
-            }
+            ::GetMessage(&msg, nullptr, 0, 0);
+            ::TranslateMessage(&msg);
+            ::DispatchMessage(&msg);
         }
         capture.stop();
     }

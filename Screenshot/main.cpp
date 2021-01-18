@@ -1,6 +1,5 @@
 #include "pch.h"
-
-void TestGraphicsCapture();
+#include "Screenshot.h"
 
 int main(int argc, char *argv)
 {
