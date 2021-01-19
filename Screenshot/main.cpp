@@ -4,5 +4,6 @@
 int main(int argc, char *argv)
 {
     TestGDI();
+    TestDesktopDuplication();
     TestGraphicsCapture();
 }

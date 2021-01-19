@@ -28,8 +28,6 @@ public:
     bool start(HWND hwnd, bool free_threaded, const Callback& callback);
     void stop();
 
-    ID3D11Device* getDevice() { return m_device.get(); }
-
 private:
     void onFrameArrived(
         winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool const& sender,
@@ -68,6 +66,18 @@ GraphicsCapture::~GraphicsCapture()
     stop();
 }
 
+void GraphicsCapture::stop()
+{
+    m_frame_arrived.revoke();
+    m_capture_session = nullptr;
+    if (m_frame_pool) {
+        m_frame_pool.Close();
+        m_frame_pool = nullptr;
+    }
+    m_capture_item = nullptr;
+    m_callback = {};
+}
+
 bool GraphicsCapture::start(HWND hwnd, bool free_threaded, const Callback& callback)
 {
     stop();
@@ -82,9 +92,9 @@ bool GraphicsCapture::start(HWND hwnd, bool free_threaded, const Callback& callb
         // create frame pool
         auto size = m_capture_item.Size();
         if (free_threaded)
-            m_frame_pool = Direct3D11CaptureFramePool::CreateFreeThreaded(m_device_rt, DirectXPixelFormat::R8G8B8A8UIntNormalized, 1, size);
+            m_frame_pool = Direct3D11CaptureFramePool::CreateFreeThreaded(m_device_rt, DirectXPixelFormat::B8G8R8A8UIntNormalized, 1, size);
         else
-            m_frame_pool = Direct3D11CaptureFramePool::Create(m_device_rt, DirectXPixelFormat::R8G8B8A8UIntNormalized, 1, size);
+            m_frame_pool = Direct3D11CaptureFramePool::Create(m_device_rt, DirectXPixelFormat::B8G8R8A8UIntNormalized, 1, size);
         m_frame_arrived = m_frame_pool.FrameArrived(auto_revoke, { this, &GraphicsCapture::onFrameArrived });
 
         // capture start
@@ -107,17 +117,6 @@ void GraphicsCapture::onFrameArrived(winrt::Windows::Graphics::Capture::Direct3D
     m_callback(surface.get(), size.Width, size.Height);
 }
 
-void GraphicsCapture::stop()
-{
-    m_frame_arrived.revoke();
-    m_capture_session = nullptr;
-    if (m_frame_pool) {
-        m_frame_pool.Close();
-        m_frame_pool = nullptr;
-    }
-    m_capture_item = nullptr;
-}
-
 
 void TestGraphicsCapture()
 {
@@ -130,7 +129,7 @@ void TestGraphicsCapture()
 
         // called from DispatchMessage()
         auto callback = [&](ID3D11Texture2D* surface, int w, int h) {
-            ReadTexture(capture.getDevice(), surface, w, h, [&](void* data, int stride) {
+            ReadTexture(surface, w, h, [&](void* data, int stride) {
                 stbi_write_png("GraphicsCapture.png", w, h, 4, data, stride);
                 });
             arrived = true;
@@ -155,7 +154,7 @@ void TestGraphicsCapture()
 
         // called from capture thread
         auto callback = [&](ID3D11Texture2D* surface, int w, int h) {
-            ReadTexture(capture.getDevice(), surface, w, h, [&](void* data, int stride) {
+            ReadTexture(surface, w, h, [&](void* data, int stride) {
                 stbi_write_png("GraphicsCapture_FreeThreaded.png", w, h, 4, data, stride);
                 });
             cond.notify_one();

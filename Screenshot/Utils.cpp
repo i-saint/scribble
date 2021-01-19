@@ -8,9 +8,11 @@ using namespace winrt;
 #include "Externals/stb_image_write.h"
 
 
-bool ReadTexture(ID3D11Device* device, ID3D11Texture2D* tex, int width, int height, const std::function<void(void*, int)>& callback)
+bool ReadTexture(ID3D11Texture2D* tex, int width, int height, const std::function<void(void*, int)>& callback)
 {
+    com_ptr<ID3D11Device> device;
     com_ptr<ID3D11DeviceContext> ctx;
+    tex->GetDevice(device.put());
     device->GetImmediateContext(ctx.put());
 
     // create query

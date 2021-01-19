@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DesktopDuplication.cpp" />
     <ClCompile Include="GDI.cpp" />
     <ClCompile Include="GraphicsCapture.cpp" />
     <ClCompile Include="pch.cpp">
