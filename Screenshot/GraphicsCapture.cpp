@@ -130,7 +130,7 @@ void TestGraphicsCapture()
         // called from DispatchMessage()
         auto callback = [&](ID3D11Texture2D* surface, int w, int h) {
             ReadTexture(surface, w, h, [&](void* data, int stride) {
-                stbi_write_png("GraphicsCapture.png", w, h, 4, data, stride);
+                SaveAsPNG("GraphicsCapture.png", w, h, stride, data);
                 });
             arrived = true;
         };
@@ -155,7 +155,7 @@ void TestGraphicsCapture()
         // called from capture thread
         auto callback = [&](ID3D11Texture2D* surface, int w, int h) {
             ReadTexture(surface, w, h, [&](void* data, int stride) {
-                stbi_write_png("GraphicsCapture_FreeThreaded.png", w, h, 4, data, stride);
+                SaveAsPNG("GraphicsCapture_FreeThreaded.png", w, h, stride, data);
                 });
             cond.notify_one();
         };

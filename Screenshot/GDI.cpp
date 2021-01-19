@@ -74,34 +74,11 @@ bool CaptureWindow(HWND hwnd, const BitmapCallback& callback)
 }
 
 
-static bool SaveAsPNG(const char* path, int w, int h, const void* data)
-{
-    // DIB image is BGRA and upside-down.
-    // so, convert to RGBA and flip vertical before export.
-
-    std::vector<byte> buf(w * h * 4);
-    int stride = w * 4;
-    auto src = (const byte*)data;
-    auto dst = (byte*)buf.data();
-    for (int i = 0; i < h; ++i) {
-        auto s = src + (stride * (h - i - 1));
-        auto d = dst + (stride * i);
-        for (int j = 0; j < w; ++j) {
-            d[0] = s[2];
-            d[1] = s[1];
-            d[2] = s[0];
-            d[3] = s[3];
-            s += 4;
-            d += 4;
-        }
-    }
-    return stbi_write_png(path, w, h, 4, buf.data(), stride);
-}
-
 
 void TestGDI()
 {
+    // DIB image is BGRA and upside-down so need to flip y
     CaptureEntireScreen([](const void* data, int w, int h) {
-        SaveAsPNG("CaptureEntireScreen.png", w, h, data);
+        SaveAsPNG("CaptureEntireScreen.png", w, h, w * 4, data, true);
         });
 }

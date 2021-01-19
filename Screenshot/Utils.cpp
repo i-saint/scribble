@@ -60,3 +60,40 @@ bool ReadTexture(ID3D11Texture2D* tex, int width, int height, const std::functio
     }
     return false;
 }
+
+bool SaveAsPNG(const char* path, int w, int h, int src_stride, const void* data, bool flip_y)
+{
+    std::vector<byte> buf(w * h * 4);
+    int dst_stride = w * 4;
+    auto src = (const byte*)data;
+    auto dst = (byte*)buf.data();
+    if (flip_y) {
+        for (int i = 0; i < h; ++i) {
+            auto s = src + (src_stride * (h - i - 1));
+            auto d = dst + (dst_stride * i);
+            for (int j = 0; j < w; ++j) {
+                d[0] = s[2];
+                d[1] = s[1];
+                d[2] = s[0];
+                d[3] = s[3];
+                s += 4;
+                d += 4;
+            }
+        }
+    }
+    else {
+        for (int i = 0; i < h; ++i) {
+            auto s = src + (src_stride * i);
+            auto d = dst + (dst_stride * i);
+            for (int j = 0; j < w; ++j) {
+                d[0] = s[2];
+                d[1] = s[1];
+                d[2] = s[0];
+                d[3] = s[3];
+                s += 4;
+                d += 4;
+            }
+        }
+    }
+    return stbi_write_png(path, w, h, 4, buf.data(), dst_stride);
+}
